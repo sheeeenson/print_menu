@@ -6,6 +6,22 @@ import { loadProject, saveProject } from '../utils/storage.js';
 
 const deepClone = (value) => JSON.parse(JSON.stringify(value));
 
+export const DEFAULT_PAGE_DESIGN_SETTINGS = Object.freeze({
+  pageMargin: 34,
+  columns: 'auto',
+  cardGap: 16,
+  cardPadding: 14,
+  cardRadius: 18,
+  imageHeight: 118,
+  categoryTitleFontSize: 28,
+  dishTitleFontSize: 17,
+  descriptionFontSize: 12,
+  oldPriceFontSize: 12,
+  newPriceFontSize: 18,
+  badgeFontSize: 10,
+  weightFontSize: 11,
+});
+
 const blankCategory = () => ({
   id: createId('cat'),
   nameEn: 'New category',
@@ -47,12 +63,69 @@ const fallbackCategoryId = (categories, preferredId) => {
   return categories[0]?.id ?? null;
 };
 
+const visibleDishIdsForCategories = (dishes, categoryIds) =>
+  dishes.filter((dish) => dish.visible && categoryIds.includes(dish.categoryId)).map((dish) => dish.id);
+
+const buildDefaultPage = (project, name = 'Page 1') => {
+  const selectedCategoryIds = project.categories.map((category) => category.id);
+  return {
+    id: createId('page'),
+    name,
+    paperSize: 'A4',
+    orientation: 'portrait',
+    languageMode: 'bilingual',
+    selectedCategoryIds,
+    selectedDishIds: visibleDishIdsForCategories(project.dishes, selectedCategoryIds),
+    layoutTemplate: 'photoCards',
+    fittingMode: 'fixed',
+    designSettings: { ...DEFAULT_PAGE_DESIGN_SETTINGS },
+  };
+};
+
+const normalizePage = (page, project, index) => {
+  const fallbackCategoryIds = project.categories.map((category) => category.id);
+  const selectedCategoryIds = (page.selectedCategoryIds ?? page.categoryIds ?? fallbackCategoryIds).filter((id) =>
+    project.categories.some((category) => category.id === id),
+  );
+
+  return {
+    id: page.id ?? createId('page'),
+    name: page.name || `Page ${index + 1}`,
+    paperSize: page.paperSize === 'A3' ? 'A3' : 'A4',
+    orientation: page.orientation === 'landscape' ? 'landscape' : 'portrait',
+    languageMode: ['en', 'ge', 'bilingual'].includes(page.languageMode) ? page.languageMode : 'bilingual',
+    selectedCategoryIds,
+    selectedDishIds: visibleDishIdsForCategories(project.dishes, selectedCategoryIds),
+    layoutTemplate: ['photoCards', 'classicList', 'compact'].includes(page.layoutTemplate) ? page.layoutTemplate : 'photoCards',
+    fittingMode: ['fixed', 'autoFill', 'compact'].includes(page.fittingMode) ? page.fittingMode : 'fixed',
+    designSettings: { ...DEFAULT_PAGE_DESIGN_SETTINGS, ...(page.designSettings ?? {}) },
+  };
+};
+
+const normalizeProject = (project) => {
+  const nextProject = {
+    ...project,
+    categories: project.categories ?? [],
+    dishes: project.dishes ?? [],
+    pages: project.pages ?? [],
+  };
+  let pages = nextProject.pages.map((page, index) => normalizePage(page, nextProject, index));
+  if (pages.length === 0) {
+    pages = [buildDefaultPage(nextProject)];
+  }
+  const selectedPageId = pages.some((page) => page.id === nextProject.selectedPageId)
+    ? nextProject.selectedPageId
+    : pages[0].id;
+
+  return { ...nextProject, pages, selectedPageId };
+};
+
 function createInitialProject() {
   try {
-    return loadProject() ?? deepClone(demoProject);
+    return normalizeProject(loadProject() ?? deepClone(demoProject));
   } catch (error) {
     console.warn('Unable to restore project from localStorage. Loading demo project instead.', error);
-    return deepClone(demoProject);
+    return normalizeProject(deepClone(demoProject));
   }
 }
 
@@ -82,9 +155,20 @@ export function createProjectStore() {
   };
 
   const update = (producer) => {
-    project = producer(project);
+    project = normalizeProject(producer(project));
     notify();
     scheduleSave();
+  };
+
+  const updateSelectedPage = (changesOrUpdater) => {
+    update((state) => ({
+      ...state,
+      pages: state.pages.map((page) => {
+        if (page.id !== state.selectedPageId) return page;
+        const changes = typeof changesOrUpdater === 'function' ? changesOrUpdater(page, state) : changesOrUpdater;
+        return { ...page, ...changes };
+      }),
+    }));
   };
 
   const actions = {
@@ -118,7 +202,8 @@ export function createProjectStore() {
           dishes: state.dishes.filter((dish) => dish.categoryId !== categoryId),
           pages: state.pages.map((page) => ({
             ...page,
-            categoryIds: page.categoryIds.filter((id) => id !== categoryId),
+            selectedCategoryIds: page.selectedCategoryIds.filter((id) => id !== categoryId),
+            selectedDishIds: page.selectedDishIds.filter((dishId) => state.dishes.some((dish) => dish.id === dishId && dish.categoryId !== categoryId)),
           })),
           selectedCategoryId: fallbackCategoryId(categories, state.selectedCategoryId),
         };
@@ -141,7 +226,7 @@ export function createProjectStore() {
           ...state,
           categories: [...state.categories, category],
           dishes: [...state.dishes, ...copiedDishes],
-          pages: state.pages.map((page) => ({ ...page, categoryIds: [...page.categoryIds, category.id] })),
+          pages: state.pages.map((page) => ({ ...page, selectedCategoryIds: [...page.selectedCategoryIds, category.id] })),
           selectedCategoryId: category.id,
         };
       });
@@ -204,6 +289,47 @@ export function createProjectStore() {
           dish.id === dishId ? { ...dish, badges: dish.badges.filter((badge) => badge.id !== badgeId) } : dish,
         ),
       }));
+    },
+    selectPage(pageId) {
+      update((state) => ({ ...state, selectedPageId: pageId }));
+    },
+    addPage() {
+      update((state) => {
+        const page = buildDefaultPage(state, `Page ${state.pages.length + 1}`);
+        return { ...state, pages: [...state.pages, page], selectedPageId: page.id };
+      });
+    },
+    duplicateSelectedPage() {
+      update((state) => {
+        const source = state.pages.find((page) => page.id === state.selectedPageId);
+        if (!source) return state;
+        const page = { ...deepClone(source), id: createId('page'), name: `${source.name} copy` };
+        return { ...state, pages: [...state.pages, page], selectedPageId: page.id };
+      });
+    },
+    deleteSelectedPage() {
+      update((state) => {
+        const currentIndex = state.pages.findIndex((page) => page.id === state.selectedPageId);
+        const pages = state.pages.filter((page) => page.id !== state.selectedPageId);
+        if (pages.length === 0) {
+          const page = buildDefaultPage(state);
+          return { ...state, pages: [page], selectedPageId: page.id };
+        }
+        const selectedPageId = pages[Math.max(0, currentIndex - 1)]?.id ?? pages[0].id;
+        return { ...state, pages, selectedPageId };
+      });
+    },
+    updateSelectedPage(changes) {
+      updateSelectedPage(changes);
+    },
+    setPageCategories(categoryIds) {
+      updateSelectedPage((page, state) => ({
+        selectedCategoryIds: categoryIds,
+        selectedDishIds: visibleDishIdsForCategories(state.dishes, categoryIds),
+      }));
+    },
+    updateSelectedPageDesign(setting, value) {
+      updateSelectedPage((page) => ({ designSettings: { ...page.designSettings, [setting]: value } }));
     },
   };
 

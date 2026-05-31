@@ -2,7 +2,7 @@ import { APP_SECTIONS } from './models/menu.js';
 import { createProjectStore } from './state/projectStore.js';
 import { parseOptionalNumber } from './utils/pricing.js';
 import { renderContentSection } from './components/ContentSection.js';
-import { renderLayoutPrintPlaceholder } from './components/LayoutPrintPlaceholder.js';
+import { renderLayoutPrintSection } from './components/LayoutPrintSection.js';
 import { renderMainNavigation } from './components/MainNavigation.js';
 
 const root = document.querySelector('#root');
@@ -17,7 +17,7 @@ function render() {
   const workspace =
     project.selectedSection === APP_SECTIONS.CONTENT
       ? renderContentSection(project, searchTerm)
-      : renderLayoutPrintPlaceholder();
+      : renderLayoutPrintSection(project);
 
   root.innerHTML = `
     <div class="app-shell">
@@ -37,6 +37,7 @@ function captureFocus() {
     dishId: element.dataset.dishId,
     categoryId: element.dataset.categoryId,
     badgeId: element.dataset.badgeId,
+    pageId: element.dataset.pageId,
     selectionStart: element.selectionStart,
     selectionEnd: element.selectionEnd,
   };
@@ -85,6 +86,21 @@ function handleInput(event) {
   if (action === 'badge-field') {
     store.actions.updateBadge(target.dataset.dishId, target.dataset.badgeId, { [target.dataset.field]: target.value });
   }
+
+  if (action === 'page-field') {
+    store.actions.updateSelectedPage({ [target.dataset.field]: target.value });
+  }
+
+  if (action === 'design-setting') {
+    store.actions.updateSelectedPageDesign(target.dataset.field, Number(target.value));
+  }
+
+  if (action === 'page-category-toggle') {
+    const categoryIds = [...root.querySelectorAll('[data-action="page-category-toggle"]')]
+      .filter((checkbox) => checkbox.checked)
+      .map((checkbox) => checkbox.dataset.categoryId);
+    store.actions.setPageCategories(categoryIds);
+  }
 }
 
 function handleClick(event) {
@@ -103,6 +119,10 @@ function handleClick(event) {
   if (action === 'delete-dish') store.actions.deleteDish(target.dataset.dishId);
   if (action === 'add-badge') store.actions.addBadge(target.dataset.dishId);
   if (action === 'delete-badge') store.actions.deleteBadge(target.dataset.dishId, target.dataset.badgeId);
+  if (action === 'select-page') store.actions.selectPage(target.dataset.pageId);
+  if (action === 'add-page') store.actions.addPage();
+  if (action === 'duplicate-page') store.actions.duplicateSelectedPage();
+  if (action === 'delete-page') store.actions.deleteSelectedPage();
 }
 
 root.addEventListener('input', handleInput);
