@@ -91,7 +91,7 @@ export const DEFAULT_PAGE_DESIGN_SETTINGS = Object.freeze({
   priceColor: '#9b1c31',
   showDescriptions: true,
   showImages: true,
-  cardContentLayout: 'textBelowImage',
+  cardContentLayout: 'below',
   badgePosition: 'topLeft',
   cardBorderEnabled: true,
   cardBorderColor: '#eadfd4',
@@ -150,8 +150,15 @@ const visibleDishIdsForCategories = (dishes, categoryIds) =>
 const normalizeAlignment = (alignment) => (['top', 'center', 'bottom'].includes(alignment) ? alignment : 'center');
 const normalizeImageType = (type) => (type === 'url' ? 'url' : 'none');
 const normalizeImageFit = (fit) => (fit === 'contain' ? 'contain' : 'cover');
-const normalizeCardContentLayout = (layout) =>
-  ['textBelowImage', 'textRightOfImage', 'textLeftOfImage'].includes(layout) ? layout : 'textBelowImage';
+const LEGACY_CARD_CONTENT_LAYOUTS = Object.freeze({
+  textBelowImage: 'below',
+  textRightOfImage: 'imageLeft',
+  textLeftOfImage: 'imageRight',
+});
+const normalizeCardContentLayout = (layout) => {
+  const normalized = LEGACY_CARD_CONTENT_LAYOUTS[layout] ?? layout;
+  return ['below', 'imageLeft', 'imageRight'].includes(normalized) ? normalized : 'below';
+};
 const GRID_PRESETS = ['oneColumn', 'twoColumns', 'threeColumns', 'fourColumns', 'fiveColumns', 'catalogGrid', 'magazineGrid', 'heroGrid', 'bentoGrid', 'textColumns'];
 const LEGACY_GRID_PRESETS = { autoSmart: 'twoColumns', compactList: 'textColumns', magazine: 'magazineGrid' };
 const normalizeGridPreset = (preset) => {
