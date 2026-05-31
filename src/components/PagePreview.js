@@ -1,0 +1,114 @@
+import { escapeHtml } from './dom.js';
+
+const money = (value) => (typeof value === 'number' ? `${value.toFixed(value % 1 === 0 ? 0 : 2)} ₾` : '');
+
+export function renderPagePreview(project, page) {
+  const selectedCategoryIds = new Set(page.selectedCategoryIds);
+  const categories = project.categories.filter((category) => selectedCategoryIds.has(category.id));
+  const style = previewStyle(page);
+  const templateClass = `template-${page.layoutTemplate}`;
+  const fittingClass = `fit-${page.fittingMode}`;
+
+  return `
+    <section class="preview-stage" aria-label="Live page preview">
+      <div class="preview-toolbar">
+        <div>
+          <p class="eyebrow">Live preview</p>
+          <h1>${escapeHtml(page.name)}</h1>
+        </div>
+        <span>${page.paperSize} ${page.orientation}</span>
+      </div>
+      <div class="paper-scroll">
+        <article class="paper-page paper-${page.paperSize.toLowerCase()} paper-${page.orientation} ${templateClass} ${fittingClass}" style="${style}">
+          ${categories.length ? categories.map((category) => renderCategory(project, page, category)).join('') : renderEmptyPage()}
+        </article>
+      </div>
+    </section>
+  `;
+}
+
+function previewStyle(page) {
+  const settings = page.designSettings;
+  const columns = settings.columns === 'auto' ? 'auto' : settings.columns;
+  return [
+    `--page-margin:${settings.pageMargin}px`,
+    `--card-gap:${settings.cardGap}px`,
+    `--card-padding:${settings.cardPadding}px`,
+    `--card-radius:${settings.cardRadius}px`,
+    `--image-height:${settings.imageHeight}px`,
+    `--category-title-size:${settings.categoryTitleFontSize}px`,
+    `--dish-title-size:${settings.dishTitleFontSize}px`,
+    `--description-size:${settings.descriptionFontSize}px`,
+    `--old-price-size:${settings.oldPriceFontSize}px`,
+    `--new-price-size:${settings.newPriceFontSize}px`,
+    `--badge-size:${settings.badgeFontSize}px`,
+    `--weight-size:${settings.weightFontSize}px`,
+    `--preview-columns:${columns}`,
+  ].join(';');
+}
+
+function renderCategory(project, page, category) {
+  const selectedDishIds = new Set(page.selectedDishIds);
+  const dishes = project.dishes.filter((dish) => dish.visible && dish.categoryId === category.id && selectedDishIds.has(dish.id));
+  return `
+    <section class="preview-category">
+      <h2>${renderLocalizedText(category, 'name', page.languageMode, 'Untitled category')}</h2>
+      <div class="preview-dish-grid">
+        ${dishes.map((dish) => renderDishCard(dish, page)).join('')}
+      </div>
+    </section>
+  `;
+}
+
+function renderDishCard(dish, page) {
+  return `
+    <article class="preview-dish-card">
+      <div class="preview-image-box">
+        ${dish.imageUrl ? `<img src="${escapeHtml(dish.imageUrl)}" alt="" loading="lazy" />` : '<div class="preview-image-placeholder">Image</div>'}
+      </div>
+      <div class="preview-badges">
+        ${renderBadges(dish)}
+      </div>
+      <h3>${renderLocalizedText(dish, 'name', page.languageMode, 'Untitled dish')}</h3>
+      <div class="preview-description">${renderLocalizedText(dish, 'description', page.languageMode, '')}</div>
+      <div class="preview-meta-row">
+        <span class="preview-weight">${escapeHtml(dish.weight || '')}</span>
+        <span class="preview-prices">
+          ${dish.oldPrice ? `<span class="preview-old-price">${money(dish.oldPrice)}</span>` : ''}
+          ${dish.newPrice ? `<strong class="preview-new-price">${money(dish.newPrice)}</strong>` : ''}
+        </span>
+      </div>
+    </article>
+  `;
+}
+
+function renderBadges(dish) {
+  const badges = [...(dish.badges ?? [])];
+  if (dish.discountPercent) {
+    badges.unshift({ id: `${dish.id}_discount`, type: 'Promo', customText: `-${dish.discountPercent}%`, emoji: '' });
+  }
+
+  return badges
+    .map((badge) => {
+      const label = badge.type === 'Custom' ? badge.customText : badge.customText || badge.type;
+      return `<span class="preview-badge">${escapeHtml([badge.emoji, label].filter(Boolean).join(' '))}</span>`;
+    })
+    .join('');
+}
+
+function renderLocalizedText(item, field, languageMode, fallback) {
+  const english = item[`${field}En`] || '';
+  const georgian = item[`${field}Ge`] || '';
+
+  if (languageMode === 'en') return `<span>${escapeHtml(english || fallback)}</span>`;
+  if (languageMode === 'ge') return `<span>${escapeHtml(georgian || fallback)}</span>`;
+
+  return `
+    <span class="localized-line localized-en">${escapeHtml(english || fallback)}</span>
+    ${georgian ? `<span class="localized-line localized-ge">${escapeHtml(georgian)}</span>` : ''}
+  `;
+}
+
+function renderEmptyPage() {
+  return '<div class="preview-empty">Select categories to add content to this page.</div>';
+}
