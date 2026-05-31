@@ -1,3 +1,6 @@
+import { renderCardStyleControls } from './CardStyleControls.js';
+import { renderColorControls } from './ColorControls.js';
+
 const controls = [
   ['pageMargin', 'Page margin', 12, 80, 1],
   ['cardGap', 'Card gap', 4, 40, 1],
@@ -15,13 +18,22 @@ const controls = [
 
 export function renderDesignControls(page) {
   return `
-    <section class="panel-section" aria-labelledby="design-controls-title">
-      <p class="eyebrow">Design</p>
-      <h2 id="design-controls-title">Basic design settings</h2>
-      <div class="design-control-list">
-        ${controls.map(([field, label, min, max, step]) => renderSlider(page, field, label, min, max, step)).join('')}
+    <details class="panel-section collapsible-panel" open>
+      <summary>
+        <span>
+          <span class="eyebrow">Design</span>
+          <strong>Page design settings</strong>
+        </span>
+      </summary>
+      ${renderColorControls(page)}
+      ${renderCardStyleControls(page)}
+      <div class="design-subpanel">
+        <h3 class="panel-subtitle">Spacing & typography</h3>
+        <div class="design-control-list">
+          ${controls.map(([field, label, min, max, step]) => renderSlider(page, field, label, min, max, step)).join('')}
+        </div>
       </div>
-    </section>
+    </details>
   `;
 }
 
