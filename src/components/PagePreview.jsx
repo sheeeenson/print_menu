@@ -1,12 +1,29 @@
 import { PageFooterPreview } from './PageFooterPreview.jsx';
 import { PageHeaderPreview } from './PageHeaderPreview.jsx';
+import { calculateAutoFillGrid } from '../utils/autoFill.js';
 
 const money = (value) => (typeof value === 'number' ? `${value.toFixed(value % 1 === 0 ? 0 : 2)} ₾` : '');
 
 export function PagePreview({ project, page }) {
   const selectedCategoryIds = new Set(page.selectedCategoryIds);
   const categories = project.categories.filter((category) => selectedCategoryIds.has(category.id));
-  const style = previewStyle(page);
+  const selectedDishes = selectedVisibleDishes(project, page);
+  const autoFillLayout = page.fittingMode === 'autoFill'
+    ? calculateAutoFillGrid({
+        paperSize: page.paperSize,
+        orientation: page.orientation,
+        pageMargin: page.designSettings.pageMargin,
+        headerEnabled: page.header?.enabled,
+        headerHeight: page.header?.height,
+        footerEnabled: page.footer?.enabled,
+        footerHeight: page.footer?.height,
+        cardGap: page.designSettings.cardGap,
+        cardPadding: page.designSettings.cardPadding,
+        imageHeight: page.designSettings.imageHeight,
+        itemCount: selectedDishes.length,
+      })
+    : null;
+  const style = previewStyle(page, autoFillLayout);
   const templateClass = `template-${page.layoutTemplate}`;
   const fittingClass = `fit-${page.fittingMode}`;
 
@@ -24,7 +41,9 @@ export function PagePreview({ project, page }) {
           <div className="print-page-inner">
             <PageHeaderPreview page={page} renderLocalizedText={renderLocalizedText} />
             <main className="page-content">
-              {categories.length ? categories.map((category) => <PreviewCategory key={category.id} project={project} page={page} category={category} />) : <EmptyPage />}
+              {page.fittingMode === 'autoFill'
+                ? <AutoFillPreview dishes={selectedDishes} page={page} />
+                : categories.length ? categories.map((category) => <PreviewCategory key={category.id} project={project} page={page} category={category} />) : <EmptyPage />}
             </main>
             <PageFooterPreview page={page} renderLocalizedText={renderLocalizedText} />
           </div>
@@ -34,7 +53,7 @@ export function PagePreview({ project, page }) {
   );
 }
 
-function previewStyle(page) {
+function previewStyle(page, autoFillLayout) {
   const settings = page.designSettings;
   const columns = settings.columns === 'auto' ? 'auto' : settings.columns;
   const colors = {
@@ -46,6 +65,21 @@ function previewStyle(page) {
     priceColor: safeCssColor(settings.priceColor, '#9b1c31'),
     cardBorderColor: safeCssColor(settings.cardBorderColor, '#eadfd4'),
   };
+  const autoFillStyle = autoFillLayout
+    ? {
+        '--auto-fill-columns': autoFillLayout.columns,
+        '--auto-fill-rows': autoFillLayout.rows,
+        '--auto-image-height': `${autoFillLayout.imageHeight}px`,
+        '--auto-card-padding': `${autoFillLayout.cardPadding}px`,
+        '--auto-dish-title-size': `${Math.round(settings.dishTitleFontSize * autoFillLayout.fontScale)}px`,
+        '--auto-description-size': `${Math.round(settings.descriptionFontSize * autoFillLayout.fontScale)}px`,
+        '--auto-old-price-size': `${Math.round(settings.oldPriceFontSize * autoFillLayout.fontScale)}px`,
+        '--auto-new-price-size': `${Math.round(settings.newPriceFontSize * autoFillLayout.fontScale)}px`,
+        '--auto-badge-size': `${Math.round(settings.badgeFontSize * autoFillLayout.fontScale)}px`,
+        '--auto-weight-size': `${Math.round(settings.weightFontSize * autoFillLayout.fontScale)}px`,
+      }
+    : {};
+
   return {
     '--page-margin': `${settings.pageMargin}px`,
     '--card-gap': `${settings.cardGap}px`,
@@ -71,11 +105,32 @@ function previewStyle(page) {
     '--image-fit': settings.imageFit,
     '--title-line-clamp': settings.titleLineClamp,
     '--description-line-clamp': settings.descriptionLineClamp,
+    ...autoFillStyle,
   };
 }
 
 function safeCssColor(color, fallback) {
   return /^#[0-9a-fA-F]{3,8}$/.test(color) ? color : fallback;
+}
+
+
+function selectedVisibleDishes(project, page) {
+  const selectedCategoryIds = new Set(page.selectedCategoryIds ?? []);
+  const selectedDishIds = Array.isArray(page.selectedDishIds) ? new Set(page.selectedDishIds) : null;
+
+  return project.dishes.filter((dish) =>
+    dish.visible && selectedCategoryIds.has(dish.categoryId) && (!selectedDishIds || selectedDishIds.has(dish.id)),
+  );
+}
+
+function AutoFillPreview({ dishes, page }) {
+  if (!dishes.length) return <EmptyPage />;
+
+  return (
+    <div className="auto-fill-dish-grid" aria-label="Auto-filled dish layout">
+      {dishes.map((dish) => <DishCard key={dish.id} dish={dish} page={page} />)}
+    </div>
+  );
 }
 
 function PreviewCategory({ project, page, category }) {
