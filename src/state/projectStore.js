@@ -169,6 +169,10 @@ const normalizePage = (page, project, index) => {
   const selectedCategoryIds = (page.selectedCategoryIds ?? page.categoryIds ?? fallbackCategoryIds).filter((id) =>
     project.categories.some((category) => category.id === id),
   );
+  const visibleDishIds = visibleDishIdsForCategories(project.dishes, selectedCategoryIds);
+  const selectedDishIds = Array.isArray(page.selectedDishIds)
+    ? page.selectedDishIds.filter((dishId) => visibleDishIds.includes(dishId))
+    : visibleDishIds;
 
   return {
     id: page.id ?? createId('page'),
@@ -177,7 +181,7 @@ const normalizePage = (page, project, index) => {
     orientation: page.orientation === 'landscape' ? 'landscape' : 'portrait',
     languageMode: ['en', 'ge', 'bilingual'].includes(page.languageMode) ? page.languageMode : 'bilingual',
     selectedCategoryIds,
-    selectedDishIds: visibleDishIdsForCategories(project.dishes, selectedCategoryIds),
+    selectedDishIds,
     layoutTemplate: ['photoCards', 'classicList', 'compact'].includes(page.layoutTemplate) ? page.layoutTemplate : 'photoCards',
     fittingMode: ['fixed', 'autoFill', 'compact'].includes(page.fittingMode) ? page.fittingMode : 'fixed',
     header: normalizeHeader(page.header),
