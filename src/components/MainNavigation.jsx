@@ -4,7 +4,7 @@ export function MainNavigation({ snapshot, actions }) {
   const { project, saveStatus } = snapshot;
 
   return (
-    <nav className="main-navigation" aria-label="Main navigation">
+    <nav className="main-navigation top-nav" aria-label="Main navigation">
       <div className="brand-block">
         <span className="brand-mark">RMS</span>
         <input

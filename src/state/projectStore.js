@@ -56,8 +56,14 @@ export const DEFAULT_PAGE_DESIGN_SETTINGS = Object.freeze({
   mutedTextColor: '#6a5d53',
   accentColor: '#9b1c31',
   priceColor: '#9b1c31',
+  showDescriptions: true,
+  showImages: true,
+  cardContentLayout: 'textBelowImage',
+  badgePosition: 'topLeft',
   cardBorderEnabled: true,
   cardBorderColor: '#eadfd4',
+  cardBorderWidth: 1,
+  cardBorderOpacity: 100,
   cardShadowEnabled: false,
   imageFit: 'cover',
   titleLineClamp: 2,
@@ -111,6 +117,15 @@ const visibleDishIdsForCategories = (dishes, categoryIds) =>
 const normalizeAlignment = (alignment) => (['top', 'center', 'bottom'].includes(alignment) ? alignment : 'center');
 const normalizeImageType = (type) => (type === 'url' ? 'url' : 'none');
 const normalizeImageFit = (fit) => (fit === 'contain' ? 'contain' : 'cover');
+const normalizeCardContentLayout = (layout) =>
+  ['textBelowImage', 'textRightOfImage', 'textLeftOfImage'].includes(layout) ? layout : 'textBelowImage';
+const normalizeBadgePosition = (position) =>
+  ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(position) ? position : 'topLeft';
+const clampNumber = (value, fallback, min, max) => {
+  const number = Number(value ?? fallback);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(max, Math.max(min, number));
+};
 
 const normalizeHeader = (header = {}) => ({
   ...DEFAULT_PAGE_HEADER,
@@ -137,8 +152,15 @@ const normalizeFooter = (footer = {}) => ({
 const normalizeDesignSettings = (settings = {}) => ({
   ...DEFAULT_PAGE_DESIGN_SETTINGS,
   ...settings,
+  showDescriptions:
+    settings.showDescriptions === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.showDescriptions : Boolean(settings.showDescriptions),
+  showImages: settings.showImages === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.showImages : Boolean(settings.showImages),
+  cardContentLayout: normalizeCardContentLayout(settings.cardContentLayout),
+  badgePosition: normalizeBadgePosition(settings.badgePosition),
   cardBorderEnabled:
     settings.cardBorderEnabled === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderEnabled : Boolean(settings.cardBorderEnabled),
+  cardBorderWidth: clampNumber(settings.cardBorderWidth, DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderWidth, 0, 8),
+  cardBorderOpacity: clampNumber(settings.cardBorderOpacity, DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderOpacity, 0, 100),
   cardShadowEnabled:
     settings.cardShadowEnabled === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.cardShadowEnabled : Boolean(settings.cardShadowEnabled),
   imageFit: normalizeImageFit(settings.imageFit),

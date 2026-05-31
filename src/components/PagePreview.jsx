@@ -37,17 +37,19 @@ export function PagePreview({ project, page }) {
         <span>{page.paperSize} {page.orientation}</span>
       </div>
       <div className="paper-scroll">
-        <article className={`paper-page paper-${page.paperSize.toLowerCase()} paper-${page.orientation} ${templateClass} ${fittingClass}`} style={style}>
-          <div className="print-page-inner">
-            <PageHeaderPreview page={page} renderLocalizedText={renderLocalizedText} />
-            <main className="page-content">
-              {page.fittingMode === 'autoFill'
-                ? <AutoFillPreview dishes={selectedDishes} page={page} />
-                : categories.length ? categories.map((category) => <PreviewCategory key={category.id} project={project} page={page} category={category} />) : <EmptyPage />}
-            </main>
-            <PageFooterPreview page={page} renderLocalizedText={renderLocalizedText} />
-          </div>
-        </article>
+        <div className="preview-page-wrapper print-root">
+          <article className={`paper-page print-page ${page.paperSize.toLowerCase()} ${page.orientation} paper-${page.paperSize.toLowerCase()} paper-${page.orientation} ${templateClass} ${fittingClass}`} style={style}>
+            <div className="print-page-inner">
+              <PageHeaderPreview page={page} renderLocalizedText={renderLocalizedText} />
+              <main className="page-content">
+                {page.fittingMode === 'autoFill'
+                  ? <AutoFillPreview dishes={selectedDishes} page={page} />
+                  : categories.length ? categories.map((category) => <PreviewCategory key={category.id} project={project} page={page} category={category} />) : <EmptyPage />}
+              </main>
+              <PageFooterPreview page={page} renderLocalizedText={renderLocalizedText} />
+            </div>
+          </article>
+        </div>
       </div>
     </section>
   );
@@ -100,7 +102,8 @@ function previewStyle(page, autoFillLayout) {
     '--preview-muted-color': colors.mutedTextColor,
     '--preview-accent-color': colors.accentColor,
     '--preview-price-color': colors.priceColor,
-    '--card-border-color': settings.cardBorderEnabled ? colors.cardBorderColor : 'transparent',
+    '--card-border-color': settings.cardBorderEnabled ? hexToRgba(colors.cardBorderColor, settings.cardBorderOpacity / 100) : 'transparent',
+    '--card-border-width': settings.cardBorderEnabled ? `${settings.cardBorderWidth}px` : '0px',
     '--card-shadow': settings.cardShadowEnabled ? '0 14px 30px rgba(35,31,32,0.14)' : 'none',
     '--image-fit': settings.imageFit,
     '--title-line-clamp': settings.titleLineClamp,
@@ -111,6 +114,17 @@ function previewStyle(page, autoFillLayout) {
 
 function safeCssColor(color, fallback) {
   return /^#[0-9a-fA-F]{3,8}$/.test(color) ? color : fallback;
+}
+
+function hexToRgba(hex, alpha) {
+  const normalized = hex.replace('#', '');
+  const rgb = [3, 4].includes(normalized.length)
+    ? normalized.slice(0, 3).split('').map((char) => `${char}${char}`).join('')
+    : normalized.slice(0, 6);
+  const red = Number.parseInt(rgb.slice(0, 2), 16);
+  const green = Number.parseInt(rgb.slice(2, 4), 16);
+  const blue = Number.parseInt(rgb.slice(4, 6), 16);
+  return `rgba(${red}, ${green}, ${blue}, ${Math.min(1, Math.max(0, alpha))})`;
 }
 
 
@@ -147,22 +161,43 @@ function PreviewCategory({ project, page, category }) {
 }
 
 function DishCard({ dish, page }) {
+  const settings = page.designSettings;
+  const showImages = settings.showImages;
+  const hasBadges = Boolean(dish.discountPercent || dish.badges?.length);
+  const layoutClass = showImages ? `card-layout-${settings.cardContentLayout}` : 'card-layout-textOnly';
+  const badgePositionClass = `badge-position-${settings.badgePosition}`;
+
   return (
-    <article className="preview-dish-card">
-      <div className="preview-image-box">
-        {dish.imageUrl ? <img src={dish.imageUrl} alt="" loading="lazy" /> : <div className="preview-image-placeholder">Image</div>}
-      </div>
-      <div className="preview-badges">
-        <Badges dish={dish} />
-      </div>
-      <h3 className="dish-title">{renderLocalizedText(dish, 'name', page.languageMode, 'Untitled dish')}</h3>
-      <p className="preview-description dish-description">{renderLocalizedText(dish, 'description', page.languageMode, '')}</p>
-      <div className="preview-meta-row">
-        <span className="preview-weight">{dish.weight || ''}</span>
-        <span className="preview-prices">
-          {dish.oldPrice ? <span className="preview-old-price">{money(dish.oldPrice)}</span> : null}
-          {dish.newPrice ? <strong className="preview-new-price">{money(dish.newPrice)}</strong> : null}
-        </span>
+    <article className={`preview-dish-card ${layoutClass} ${showImages ? 'has-images' : 'no-images'}`}>
+      {showImages ? (
+        <div className="preview-image-box">
+          {dish.imageUrl ? <img src={dish.imageUrl} alt="" loading="lazy" /> : <div className="preview-image-placeholder">Image</div>}
+          {hasBadges ? (
+            <div className={`preview-badges image-badges ${badgePositionClass}`}>
+              <Badges dish={dish} />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      <div className="preview-card-content">
+        <div className="preview-title-row">
+          <h3 className="dish-title">{renderLocalizedText(dish, 'name', page.languageMode, 'Untitled dish')}</h3>
+          {!showImages && hasBadges ? (
+            <div className="preview-badges title-badges">
+              <Badges dish={dish} />
+            </div>
+          ) : null}
+        </div>
+        {settings.showDescriptions ? (
+          <p className="preview-description dish-description">{renderLocalizedText(dish, 'description', page.languageMode, '')}</p>
+        ) : null}
+        <div className="preview-meta-row">
+          <span className="preview-weight">{dish.weight || ''}</span>
+          <span className="preview-prices">
+            {dish.oldPrice ? <span className="preview-old-price">{money(dish.oldPrice)}</span> : null}
+            {dish.newPrice ? <strong className="preview-new-price">{money(dish.newPrice)}</strong> : null}
+          </span>
+        </div>
       </div>
     </article>
   );
