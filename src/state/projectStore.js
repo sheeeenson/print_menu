@@ -48,12 +48,26 @@ export const DEFAULT_FIT_STRATEGY = Object.freeze({
   minImageHeight: 32,
 });
 
+export const DEFAULT_CUSTOM_GRID = Object.freeze({
+  rows: 4,
+  columns: 3,
+  gap: 16,
+  autoRows: true,
+  densePacking: true,
+});
+
 export const DEFAULT_PAGE_DESIGN_SETTINGS = Object.freeze({
   pageMargin: 34,
   columns: 'auto',
-  gridPreset: 'autoSmart',
+  gridMode: 'preset',
+  gridPreset: 'twoColumns',
   cardDensity: 'balanced',
   cardGap: 16,
+  customGrid: { ...DEFAULT_CUSTOM_GRID },
+  makeFirstItemHero: false,
+  heroItemSpan: '2x2',
+  defaultItemSpan: '1x1',
+  customGridPresets: [],
   cardPadding: 14,
   cardRadius: 18,
   imageHeight: 118,
@@ -138,6 +152,40 @@ const normalizeImageType = (type) => (type === 'url' ? 'url' : 'none');
 const normalizeImageFit = (fit) => (fit === 'contain' ? 'contain' : 'cover');
 const normalizeCardContentLayout = (layout) =>
   ['textBelowImage', 'textRightOfImage', 'textLeftOfImage'].includes(layout) ? layout : 'textBelowImage';
+const GRID_PRESETS = ['oneColumn', 'twoColumns', 'threeColumns', 'fourColumns', 'fiveColumns', 'catalogGrid', 'magazineGrid', 'heroGrid', 'bentoGrid', 'textColumns'];
+const LEGACY_GRID_PRESETS = { autoSmart: 'twoColumns', compactList: 'textColumns', magazine: 'magazineGrid' };
+const normalizeGridPreset = (preset) => {
+  const normalized = LEGACY_GRID_PRESETS[preset] ?? preset;
+  return GRID_PRESETS.includes(normalized) ? normalized : 'twoColumns';
+};
+const normalizeGridMode = (mode) => (['preset', 'custom', 'autoFill'].includes(mode) ? mode : 'preset');
+const normalizeSpanOption = (value, fallback, allowed) => (allowed.includes(value) ? value : fallback);
+const normalizeCustomGrid = (customGrid = {}, fallbackGap = DEFAULT_PAGE_DESIGN_SETTINGS.cardGap) => ({
+  rows: clampNumber(customGrid.rows, DEFAULT_CUSTOM_GRID.rows, 1, 12),
+  columns: clampNumber(customGrid.columns, DEFAULT_CUSTOM_GRID.columns, 1, 8),
+  gap: clampNumber(customGrid.gap, fallbackGap, 0, 64),
+  autoRows: customGrid.autoRows === undefined ? DEFAULT_CUSTOM_GRID.autoRows : Boolean(customGrid.autoRows),
+  densePacking: customGrid.densePacking === undefined ? DEFAULT_CUSTOM_GRID.densePacking : Boolean(customGrid.densePacking),
+});
+const normalizeGridPresetList = (presets = [], fallbackGap = DEFAULT_PAGE_DESIGN_SETTINGS.cardGap) => Array.isArray(presets)
+  ? presets.map((preset) => ({
+      id: preset.id || createId('gridPreset'),
+      name: preset.name || 'Custom grid',
+      ...normalizeCustomGrid(preset, fallbackGap),
+      itemSpanRules: {
+        makeFirstItemHero: Boolean(preset.itemSpanRules?.makeFirstItemHero),
+        heroItemSpan: normalizeSpanOption(preset.itemSpanRules?.heroItemSpan, '2x2', ['2x1', '2x2', '3x2']),
+        defaultItemSpan: normalizeSpanOption(preset.itemSpanRules?.defaultItemSpan, '1x1', ['1x1', '2x1']),
+      },
+    })).slice(0, 24)
+  : [];
+const normalizeItemPlacements = (placements = {}) => Object.fromEntries(
+  Object.entries(placements ?? {}).map(([dishId, placement]) => [dishId, {
+    colSpan: clampNumber(placement?.colSpan, 1, 1, 8),
+    rowSpan: clampNumber(placement?.rowSpan, 1, 1, 12),
+    priority: clampNumber(placement?.priority, 0, -999, 999),
+  }]),
+);
 const normalizeBadgePosition = (position) =>
   ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(position) ? position : 'topLeft';
 const clampNumber = (value, fallback, min, max) => {
@@ -182,7 +230,13 @@ const normalizeDesignSettings = (settings = {}) => {
     showImages: settings.showImages === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.showImages : Boolean(settings.showImages),
     fitAllItems: settings.fitAllItems === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.fitAllItems : Boolean(settings.fitAllItems),
     fontPreset: Object.keys(FONT_PRESETS).includes(merged.fontPreset) || merged.fontPreset === 'custom' ? merged.fontPreset : 'custom',
-    gridPreset: ['autoSmart', 'oneColumn', 'twoColumns', 'threeColumns', 'fourColumns', 'compactList', 'magazine', 'heroGrid'].includes(merged.gridPreset) ? merged.gridPreset : 'autoSmart',
+    gridMode: normalizeGridMode(merged.gridMode),
+    gridPreset: normalizeGridPreset(merged.gridPreset),
+    customGrid: normalizeCustomGrid(merged.customGrid, merged.cardGap),
+    makeFirstItemHero: Boolean(merged.makeFirstItemHero),
+    heroItemSpan: normalizeSpanOption(merged.heroItemSpan, '2x2', ['2x1', '2x2', '3x2']),
+    defaultItemSpan: normalizeSpanOption(merged.defaultItemSpan, '1x1', ['1x1', '2x1']),
+    customGridPresets: normalizeGridPresetList(merged.customGridPresets, merged.cardGap),
     cardDensity: ['airy', 'balanced', 'compact'].includes(merged.cardDensity) ? merged.cardDensity : 'balanced',
     categoryTitleStyle: ['plain', 'underline', 'accentBar', 'pill', 'centered'].includes(merged.categoryTitleStyle) ? merged.categoryTitleStyle : 'plain',
     imageRatio: ['square', 'fourThree', 'sixteenNine', 'wide', 'custom'].includes(merged.imageRatio) ? merged.imageRatio : 'custom',
@@ -224,7 +278,8 @@ const buildDefaultPage = (project, name = 'Page 1') => {
     fittingMode: 'fixed',
     header: { ...DEFAULT_PAGE_HEADER },
     footer: { ...DEFAULT_PAGE_FOOTER },
-    designSettings: { ...DEFAULT_PAGE_DESIGN_SETTINGS },
+    designSettings: { ...DEFAULT_PAGE_DESIGN_SETTINGS, customGrid: { ...DEFAULT_CUSTOM_GRID }, customGridPresets: [] },
+    itemPlacements: {},
   };
 };
 
@@ -251,6 +306,7 @@ const normalizePage = (page, project, index) => {
     header: normalizeHeader(page.header),
     footer: normalizeFooter(page.footer),
     designSettings: normalizeDesignSettings(page.designSettings),
+    itemPlacements: normalizeItemPlacements(page.itemPlacements),
   };
 };
 
@@ -482,6 +538,65 @@ export function createProjectStore() {
     },
     updateSelectedPageDesign(setting, value) {
       updateSelectedPage((page) => ({ designSettings: { ...page.designSettings, [setting]: value } }));
+    },
+    updateSelectedPageCustomGrid(setting, value) {
+      updateSelectedPage((page) => ({
+        designSettings: {
+          ...page.designSettings,
+          customGrid: { ...page.designSettings.customGrid, [setting]: value },
+        },
+      }));
+    },
+    saveSelectedPageCustomGridPreset(name) {
+      updateSelectedPage((page) => {
+        const trimmedName = name.trim() || `Custom grid ${(page.designSettings.customGridPresets?.length ?? 0) + 1}`;
+        const preset = {
+          id: createId('gridPreset'),
+          name: trimmedName,
+          ...page.designSettings.customGrid,
+          itemSpanRules: {
+            makeFirstItemHero: page.designSettings.makeFirstItemHero,
+            heroItemSpan: page.designSettings.heroItemSpan,
+            defaultItemSpan: page.designSettings.defaultItemSpan,
+          },
+        };
+        return {
+          designSettings: {
+            ...page.designSettings,
+            customGridPresets: [...(page.designSettings.customGridPresets ?? []), preset],
+          },
+        };
+      });
+    },
+    applySelectedPageCustomGridPreset(presetId) {
+      updateSelectedPage((page) => {
+        const preset = page.designSettings.customGridPresets?.find((item) => item.id === presetId);
+        if (!preset) return {};
+        return {
+          designSettings: {
+            ...page.designSettings,
+            gridMode: 'custom',
+            customGrid: {
+              rows: preset.rows,
+              columns: preset.columns,
+              gap: preset.gap,
+              autoRows: preset.autoRows,
+              densePacking: preset.densePacking,
+            },
+            makeFirstItemHero: preset.itemSpanRules?.makeFirstItemHero ?? page.designSettings.makeFirstItemHero,
+            heroItemSpan: preset.itemSpanRules?.heroItemSpan ?? page.designSettings.heroItemSpan,
+            defaultItemSpan: preset.itemSpanRules?.defaultItemSpan ?? page.designSettings.defaultItemSpan,
+          },
+        };
+      });
+    },
+    deleteSelectedPageCustomGridPreset(presetId) {
+      updateSelectedPage((page) => ({
+        designSettings: {
+          ...page.designSettings,
+          customGridPresets: (page.designSettings.customGridPresets ?? []).filter((preset) => preset.id !== presetId),
+        },
+      }));
     },
     updateSelectedPageFitStrategy(setting, value) {
       updateSelectedPage((page) => ({

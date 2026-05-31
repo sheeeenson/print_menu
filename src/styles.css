@@ -413,3 +413,67 @@ h1, h2, h3, h4, p { margin-top: 0; } h1, h2, h3, h4 { line-height: 1.15; }
 }
 .fit-help-text { margin: -4px 0 8px; color: #7c7065; font-size: 0.82rem; font-weight: 700; }
 .panel-fit-warning { border: 1px solid #e1a02d; border-radius: 16px; background: #fff4d8; color: #7c4b00; padding: 12px 14px; margin-bottom: 18px; font-size: 0.86rem; font-weight: 850; line-height: 1.35; }
+
+/* TASK 006.5 grid builder */
+.grid-number-control { gap: 8px; }
+.grid-number-control input[type="number"] { width: 100%; border: 1px solid #d8cbbd; border-radius: 12px; background: #fff; color: #231f20; padding: 9px 10px; font-weight: 750; }
+.saved-grid-card { border: 1px solid #e4d9cd; border-radius: 16px; background: #fffdfa; padding: 12px; display: grid; gap: 10px; }
+.saved-grid-card .field-label { margin-bottom: 0; }
+.saved-grid-list { display: grid; gap: 8px; }
+.saved-grid-list > strong { color: #231f20; font-size: 0.84rem; }
+.saved-grid-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 7px; align-items: center; border: 1px solid #e4d9cd; border-radius: 14px; background: #fff; padding: 8px; }
+.saved-grid-row span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #574d45; font-weight: 850; font-size: 0.84rem; }
+.saved-grid-row button { border: 1px solid #ded1c1; border-radius: 999px; background: #fffaf2; color: #574d45; padding: 6px 9px; font-size: 0.76rem; font-weight: 850; }
+.saved-grid-row button.danger { color: #a22a2a; }
+
+.grid-mode-custom .page-content { display: flex; flex-direction: column; min-height: 0; padding-top: var(--card-gap); }
+.custom-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-columns), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--grid-rows), minmax(0, 1fr));
+  grid-auto-flow: var(--grid-auto-flow);
+  grid-auto-rows: minmax(0, 1fr);
+  gap: var(--grid-gap);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+.custom-grid-item {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  grid-column: span var(--col-span);
+  grid-row: span var(--row-span);
+}
+.custom-grid-item .preview-dish-card { width: 100%; height: 100%; padding: min(var(--card-padding), 12px); }
+.custom-grid-item .preview-image-box { min-height: 0; height: min(var(--image-height), 44%); }
+.custom-grid-item .preview-card-content { gap: 5px; }
+.custom-grid-item .preview-meta-row { gap: 6px; }
+.custom-grid-item .hero-dish-card .preview-image-box { height: min(calc(var(--image-height) * 1.25), 54%); }
+
+.paper-page[style*="--preview-columns: 5"] .preview-dish-grid,
+.paper-page[style*="--preview-columns:5"] .preview-dish-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+
+.grid-textColumns .preview-dish-grid,
+.grid-textColumns .auto-fill-dish-grid,
+.grid-compactList .preview-dish-grid,
+.grid-compactList .auto-fill-dish-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: max(4px, calc(var(--card-gap) * 0.7)); }
+.grid-textColumns .preview-dish-card,
+.grid-compactList .preview-dish-card { padding: max(6px, calc(var(--card-padding) * 0.75)); }
+.grid-textColumns .preview-image-box,
+.grid-compactList .preview-image-box { display: none; }
+.grid-textColumns .preview-description,
+.grid-compactList .preview-description { -webkit-line-clamp: 2; }
+
+.grid-catalogGrid .preview-dish-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.grid-catalogGrid .preview-dish-card { min-height: 0; }
+.grid-magazineGrid .preview-dish-grid,
+.grid-magazine .preview-dish-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.grid-magazineGrid .preview-dish-card:nth-child(3n+1),
+.grid-magazine .preview-dish-card:nth-child(3n+1) { grid-column: span 2; }
+.grid-heroGrid .preview-dish-grid .preview-dish-card:first-child { grid-column: span 2; }
+.grid-heroGrid .preview-dish-grid .preview-dish-card:first-child .preview-image-box { height: calc(var(--image-height) * 1.25); }
+.grid-bentoGrid .preview-dish-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-flow: dense; }
+.grid-bentoGrid .preview-dish-card:nth-child(6n+1) { grid-column: span 2; grid-row: span 2; }
+.grid-bentoGrid .preview-dish-card:nth-child(6n+4) { grid-column: span 2; }

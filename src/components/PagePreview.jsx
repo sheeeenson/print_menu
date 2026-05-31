@@ -10,6 +10,7 @@ export function PagePreview({ project, page }) {
   const categories = project.categories.filter((category) => selectedCategoryIds.has(category.id));
   const selectedDishes = selectedVisibleDishes(project, page);
   const paper = paperDimensions(page.paperSize, page.orientation);
+  const isAutoFillMode = page.designSettings.gridMode === 'autoFill' || page.fittingMode === 'autoFill';
   const fitAllLayout = page.designSettings.fitAllItems
     ? calculateFitAllLayout({
         itemCount: selectedDishes.length,
@@ -23,7 +24,7 @@ export function PagePreview({ project, page }) {
         fitStrategy: page.designSettings.fitStrategy,
       })
     : null;
-  const autoFillLayout = !fitAllLayout && page.fittingMode === 'autoFill'
+  const autoFillLayout = !fitAllLayout && isAutoFillMode
     ? calculateAutoFillGrid({
         paperSize: page.paperSize,
         orientation: page.orientation,
@@ -38,10 +39,11 @@ export function PagePreview({ project, page }) {
         itemCount: selectedDishes.length,
       })
     : null;
-  const style = previewStyle(page, autoFillLayout, fitAllLayout);
+  const style = previewStyle(page, autoFillLayout, fitAllLayout, selectedDishes.length);
   const templateClass = `template-${page.layoutTemplate}`;
-  const fittingClass = page.designSettings.fitAllItems ? 'fit-all-items' : `fit-${page.fittingMode}`;
-  const gridClass = `grid-${page.designSettings.gridPreset}`;
+  const fittingClass = page.designSettings.fitAllItems ? 'fit-all-items' : `fit-${isAutoFillMode ? 'autoFill' : page.fittingMode}`;
+  const gridClass = `grid-mode-${page.designSettings.gridMode} grid-${page.designSettings.gridPreset}`;
+  const customGridWarning = page.designSettings.gridMode === 'custom' ? getCustomGridWarning(selectedDishes, page, fitAllLayout) : '';
   const densityClass = `density-${page.designSettings.cardDensity}`;
   const categoryStyleClass = `category-style-${page.designSettings.categoryTitleStyle}`;
 
@@ -61,11 +63,14 @@ export function PagePreview({ project, page }) {
               <PageHeaderPreview page={page} renderLocalizedText={renderLocalizedText} />
               <main className="page-content">
                 {fitAllLayout?.warning ? <div className="fit-warning" role="alert">{fitAllLayout.warning}</div> : null}
-                {fitAllLayout
-                  ? <FitAllPreview dishes={selectedDishes} page={page} fitAllLayout={fitAllLayout} />
-                  : page.fittingMode === 'autoFill'
-                    ? <AutoFillPreview dishes={selectedDishes} page={page} />
-                    : categories.length ? categories.map((category) => <PreviewCategory key={category.id} project={project} page={page} category={category} />) : <EmptyPage />}
+                {customGridWarning ? <div className="fit-warning" role="alert">{customGridWarning}</div> : null}
+                {page.designSettings.gridMode === 'custom'
+                  ? <CustomGridPreview dishes={selectedDishes} page={page} fitAllLayout={fitAllLayout} />
+                  : fitAllLayout
+                    ? <FitAllPreview dishes={selectedDishes} page={page} fitAllLayout={fitAllLayout} />
+                    : isAutoFillMode
+                      ? <AutoFillPreview dishes={selectedDishes} page={page} />
+                      : categories.length ? categories.map((category) => <PreviewCategory key={category.id} project={project} page={page} category={category} />) : <EmptyPage />}
               </main>
               <PageFooterPreview page={page} renderLocalizedText={renderLocalizedText} />
             </div>
@@ -76,9 +81,10 @@ export function PagePreview({ project, page }) {
   );
 }
 
-function previewStyle(page, autoFillLayout, fitAllLayout) {
+function previewStyle(page, autoFillLayout, fitAllLayout, itemCount = 0) {
   const settings = page.designSettings;
   const columns = gridColumns(settings);
+  const customRows = effectiveCustomGridRows(settings, fitAllLayout, itemCount);
   const colors = {
     backgroundColor: safeCssColor(settings.backgroundColor, '#fffdfa'),
     cardBackgroundColor: safeCssColor(settings.cardBackgroundColor, '#ffffff'),
@@ -136,6 +142,10 @@ function previewStyle(page, autoFillLayout, fitAllLayout) {
     '--badge-size': `${settings.badgeFontSize}px`,
     '--weight-size': `${settings.weightFontSize}px`,
     '--preview-columns': columns,
+    '--grid-columns': settings.customGrid.columns,
+    '--grid-rows': customRows,
+    '--grid-gap': `${settings.customGrid.gap}px`,
+    '--grid-auto-flow': settings.customGrid.densePacking ? 'dense' : 'row',
     '--category-font-family': settings.categoryFontFamily,
     '--dish-title-font-family': settings.dishTitleFontFamily,
     '--description-font-family': settings.descriptionFontFamily,
@@ -177,10 +187,19 @@ function cssLength(value) {
 function gridColumns(settings) {
   if (settings.gridPreset === 'oneColumn') return 1;
   if (settings.gridPreset === 'twoColumns') return 2;
-  if (settings.gridPreset === 'threeColumns') return 3;
+  if (settings.gridPreset === 'threeColumns' || settings.gridPreset === 'catalogGrid' || settings.gridPreset === 'magazineGrid' || settings.gridPreset === 'bentoGrid') return 3;
   if (settings.gridPreset === 'fourColumns') return 4;
+  if (settings.gridPreset === 'fiveColumns') return 5;
+  if (settings.gridPreset === 'textColumns') return 2;
   if (settings.columns !== 'auto') return settings.columns;
   return 'auto';
+}
+
+function effectiveCustomGridRows(settings, fitAllLayout, itemCount) {
+  if (settings.gridMode !== 'custom') return settings.customGrid.rows;
+  const requiredRows = Math.ceil(totalSpanCellsForCount(itemCount, settings) / settings.customGrid.columns);
+  if (fitAllLayout) return Math.max(settings.customGrid.rows, fitAllLayout.rows, requiredRows);
+  return settings.customGrid.autoRows ? Math.max(settings.customGrid.rows, requiredRows) : settings.customGrid.rows;
 }
 
 function densityValues(density) {
@@ -222,6 +241,81 @@ function selectedVisibleDishes(project, page) {
   );
 }
 
+function spanToSize(value) {
+  const [colSpan, rowSpan] = String(value).split('x').map((part) => Number(part));
+  return { colSpan: Number.isFinite(colSpan) ? colSpan : 1, rowSpan: Number.isFinite(rowSpan) ? rowSpan : 1 };
+}
+
+function itemSpanForIndex(index, settings) {
+  if (index === 0 && settings.makeFirstItemHero) return spanToSize(settings.heroItemSpan);
+  return spanToSize(settings.defaultItemSpan);
+}
+
+function totalSpanCellsForCount(count, settings) {
+  return Array.from({ length: count }).reduce((total, _, index) => {
+    const span = itemSpanForIndex(index, settings);
+    return total + span.colSpan * span.rowSpan;
+  }, 0);
+}
+
+function canPackItems(dishes, page, rowLimit) {
+  const settings = page.designSettings;
+  const columns = settings.customGrid.columns;
+  const grid = Array.from({ length: rowLimit }, () => Array(columns).fill(false));
+
+  return dishes.every((dish, index) => {
+    const placement = page.itemPlacements?.[dish.id];
+    const fallbackSpan = itemSpanForIndex(index, settings);
+    const colSpan = Math.min(columns, placement?.colSpan ?? fallbackSpan.colSpan);
+    const rowSpan = Math.max(1, placement?.rowSpan ?? fallbackSpan.rowSpan);
+    for (let row = 0; row <= rowLimit - rowSpan; row += 1) {
+      for (let column = 0; column <= columns - colSpan; column += 1) {
+        let open = true;
+        for (let rr = row; rr < row + rowSpan; rr += 1) {
+          for (let cc = column; cc < column + colSpan; cc += 1) {
+            if (grid[rr][cc]) open = false;
+          }
+        }
+        if (open) {
+          for (let rr = row; rr < row + rowSpan; rr += 1) {
+            for (let cc = column; cc < column + colSpan; cc += 1) grid[rr][cc] = true;
+          }
+          return true;
+        }
+      }
+    }
+    return false;
+  });
+}
+
+function getCustomGridWarning(dishes, page, fitAllLayout) {
+  if (!dishes.length) return '';
+  if (fitAllLayout?.warning) return 'Some items do not fit into the current custom grid. Increase rows, reduce item size, enable Auto rows, or use Auto-fill.';
+  if (page.designSettings.customGrid.autoRows || page.designSettings.fitAllItems) return '';
+  return canPackItems(dishes, page, page.designSettings.customGrid.rows)
+    ? ''
+    : 'Some items do not fit into the current custom grid. Increase rows, reduce item size, enable Auto rows, or use Auto-fill.';
+}
+
+function CustomGridPreview({ dishes, page, fitAllLayout }) {
+  if (!dishes.length) return <EmptyPage />;
+  return (
+    <div className="custom-grid" aria-label="Custom dish grid">
+      {dishes.map((dish, index) => {
+        const placement = page.itemPlacements?.[dish.id];
+        const fallbackSpan = itemSpanForIndex(index, page.designSettings);
+        const colSpan = Math.min(page.designSettings.customGrid.columns, placement?.colSpan ?? fallbackSpan.colSpan);
+        const rowSpan = placement?.rowSpan ?? fallbackSpan.rowSpan;
+        return (
+          <div className="custom-grid-item" key={dish.id} style={{ '--col-span': colSpan, '--row-span': rowSpan }}>
+            <DishCard dish={dish} page={page} hideDescription={fitAllLayout?.hideDescriptions} isHero={index === 0 && page.designSettings.makeFirstItemHero} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function AutoFillPreview({ dishes, page }) {
   if (!dishes.length) return <EmptyPage />;
 
@@ -259,7 +353,7 @@ function PreviewCategory({ project, page, category }) {
 
 function DishCard({ dish, page, hideDescription = false, isHero = false }) {
   const settings = page.designSettings;
-  const showImages = settings.showImages && settings.gridPreset !== 'compactList';
+  const showImages = settings.showImages && !(settings.gridMode === 'preset' && settings.gridPreset === 'textColumns');
   const hasBadges = Boolean(dish.discountPercent || dish.badges?.length);
   const layoutClass = showImages ? `card-layout-${settings.cardContentLayout}` : 'card-layout-textOnly';
   const badgePositionClass = `badge-position-${settings.badgePosition}`;

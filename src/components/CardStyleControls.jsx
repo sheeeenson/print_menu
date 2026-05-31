@@ -14,18 +14,6 @@ export function CardStyleControls({ page, actions }) {
         <input type="checkbox" checked={settings.showImages} onChange={update('showImages')} />
         Show images
       </label>
-      <label className="field-label">Grid style
-        <select value={settings.gridPreset} onChange={update('gridPreset')}>
-          <option value="autoSmart">Auto Smart</option>
-          <option value="oneColumn">1 Column</option>
-          <option value="twoColumns">2 Columns</option>
-          <option value="threeColumns">3 Columns</option>
-          <option value="fourColumns">4 Columns</option>
-          <option value="compactList">Compact List</option>
-          <option value="magazine">Magazine</option>
-          <option value="heroGrid">Hero + Grid</option>
-        </select>
-      </label>
       <label className="field-label">Card density
         <select value={settings.cardDensity} onChange={update('cardDensity')}>
           <option value="airy">Airy</option>

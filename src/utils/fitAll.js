@@ -126,8 +126,9 @@ function columnsFromPreset(preset, itemCount, width, height) {
   if (preset === 'twoColumns') return Math.min(2, itemCount);
   if (preset === 'threeColumns') return Math.min(3, itemCount);
   if (preset === 'fourColumns') return Math.min(4, itemCount);
-  if (preset === 'compactList') return Math.min(Math.max(2, Math.round(width / 175)), itemCount);
-  if (preset === 'heroGrid' || preset === 'magazine') return Math.min(Math.max(2, Math.round(width / 240)), itemCount);
+  if (preset === 'fiveColumns') return Math.min(5, itemCount);
+  if (preset === 'textColumns' || preset === 'compactList') return Math.min(Math.max(2, Math.round(width / 175)), itemCount);
+  if (['heroGrid', 'magazine', 'magazineGrid', 'catalogGrid', 'bentoGrid'].includes(preset)) return Math.min(Math.max(2, Math.round(width / 240)), itemCount);
   return smartColumns(itemCount, width, height);
 }
 
