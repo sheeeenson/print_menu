@@ -21,17 +21,16 @@ export function LayoutPrintSection({ project, actions }) {
   return (
     <section className="layout-print-section" aria-label="Layout and print workspace">
       <aside className="layout-admin-panel layout-sidebar">
-        <div className="panel-section print-actions-panel preview-controls">
-          <p className="eyebrow">Output</p>
-          <h2>Print &amp; export</h2>
-          <div className="print-action-row">
-            <button className="primary-action compact" type="button" onClick={printPage}>Print</button>
-            <button className="secondary-action compact" type="button" onClick={() => setIsPdfModalOpen(true)}>Save as PDF</button>
-          </div>
-        </div>
         {fitWarning ? <div className="panel-fit-warning" role="alert">{fitWarning}</div> : null}
 
-        {selectedPage ? <LayoutPrintControls page={selectedPage} actions={actions} /> : null}
+        {selectedPage ? (
+          <LayoutPrintControls
+            page={selectedPage}
+            actions={actions}
+            onPrint={printPage}
+            onSaveAsPdf={() => setIsPdfModalOpen(true)}
+          />
+        ) : null}
         <PageList project={project} actions={actions} />
         {selectedPage ? <PageSettingsPanel page={selectedPage} actions={actions} /> : null}
         {selectedPage ? <PageContentSelector project={project} page={selectedPage} actions={actions} /> : null}
@@ -46,7 +45,7 @@ export function LayoutPrintSection({ project, actions }) {
 }
 
 
-function LayoutPrintControls({ page, actions }) {
+function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf }) {
   const settings = page.designSettings;
   const update = (field) => (event) => {
     const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
@@ -58,6 +57,12 @@ function LayoutPrintControls({ page, actions }) {
     <div className="panel-section preview-controls layout-print-controls">
       <p className="eyebrow">Layout &amp; Print</p>
       <h2>Card display</h2>
+      <p className="layout-debug-label" role="status">Layout controls loaded</p>
+      <div className="print-action-row" aria-label="Print and demo actions">
+        <button className="primary-action compact" type="button" onClick={onPrint}>Print</button>
+        <button className="secondary-action compact" type="button" onClick={onSaveAsPdf}>Save as PDF</button>
+        <button className="secondary-action compact" type="button" onClick={actions.resetDemoData}>Reset demo data</button>
+      </div>
       <label className="toggle-label">
         <input type="checkbox" checked={settings.showImages} onChange={update('showImages')} />
         Show images
@@ -82,6 +87,18 @@ function LayoutPrintControls({ page, actions }) {
           <input type="color" value={settings.cardBorderColor} onChange={update('cardBorderColor')} disabled={!settings.cardBorderEnabled} />
           <input value={settings.cardBorderColor} onChange={update('cardBorderColor')} disabled={!settings.cardBorderEnabled} />
         </span>
+      </label>
+      <label className="slider-label">
+        <span>Card border width<strong>{settings.cardBorderWidth}px</strong></span>
+        <input
+          type="range"
+          min="0"
+          max="8"
+          step="1"
+          value={settings.cardBorderWidth}
+          disabled={!settings.cardBorderEnabled}
+          onChange={updateNumber('cardBorderWidth')}
+        />
       </label>
       <label className="slider-label">
         <span>Card border opacity<strong>{settings.cardBorderOpacity}%</strong></span>

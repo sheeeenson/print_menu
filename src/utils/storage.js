@@ -8,3 +8,7 @@ export function loadProject() {
 export function saveProject(project) {
   localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
 }
+
+export function clearProject() {
+  localStorage.removeItem(PROJECT_STORAGE_KEY);
+}
