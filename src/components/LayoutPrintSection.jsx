@@ -30,6 +30,8 @@ export function LayoutPrintSection({ project, actions }) {
           </div>
         </div>
         {fitWarning ? <div className="panel-fit-warning" role="alert">{fitWarning}</div> : null}
+
+        {selectedPage ? <LayoutPrintControls page={selectedPage} actions={actions} /> : null}
         <PageList project={project} actions={actions} />
         {selectedPage ? <PageSettingsPanel page={selectedPage} actions={actions} /> : null}
         {selectedPage ? <PageContentSelector project={project} page={selectedPage} actions={actions} /> : null}
@@ -43,6 +45,60 @@ export function LayoutPrintSection({ project, actions }) {
   );
 }
 
+
+function LayoutPrintControls({ page, actions }) {
+  const settings = page.designSettings;
+  const update = (field) => (event) => {
+    const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
+    actions.updateSelectedPageDesign(field, value);
+  };
+  const updateNumber = (field) => (event) => actions.updateSelectedPageDesign(field, Number(event.target.value));
+
+  return (
+    <div className="panel-section preview-controls layout-print-controls">
+      <p className="eyebrow">Layout &amp; Print</p>
+      <h2>Card display</h2>
+      <label className="toggle-label">
+        <input type="checkbox" checked={settings.showImages} onChange={update('showImages')} />
+        Show images
+      </label>
+      <label className="toggle-label">
+        <input type="checkbox" checked={settings.showDescriptions} onChange={update('showDescriptions')} />
+        Show descriptions
+      </label>
+      <label className="field-label">Card content layout
+        <select value={settings.cardContentLayout} onChange={update('cardContentLayout')} disabled={!settings.showImages}>
+          <option value="below">Below image</option>
+          <option value="imageLeft">Image left</option>
+          <option value="imageRight">Image right</option>
+        </select>
+      </label>
+      <label className="toggle-label">
+        <input type="checkbox" checked={settings.cardBorderEnabled} onChange={update('cardBorderEnabled')} />
+        Border enabled
+      </label>
+      <label className="color-label">Card border color
+        <span>
+          <input type="color" value={settings.cardBorderColor} onChange={update('cardBorderColor')} disabled={!settings.cardBorderEnabled} />
+          <input value={settings.cardBorderColor} onChange={update('cardBorderColor')} disabled={!settings.cardBorderEnabled} />
+        </span>
+      </label>
+      <label className="slider-label">
+        <span>Card border opacity<strong>{settings.cardBorderOpacity}%</strong></span>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          value={settings.cardBorderOpacity}
+          disabled={!settings.cardBorderEnabled}
+          onChange={updateNumber('cardBorderOpacity')}
+        />
+      </label>
+    </div>
+  );
+}
+
 function SavePdfModal({ onCancel, onConfirm }) {
   return (
     <div className="modal-backdrop" role="presentation">
@@ -50,7 +106,7 @@ function SavePdfModal({ onCancel, onConfirm }) {
         <p className="eyebrow">Browser PDF export</p>
         <h2 id="save-pdf-title">Save as PDF</h2>
         <p>
-          In the browser print dialog, choose Save as PDF, set scale to 100%, choose correct paper size, and enable background graphics.
+          Choose Save as PDF in the browser print dialog. Set scale to 100%, select correct paper size, and enable background graphics.
         </p>
         <div className="modal-actions">
           <button className="secondary-action compact" type="button" onClick={onCancel}>Cancel</button>
