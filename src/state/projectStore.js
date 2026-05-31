@@ -2,6 +2,7 @@ import { demoProject } from '../data/demoProject.js';
 import { SAVE_STATUSES } from '../models/menu.js';
 import { createId } from '../utils/id.js';
 import { recalculatePricing } from '../utils/pricing.js';
+import { FONT_PRESETS } from '../utils/typography.js';
 import { loadProject, saveProject } from '../utils/storage.js';
 
 const deepClone = (value) => JSON.parse(JSON.stringify(value));
@@ -36,13 +37,27 @@ export const DEFAULT_PAGE_FOOTER = Object.freeze({
   alignment: 'center',
 });
 
+export const DEFAULT_FIT_STRATEGY = Object.freeze({
+  allowShrinkCards: true,
+  allowShrinkImages: true,
+  allowShrinkText: true,
+  allowHideDescriptions: false,
+  allowCompactFallback: true,
+  minReadableFontSize: 8,
+  minCardHeight: 72,
+  minImageHeight: 32,
+});
+
 export const DEFAULT_PAGE_DESIGN_SETTINGS = Object.freeze({
   pageMargin: 34,
   columns: 'auto',
+  gridPreset: 'autoSmart',
+  cardDensity: 'balanced',
   cardGap: 16,
   cardPadding: 14,
   cardRadius: 18,
   imageHeight: 118,
+  imageRatio: 'custom',
   categoryTitleFontSize: 28,
   dishTitleFontSize: 17,
   descriptionFontSize: 12,
@@ -50,6 +65,10 @@ export const DEFAULT_PAGE_DESIGN_SETTINGS = Object.freeze({
   newPriceFontSize: 18,
   badgeFontSize: 10,
   weightFontSize: 11,
+  fontPreset: 'cleanModern',
+  ...FONT_PRESETS.cleanModern,
+  fitAllItems: false,
+  fitStrategy: { ...DEFAULT_FIT_STRATEGY },
   backgroundColor: '#fffdfa',
   cardBackgroundColor: '#ffffff',
   textColor: '#231f20',
@@ -149,24 +168,47 @@ const normalizeFooter = (footer = {}) => ({
   alignment: normalizeAlignment(footer.alignment),
 });
 
-const normalizeDesignSettings = (settings = {}) => ({
-  ...DEFAULT_PAGE_DESIGN_SETTINGS,
-  ...settings,
-  showDescriptions:
-    settings.showDescriptions === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.showDescriptions : Boolean(settings.showDescriptions),
-  showImages: settings.showImages === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.showImages : Boolean(settings.showImages),
-  cardContentLayout: normalizeCardContentLayout(settings.cardContentLayout),
-  badgePosition: normalizeBadgePosition(settings.badgePosition),
-  cardBorderEnabled:
-    settings.cardBorderEnabled === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderEnabled : Boolean(settings.cardBorderEnabled),
-  cardBorderWidth: clampNumber(settings.cardBorderWidth, DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderWidth, 0, 8),
-  cardBorderOpacity: clampNumber(settings.cardBorderOpacity, DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderOpacity, 0, 100),
-  cardShadowEnabled:
-    settings.cardShadowEnabled === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.cardShadowEnabled : Boolean(settings.cardShadowEnabled),
-  imageFit: normalizeImageFit(settings.imageFit),
-  titleLineClamp: Number(settings.titleLineClamp ?? DEFAULT_PAGE_DESIGN_SETTINGS.titleLineClamp),
-  descriptionLineClamp: Number(settings.descriptionLineClamp ?? DEFAULT_PAGE_DESIGN_SETTINGS.descriptionLineClamp),
-});
+const normalizeDesignSettings = (settings = {}) => {
+  const merged = {
+    ...DEFAULT_PAGE_DESIGN_SETTINGS,
+    ...settings,
+    fitStrategy: { ...DEFAULT_FIT_STRATEGY, ...(settings.fitStrategy ?? {}) },
+  };
+
+  return {
+    ...merged,
+    showDescriptions:
+      settings.showDescriptions === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.showDescriptions : Boolean(settings.showDescriptions),
+    showImages: settings.showImages === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.showImages : Boolean(settings.showImages),
+    fitAllItems: settings.fitAllItems === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.fitAllItems : Boolean(settings.fitAllItems),
+    fontPreset: Object.keys(FONT_PRESETS).includes(merged.fontPreset) || merged.fontPreset === 'custom' ? merged.fontPreset : 'custom',
+    gridPreset: ['autoSmart', 'oneColumn', 'twoColumns', 'threeColumns', 'fourColumns', 'compactList', 'magazine', 'heroGrid'].includes(merged.gridPreset) ? merged.gridPreset : 'autoSmart',
+    cardDensity: ['airy', 'balanced', 'compact'].includes(merged.cardDensity) ? merged.cardDensity : 'balanced',
+    categoryTitleStyle: ['plain', 'underline', 'accentBar', 'pill', 'centered'].includes(merged.categoryTitleStyle) ? merged.categoryTitleStyle : 'plain',
+    imageRatio: ['square', 'fourThree', 'sixteenNine', 'wide', 'custom'].includes(merged.imageRatio) ? merged.imageRatio : 'custom',
+    cardContentLayout: normalizeCardContentLayout(settings.cardContentLayout),
+    badgePosition: normalizeBadgePosition(settings.badgePosition),
+    cardBorderEnabled:
+      settings.cardBorderEnabled === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderEnabled : Boolean(settings.cardBorderEnabled),
+    cardBorderWidth: clampNumber(settings.cardBorderWidth, DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderWidth, 0, 8),
+    cardBorderOpacity: clampNumber(settings.cardBorderOpacity, DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderOpacity, 0, 100),
+    cardShadowEnabled:
+      settings.cardShadowEnabled === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.cardShadowEnabled : Boolean(settings.cardShadowEnabled),
+    imageFit: normalizeImageFit(settings.imageFit),
+    titleLineClamp: Number(settings.titleLineClamp ?? DEFAULT_PAGE_DESIGN_SETTINGS.titleLineClamp),
+    descriptionLineClamp: Number(settings.descriptionLineClamp ?? DEFAULT_PAGE_DESIGN_SETTINGS.descriptionLineClamp),
+    fitStrategy: {
+      allowShrinkCards: Boolean(merged.fitStrategy.allowShrinkCards),
+      allowShrinkImages: Boolean(merged.fitStrategy.allowShrinkImages),
+      allowShrinkText: Boolean(merged.fitStrategy.allowShrinkText),
+      allowHideDescriptions: Boolean(merged.fitStrategy.allowHideDescriptions),
+      allowCompactFallback: Boolean(merged.fitStrategy.allowCompactFallback),
+      minReadableFontSize: clampNumber(merged.fitStrategy.minReadableFontSize, DEFAULT_FIT_STRATEGY.minReadableFontSize, 6, 16),
+      minCardHeight: clampNumber(merged.fitStrategy.minCardHeight, DEFAULT_FIT_STRATEGY.minCardHeight, 48, 220),
+      minImageHeight: clampNumber(merged.fitStrategy.minImageHeight, DEFAULT_FIT_STRATEGY.minImageHeight, 0, 140),
+    },
+  };
+};
 
 const buildDefaultPage = (project, name = 'Page 1') => {
   const selectedCategoryIds = project.categories.map((category) => category.id);
@@ -440,6 +482,14 @@ export function createProjectStore() {
     },
     updateSelectedPageDesign(setting, value) {
       updateSelectedPage((page) => ({ designSettings: { ...page.designSettings, [setting]: value } }));
+    },
+    updateSelectedPageFitStrategy(setting, value) {
+      updateSelectedPage((page) => ({
+        designSettings: {
+          ...page.designSettings,
+          fitStrategy: { ...page.designSettings.fitStrategy, [setting]: value },
+        },
+      }));
     },
     updateSelectedPageHeader(setting, value) {
       updateSelectedPage((page) => ({ header: { ...page.header, [setting]: value } }));

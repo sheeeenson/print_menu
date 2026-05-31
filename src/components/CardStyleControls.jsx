@@ -14,6 +14,43 @@ export function CardStyleControls({ page, actions }) {
         <input type="checkbox" checked={settings.showImages} onChange={update('showImages')} />
         Show images
       </label>
+      <label className="field-label">Grid style
+        <select value={settings.gridPreset} onChange={update('gridPreset')}>
+          <option value="autoSmart">Auto Smart</option>
+          <option value="oneColumn">1 Column</option>
+          <option value="twoColumns">2 Columns</option>
+          <option value="threeColumns">3 Columns</option>
+          <option value="fourColumns">4 Columns</option>
+          <option value="compactList">Compact List</option>
+          <option value="magazine">Magazine</option>
+          <option value="heroGrid">Hero + Grid</option>
+        </select>
+      </label>
+      <label className="field-label">Card density
+        <select value={settings.cardDensity} onChange={update('cardDensity')}>
+          <option value="airy">Airy</option>
+          <option value="balanced">Balanced</option>
+          <option value="compact">Compact</option>
+        </select>
+      </label>
+      <label className="field-label">Category title style
+        <select value={settings.categoryTitleStyle} onChange={update('categoryTitleStyle')}>
+          <option value="plain">Plain</option>
+          <option value="underline">Underline</option>
+          <option value="accentBar">Accent bar</option>
+          <option value="pill">Pill</option>
+          <option value="centered">Centered</option>
+        </select>
+      </label>
+      <label className="field-label">Image ratio
+        <select value={settings.imageRatio} onChange={update('imageRatio')} disabled={!settings.showImages}>
+          <option value="custom">Custom height slider</option>
+          <option value="square">Square</option>
+          <option value="fourThree">4:3</option>
+          <option value="sixteenNine">16:9</option>
+          <option value="wide">Wide</option>
+        </select>
+      </label>
       <label className="field-label">Card content layout
         <select value={settings.cardContentLayout} onChange={update('cardContentLayout')} disabled={!settings.showImages}>
           <option value="textBelowImage">Text below image</option>

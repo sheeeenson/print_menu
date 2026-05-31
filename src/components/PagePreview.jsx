@@ -1,6 +1,7 @@
 import { PageFooterPreview } from './PageFooterPreview.jsx';
 import { PageHeaderPreview } from './PageHeaderPreview.jsx';
 import { calculateAutoFillGrid } from '../utils/autoFill.js';
+import { calculateFitAllLayout, paperDimensions } from '../utils/fitAll.js';
 
 const money = (value) => (typeof value === 'number' ? `${value.toFixed(value % 1 === 0 ? 0 : 2)} ₾` : '');
 
@@ -8,7 +9,21 @@ export function PagePreview({ project, page }) {
   const selectedCategoryIds = new Set(page.selectedCategoryIds);
   const categories = project.categories.filter((category) => selectedCategoryIds.has(category.id));
   const selectedDishes = selectedVisibleDishes(project, page);
-  const autoFillLayout = page.fittingMode === 'autoFill'
+  const paper = paperDimensions(page.paperSize, page.orientation);
+  const fitAllLayout = page.designSettings.fitAllItems
+    ? calculateFitAllLayout({
+        itemCount: selectedDishes.length,
+        pageWidthPx: paper.width,
+        pageHeightPx: paper.height,
+        headerHeight: page.header?.enabled ? page.header?.height : 0,
+        footerHeight: page.footer?.enabled ? page.footer?.height : 0,
+        pageMargin: page.designSettings.pageMargin,
+        cardGap: page.designSettings.cardGap,
+        baseDesignSettings: page.designSettings,
+        fitStrategy: page.designSettings.fitStrategy,
+      })
+    : null;
+  const autoFillLayout = !fitAllLayout && page.fittingMode === 'autoFill'
     ? calculateAutoFillGrid({
         paperSize: page.paperSize,
         orientation: page.orientation,
@@ -23,9 +38,12 @@ export function PagePreview({ project, page }) {
         itemCount: selectedDishes.length,
       })
     : null;
-  const style = previewStyle(page, autoFillLayout);
+  const style = previewStyle(page, autoFillLayout, fitAllLayout);
   const templateClass = `template-${page.layoutTemplate}`;
-  const fittingClass = `fit-${page.fittingMode}`;
+  const fittingClass = page.designSettings.fitAllItems ? 'fit-all-items' : `fit-${page.fittingMode}`;
+  const gridClass = `grid-${page.designSettings.gridPreset}`;
+  const densityClass = `density-${page.designSettings.cardDensity}`;
+  const categoryStyleClass = `category-style-${page.designSettings.categoryTitleStyle}`;
 
   return (
     <section className="preview-stage" aria-label="Live page preview">
@@ -38,13 +56,16 @@ export function PagePreview({ project, page }) {
       </div>
       <div className="paper-scroll">
         <div className="preview-page-wrapper print-root">
-          <article className={`paper-page print-page ${page.paperSize.toLowerCase()} ${page.orientation} paper-${page.paperSize.toLowerCase()} paper-${page.orientation} ${templateClass} ${fittingClass}`} style={style}>
+          <article className={`paper-page print-page ${page.paperSize.toLowerCase()} ${page.orientation} paper-${page.paperSize.toLowerCase()} paper-${page.orientation} ${templateClass} ${fittingClass} ${gridClass} ${densityClass} ${categoryStyleClass}`} style={style}>
             <div className="print-page-inner">
               <PageHeaderPreview page={page} renderLocalizedText={renderLocalizedText} />
               <main className="page-content">
-                {page.fittingMode === 'autoFill'
-                  ? <AutoFillPreview dishes={selectedDishes} page={page} />
-                  : categories.length ? categories.map((category) => <PreviewCategory key={category.id} project={project} page={page} category={category} />) : <EmptyPage />}
+                {fitAllLayout?.warning ? <div className="fit-warning" role="alert">{fitAllLayout.warning}</div> : null}
+                {fitAllLayout
+                  ? <FitAllPreview dishes={selectedDishes} page={page} fitAllLayout={fitAllLayout} />
+                  : page.fittingMode === 'autoFill'
+                    ? <AutoFillPreview dishes={selectedDishes} page={page} />
+                    : categories.length ? categories.map((category) => <PreviewCategory key={category.id} project={project} page={page} category={category} />) : <EmptyPage />}
               </main>
               <PageFooterPreview page={page} renderLocalizedText={renderLocalizedText} />
             </div>
@@ -55,9 +76,9 @@ export function PagePreview({ project, page }) {
   );
 }
 
-function previewStyle(page, autoFillLayout) {
+function previewStyle(page, autoFillLayout, fitAllLayout) {
   const settings = page.designSettings;
-  const columns = settings.columns === 'auto' ? 'auto' : settings.columns;
+  const columns = gridColumns(settings);
   const colors = {
     backgroundColor: safeCssColor(settings.backgroundColor, '#fffdfa'),
     cardBackgroundColor: safeCssColor(settings.cardBackgroundColor, '#ffffff'),
@@ -82,12 +103,31 @@ function previewStyle(page, autoFillLayout) {
       }
     : {};
 
+  const density = densityValues(settings.cardDensity);
+  const effectiveImageHeight = fitAllLayout?.effectiveImageHeight ?? imageHeightForStyle(settings);
+  const fontScale = fitAllLayout?.effectiveFontScale ?? density.fontScale;
+  const fitAllStyle = fitAllLayout
+    ? {
+        '--fit-all-columns': fitAllLayout.columns,
+        '--fit-all-rows': fitAllLayout.rows,
+        '--card-width': `${fitAllLayout.cardWidth}px`,
+        '--card-height': `${fitAllLayout.cardHeight}px`,
+        '--effective-image-height': `${fitAllLayout.effectiveImageHeight}px`,
+        '--font-scale': fitAllLayout.effectiveFontScale,
+      }
+    : {
+        '--card-width': 'auto',
+        '--card-height': 'auto',
+        '--effective-image-height': cssLength(effectiveImageHeight),
+        '--font-scale': fontScale,
+      };
+
   return {
     '--page-margin': `${settings.pageMargin}px`,
-    '--card-gap': `${settings.cardGap}px`,
-    '--card-padding': `${settings.cardPadding}px`,
+    '--card-gap': `${Math.round(settings.cardGap * density.gapMultiplier)}px`,
+    '--card-padding': `${Math.round(settings.cardPadding * density.paddingMultiplier)}px`,
     '--card-radius': `${settings.cardRadius}px`,
-    '--image-height': `${settings.imageHeight}px`,
+    '--image-height': cssLength(effectiveImageHeight),
     '--category-title-size': `${settings.categoryTitleFontSize}px`,
     '--dish-title-size': `${settings.dishTitleFontSize}px`,
     '--description-size': `${settings.descriptionFontSize}px`,
@@ -96,6 +136,22 @@ function previewStyle(page, autoFillLayout) {
     '--badge-size': `${settings.badgeFontSize}px`,
     '--weight-size': `${settings.weightFontSize}px`,
     '--preview-columns': columns,
+    '--category-font-family': settings.categoryFontFamily,
+    '--dish-title-font-family': settings.dishTitleFontFamily,
+    '--description-font-family': settings.descriptionFontFamily,
+    '--price-font-family': settings.priceFontFamily,
+    '--badge-font-family': settings.badgeFontFamily,
+    '--header-footer-font-family': settings.headerFooterFontFamily,
+    '--category-font-weight': settings.categoryFontWeight,
+    '--dish-title-font-weight': settings.dishTitleFontWeight,
+    '--description-font-weight': settings.descriptionFontWeight,
+    '--price-font-weight': settings.priceFontWeight,
+    '--badge-font-weight': settings.badgeFontWeight,
+    '--category-letter-spacing': `${settings.categoryLetterSpacing}em`,
+    '--dish-title-letter-spacing': `${settings.dishTitleLetterSpacing}em`,
+    '--price-letter-spacing': `${settings.priceLetterSpacing}em`,
+    '--category-text-transform': settings.categoryUppercase ? 'uppercase' : 'none',
+    '--dish-title-text-transform': settings.dishTitleUppercase ? 'uppercase' : 'none',
     '--page-background': colors.backgroundColor,
     '--card-background': colors.cardBackgroundColor,
     '--preview-text-color': colors.textColor,
@@ -108,8 +164,37 @@ function previewStyle(page, autoFillLayout) {
     '--image-fit': settings.imageFit,
     '--title-line-clamp': settings.titleLineClamp,
     '--description-line-clamp': settings.descriptionLineClamp,
+    ...fitAllStyle,
     ...autoFillStyle,
   };
+}
+
+
+function cssLength(value) {
+  return typeof value === 'number' ? `${value}px` : value;
+}
+
+function gridColumns(settings) {
+  if (settings.gridPreset === 'oneColumn') return 1;
+  if (settings.gridPreset === 'twoColumns') return 2;
+  if (settings.gridPreset === 'threeColumns') return 3;
+  if (settings.gridPreset === 'fourColumns') return 4;
+  if (settings.columns !== 'auto') return settings.columns;
+  return 'auto';
+}
+
+function densityValues(density) {
+  if (density === 'airy') return { gapMultiplier: 1.25, paddingMultiplier: 1.18, fontScale: 1.04 };
+  if (density === 'compact') return { gapMultiplier: 0.7, paddingMultiplier: 0.78, fontScale: 0.92 };
+  return { gapMultiplier: 1, paddingMultiplier: 1, fontScale: 1 };
+}
+
+function imageHeightForStyle(settings) {
+  if (settings.imageRatio === 'square') return 'var(--card-width, 180px)';
+  if (settings.imageRatio === 'fourThree') return 'calc(var(--card-width, 180px) * 0.75)';
+  if (settings.imageRatio === 'sixteenNine') return 'calc(var(--card-width, 180px) * 0.5625)';
+  if (settings.imageRatio === 'wide') return 'calc(var(--card-width, 180px) * 0.42)';
+  return settings.imageHeight;
 }
 
 function safeCssColor(color, fallback) {
@@ -147,6 +232,18 @@ function AutoFillPreview({ dishes, page }) {
   );
 }
 
+function FitAllPreview({ dishes, page, fitAllLayout }) {
+  if (!dishes.length) return <EmptyPage />;
+  const capacity = Math.max(0, fitAllLayout.columns * fitAllLayout.rows);
+  const renderDishes = fitAllLayout.success ? dishes : dishes.slice(0, capacity);
+
+  return (
+    <div className="fit-all-dish-grid" aria-label="Guaranteed fit dish layout">
+      {renderDishes.map((dish, index) => <DishCard key={dish.id} dish={dish} page={page} hideDescription={fitAllLayout.hideDescriptions} isHero={index === 0} />)}
+    </div>
+  );
+}
+
 function PreviewCategory({ project, page, category }) {
   const selectedDishIds = new Set(page.selectedDishIds);
   const dishes = project.dishes.filter((dish) => dish.visible && dish.categoryId === category.id && selectedDishIds.has(dish.id));
@@ -160,15 +257,15 @@ function PreviewCategory({ project, page, category }) {
   );
 }
 
-function DishCard({ dish, page }) {
+function DishCard({ dish, page, hideDescription = false, isHero = false }) {
   const settings = page.designSettings;
-  const showImages = settings.showImages;
+  const showImages = settings.showImages && settings.gridPreset !== 'compactList';
   const hasBadges = Boolean(dish.discountPercent || dish.badges?.length);
   const layoutClass = showImages ? `card-layout-${settings.cardContentLayout}` : 'card-layout-textOnly';
   const badgePositionClass = `badge-position-${settings.badgePosition}`;
 
   return (
-    <article className={`preview-dish-card ${layoutClass} ${showImages ? 'has-images' : 'no-images'}`}>
+    <article className={`preview-dish-card ${layoutClass} ${showImages ? 'has-images' : 'no-images'} ${isHero ? 'hero-dish-card' : ''}`}>
       {showImages ? (
         <div className="preview-image-box">
           {dish.imageUrl ? <img src={dish.imageUrl} alt="" loading="lazy" /> : <div className="preview-image-placeholder">Image</div>}
@@ -188,7 +285,7 @@ function DishCard({ dish, page }) {
             </div>
           ) : null}
         </div>
-        {settings.showDescriptions ? (
+        {settings.showDescriptions && !hideDescription ? (
           <p className="preview-description dish-description">{renderLocalizedText(dish, 'description', page.languageMode, '')}</p>
         ) : null}
         <div className="preview-meta-row">
