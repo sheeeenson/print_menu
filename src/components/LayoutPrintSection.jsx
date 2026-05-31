@@ -6,10 +6,12 @@ import { PageContentSelector } from './PageContentSelector.jsx';
 import { PageList } from './PageList.jsx';
 import { PagePreview } from './PagePreview.jsx';
 import { PageSettingsPanel } from './PageSettingsPanel.jsx';
+import { calculateFitAllLayout, paperDimensions } from '../utils/fitAll.js';
 
 export function LayoutPrintSection({ project, actions }) {
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const selectedPage = project.pages.find((page) => page.id === project.selectedPageId) ?? project.pages[0];
+  const fitWarning = selectedPage ? getFitWarning(project, selectedPage) : '';
   const printPage = () => window.print();
   const confirmSaveAsPdf = () => {
     setIsPdfModalOpen(false);
@@ -27,6 +29,7 @@ export function LayoutPrintSection({ project, actions }) {
             <button className="secondary-action compact" type="button" onClick={() => setIsPdfModalOpen(true)}>Save as PDF</button>
           </div>
         </div>
+        {fitWarning ? <div className="panel-fit-warning" role="alert">{fitWarning}</div> : null}
         <PageList project={project} actions={actions} />
         {selectedPage ? <PageSettingsPanel page={selectedPage} actions={actions} /> : null}
         {selectedPage ? <PageContentSelector project={project} page={selectedPage} actions={actions} /> : null}
@@ -56,4 +59,25 @@ function SavePdfModal({ onCancel, onConfirm }) {
       </div>
     </div>
   );
+}
+
+
+function getFitWarning(project, page) {
+  if (!page.designSettings.fitAllItems) return '';
+  const selectedCategoryIds = new Set(page.selectedCategoryIds ?? []);
+  const selectedDishIds = new Set(page.selectedDishIds ?? []);
+  const itemCount = project.dishes.filter((dish) => dish.visible && selectedCategoryIds.has(dish.categoryId) && selectedDishIds.has(dish.id)).length;
+  const paper = paperDimensions(page.paperSize, page.orientation);
+  const layout = calculateFitAllLayout({
+    itemCount,
+    pageWidthPx: paper.width,
+    pageHeightPx: paper.height,
+    headerHeight: page.header?.enabled ? page.header?.height : 0,
+    footerHeight: page.footer?.enabled ? page.footer?.height : 0,
+    pageMargin: page.designSettings.pageMargin,
+    cardGap: page.designSettings.cardGap,
+    baseDesignSettings: page.designSettings,
+    fitStrategy: page.designSettings.fitStrategy,
+  });
+  return layout.success ? '' : layout.warning;
 }
