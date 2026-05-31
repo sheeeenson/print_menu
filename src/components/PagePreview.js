@@ -1,4 +1,6 @@
 import { escapeHtml } from './dom.js';
+import { renderPageFooterPreview } from './PageFooterPreview.js';
+import { renderPageHeaderPreview } from './PageHeaderPreview.js';
 
 const money = (value) => (typeof value === 'number' ? `${value.toFixed(value % 1 === 0 ? 0 : 2)} ₾` : '');
 
@@ -20,7 +22,13 @@ export function renderPagePreview(project, page) {
       </div>
       <div class="paper-scroll">
         <article class="paper-page paper-${page.paperSize.toLowerCase()} paper-${page.orientation} ${templateClass} ${fittingClass}" style="${style}">
-          ${categories.length ? categories.map((category) => renderCategory(project, page, category)).join('') : renderEmptyPage()}
+          <div class="print-page-inner">
+            ${renderPageHeaderPreview(page, renderLocalizedText)}
+            <main class="page-content">
+              ${categories.length ? categories.map((category) => renderCategory(project, page, category)).join('') : renderEmptyPage()}
+            </main>
+            ${renderPageFooterPreview(page, renderLocalizedText)}
+          </div>
         </article>
       </div>
     </section>
@@ -30,6 +38,15 @@ export function renderPagePreview(project, page) {
 function previewStyle(page) {
   const settings = page.designSettings;
   const columns = settings.columns === 'auto' ? 'auto' : settings.columns;
+  const colors = {
+    backgroundColor: safeCssColor(settings.backgroundColor, '#fffdfa'),
+    cardBackgroundColor: safeCssColor(settings.cardBackgroundColor, '#ffffff'),
+    textColor: safeCssColor(settings.textColor, '#231f20'),
+    mutedTextColor: safeCssColor(settings.mutedTextColor, '#6a5d53'),
+    accentColor: safeCssColor(settings.accentColor, '#9b1c31'),
+    priceColor: safeCssColor(settings.priceColor, '#9b1c31'),
+    cardBorderColor: safeCssColor(settings.cardBorderColor, '#eadfd4'),
+  };
   return [
     `--page-margin:${settings.pageMargin}px`,
     `--card-gap:${settings.cardGap}px`,
@@ -44,7 +61,22 @@ function previewStyle(page) {
     `--badge-size:${settings.badgeFontSize}px`,
     `--weight-size:${settings.weightFontSize}px`,
     `--preview-columns:${columns}`,
+    `--page-background:${colors.backgroundColor}`,
+    `--card-background:${colors.cardBackgroundColor}`,
+    `--preview-text-color:${colors.textColor}`,
+    `--preview-muted-color:${colors.mutedTextColor}`,
+    `--preview-accent-color:${colors.accentColor}`,
+    `--preview-price-color:${colors.priceColor}`,
+    `--card-border-color:${settings.cardBorderEnabled ? colors.cardBorderColor : 'transparent'}`,
+    `--card-shadow:${settings.cardShadowEnabled ? '0 14px 30px rgba(35,31,32,0.14)' : 'none'}`,
+    `--image-fit:${settings.imageFit}`,
+    `--title-line-clamp:${settings.titleLineClamp}`,
+    `--description-line-clamp:${settings.descriptionLineClamp}`,
   ].join(';');
+}
+
+function safeCssColor(color, fallback) {
+  return /^#[0-9a-fA-F]{3,8}$/.test(color) ? color : fallback;
 }
 
 function renderCategory(project, page, category) {
@@ -69,8 +101,8 @@ function renderDishCard(dish, page) {
       <div class="preview-badges">
         ${renderBadges(dish)}
       </div>
-      <h3>${renderLocalizedText(dish, 'name', page.languageMode, 'Untitled dish')}</h3>
-      <div class="preview-description">${renderLocalizedText(dish, 'description', page.languageMode, '')}</div>
+      <h3 class="dish-title">${renderLocalizedText(dish, 'name', page.languageMode, 'Untitled dish')}</h3>
+      <p class="preview-description dish-description">${renderLocalizedText(dish, 'description', page.languageMode, '')}</p>
       <div class="preview-meta-row">
         <span class="preview-weight">${escapeHtml(dish.weight || '')}</span>
         <span class="preview-prices">

@@ -38,6 +38,7 @@ function captureFocus() {
     categoryId: element.dataset.categoryId,
     badgeId: element.dataset.badgeId,
     pageId: element.dataset.pageId,
+    control: element.dataset.control,
     selectionStart: element.selectionStart,
     selectionEnd: element.selectionEnd,
   };
@@ -92,7 +93,15 @@ function handleInput(event) {
   }
 
   if (action === 'design-setting') {
-    store.actions.updateSelectedPageDesign(target.dataset.field, Number(target.value));
+    store.actions.updateSelectedPageDesign(target.dataset.field, coercePageSettingValue(target));
+  }
+
+  if (action === 'header-setting') {
+    store.actions.updateSelectedPageHeader(target.dataset.field, coercePageSettingValue(target));
+  }
+
+  if (action === 'footer-setting') {
+    store.actions.updateSelectedPageFooter(target.dataset.field, coercePageSettingValue(target));
   }
 
   if (action === 'page-category-toggle') {
@@ -101,6 +110,13 @@ function handleInput(event) {
       .map((checkbox) => checkbox.dataset.categoryId);
     store.actions.setPageCategories(categoryIds);
   }
+}
+
+
+function coercePageSettingValue(target) {
+  if (target.type === 'checkbox') return target.checked;
+  if (target.type === 'range' || target.type === 'number') return Number(target.value);
+  return target.value;
 }
 
 function handleClick(event) {
