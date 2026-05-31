@@ -3,7 +3,7 @@ import { SAVE_STATUSES } from '../models/menu.js';
 import { createId } from '../utils/id.js';
 import { recalculatePricing } from '../utils/pricing.js';
 import { FONT_PRESETS } from '../utils/typography.js';
-import { loadProject, saveProject } from '../utils/storage.js';
+import { clearProject, loadProject, saveProject } from '../utils/storage.js';
 
 const deepClone = (value) => JSON.parse(JSON.stringify(value));
 
@@ -392,6 +392,14 @@ export function createProjectStore() {
     },
     setSection(section) {
       update((state) => ({ ...state, selectedSection: section }));
+    },
+    resetDemoData() {
+      window.clearTimeout(saveTimer);
+      saveTimer = null;
+      clearProject();
+      project = normalizeProject(deepClone(demoProject));
+      saveStatus = SAVE_STATUSES.SAVED;
+      notify();
     },
     selectCategory(categoryId) {
       update((state) => ({ ...state, selectedCategoryId: categoryId }));

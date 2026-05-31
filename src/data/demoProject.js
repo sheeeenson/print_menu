@@ -156,7 +156,7 @@ export const demoProject = {
     accentColor: '#9b1c31',
     fontFamily: 'Inter',
   },
-  selectedSection: APP_SECTIONS.CONTENT,
+  selectedSection: APP_SECTIONS.LAYOUT_PRINT,
   selectedPageId: 'page_default',
   selectedCategoryId: demoCategories[0].id,
 };
