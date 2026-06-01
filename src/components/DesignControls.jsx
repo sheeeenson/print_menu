@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { CardStyleControls } from './CardStyleControls.jsx';
 import { ColorControls } from './ColorControls.jsx';
 import { GOOGLE_FONT_OPTIONS } from '../utils/typography.js';
@@ -8,6 +9,7 @@ const controls = [
   ['cardPadding', 'Card padding', 6, 32, 1],
   ['cardRadius', 'Card radius', 0, 32, 1],
   ['imageHeight', 'Image height', 60, 220, 1],
+  ['imageTitleGap', 'Image to title gap', 0, 40, 1],
   ['categoryTitleFontSize', 'Category title', 18, 44, 1],
   ['dishTitleFontSize', 'Dish title', 12, 28, 1],
   ['descriptionFontSize', 'Description', 9, 18, 1],
@@ -20,6 +22,11 @@ const controls = [
 const fontWeightOptions = [400, 500, 600, 700, 800, 850, 900, 950];
 
 export function DesignControls({ page, actions }) {
+  useEffect(() => {
+    const gap = Number(page.designSettings.imageTitleGap ?? 1);
+    document.documentElement.style.setProperty('--image-title-gap', `${gap}px`);
+  }, [page.designSettings.imageTitleGap]);
+
   return (
     <details className="panel-section collapsible-panel" open>
       <summary>
