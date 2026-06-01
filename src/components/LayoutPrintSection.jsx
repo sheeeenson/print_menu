@@ -70,7 +70,8 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
       designSettings: {
         ...settings,
         layoutMode,
-        gridMode: layoutMode === 'smartAutoFit' ? 'autoFill' : (layoutMode === 'manualDesigner' || layoutMode === 'elasticGrid') ? 'custom' : 'preset',
+        gridMode: layoutMode === 'smartAutoFit' ? 'autoFill' : layoutMode === 'snapGrid' ? 'custom' : 'preset',
+        resizeMode: layoutMode === 'manualDesigner' ? 'freeResize' : layoutMode === 'snapGrid' ? 'snapToGrid' : settings.resizeMode,
         gridPreset: layoutMode === 'classicColumns' ? columnPresetFor(settings.classicColumns) : settings.gridPreset,
       },
     });
@@ -105,8 +106,9 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
         <select value={settings.layoutMode} onChange={updateLayoutMode}>
           <option value="classicColumns">Classic columns</option>
           <option value="smartAutoFit">Smart auto-fit</option>
+          <option value="snapGrid">Snap grid</option>
+          <option value="fluidGrid">Fluid grid</option>
           <option value="manualDesigner">Manual designer</option>
-          <option value="elasticGrid">Elastic grid</option>
         </select>
       </label>
       {settings.layoutMode === 'classicColumns' ? (
@@ -125,22 +127,24 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
         </select>
       </label>
       {settings.layoutMode === 'manualDesigner' ? (
-        <label className="field-label">Resize mode
-          <select value={settings.resizeMode} onChange={update('resizeMode')}>
-            <option value="snapToGrid">Snap to grid</option>
-            <option value="freeResize">Free resize</option>
-          </select>
-        </label>
+        <p className="muted-text">Manual designer uses free positioning and free resize inside the printable content area.</p>
       ) : null}
-      {settings.layoutMode === 'elasticGrid' ? (
-        <div className="elastic-grid-controls">
-          <h3>Elastic Grid</h3>
+      {settings.layoutMode === 'snapGrid' ? (
+        <div className="grid-resize-controls">
+          <h3>Snap Grid</h3>
           <div className="two-column-fields">
             <label className="field-label">Columns<input type="number" min="1" max="6" value={settings.customGrid.columns} onChange={(event) => actions.updateSelectedPageCustomGrid('columns', Number(event.target.value))} /></label>
             <label className="field-label">Rows<input type="number" min="1" max="12" value={settings.customGrid.rows} onChange={(event) => actions.updateSelectedPageCustomGrid('rows', Number(event.target.value))} /></label>
           </div>
           <label className="slider-label"><span>Gap<strong>{settings.customGrid.gap}px</strong></span><input type="range" min="0" max="64" value={settings.customGrid.gap} onChange={(event) => actions.updateSelectedPageCustomGrid('gap', Number(event.target.value))} /></label>
           <label className="toggle-label"><input type="checkbox" checked={settings.customGrid.densePacking} onChange={(event) => actions.updateSelectedPageCustomGrid('densePacking', event.target.checked)} /> Dense packing</label>
+        </div>
+      ) : null}
+      {settings.layoutMode === 'fluidGrid' ? (
+        <div className="grid-resize-controls">
+          <h3>Fluid Grid</h3>
+          <p className="muted-text">Cards stay in layout flow and resize smoothly with weight-based sizing.</p>
+          <label className="slider-label"><span>Gap<strong>{settings.cardGap}px</strong></span><input type="range" min="0" max="64" value={settings.cardGap} onChange={updateNumber('cardGap')} /></label>
         </div>
       ) : null}
 
@@ -184,7 +188,7 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
         </select>
       </label>
 
-      {(settings.layoutMode === 'manualDesigner' || settings.layoutMode === 'elasticGrid') ? (
+      {(['manualDesigner', 'snapGrid', 'fluidGrid'].includes(settings.layoutMode)) ? (
         <SelectedCardControls page={page} actions={actions} selectedDish={selectedDish} placement={selectedPlacement} />
       ) : null}
 
@@ -202,7 +206,7 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
         <summary>Card border</summary>
         <label className="toggle-label"><input type="checkbox" checked={settings.cardBorderEnabled} onChange={update('cardBorderEnabled')} /> Border enabled</label>
         <label className="color-label">Card border color<span><input type="color" value={settings.cardBorderColor} onChange={update('cardBorderColor')} disabled={!settings.cardBorderEnabled} /><input value={settings.cardBorderColor} onChange={update('cardBorderColor')} disabled={!settings.cardBorderEnabled} /></span></label>
-        <label className="slider-label"><span>Card border width<strong>{settings.cardBorderWidth}px</strong></span><input type="range" min="0" max="8" step="1" value={settings.cardBorderWidth} disabled={!settings.cardBorderEnabled} onChange={updateNumber('cardBorderWidth')} /></label>
+        <label className="slider-label"><span>Card border width<strong>{settings.cardBorderWidth}px</strong></span><input type="range" min="0" max="12" step="1" value={settings.cardBorderWidth} disabled={!settings.cardBorderEnabled} onChange={updateNumber('cardBorderWidth')} /></label>
         <label className="slider-label"><span>Card border opacity<strong>{settings.cardBorderOpacity}%</strong></span><input type="range" min="0" max="100" step="1" value={settings.cardBorderOpacity} disabled={!settings.cardBorderEnabled} onChange={updateNumber('cardBorderOpacity')} /></label>
       </details>
     </div>
@@ -216,10 +220,17 @@ function columnPresetFor(columns) {
 const MANUAL_GRID_SPANS = Object.freeze(['1x1', '2x1', '1x2', '2x2', '3x2', '3x3']);
 
 function SelectedCardControls({ page, actions, selectedDish, placement }) {
-  const isElastic = page.designSettings.layoutMode === 'elasticGrid';
-  const isFreeResize = !isElastic && page.designSettings.resizeMode === 'freeResize';
+  const isFluid = page.designSettings.layoutMode === 'fluidGrid';
+  const isFreeResize = page.designSettings.layoutMode === 'manualDesigner' && page.designSettings.resizeMode === 'freeResize';
   const current = {
-    mode: isFreeResize ? 'free' : 'grid',
+    mode: isFluid ? 'fluid' : isFreeResize ? 'free' : 'grid',
+    widthWeight: placement?.widthWeight ?? 1,
+    heightWeight: placement?.heightWeight ?? 1,
+    minWidthPercent: placement?.minWidthPercent ?? 12,
+    minHeightPercent: placement?.minHeightPercent ?? 8,
+    maxWidthPercent: placement?.maxWidthPercent ?? 100,
+    maxHeightPercent: placement?.maxHeightPercent ?? 100,
+    order: placement?.order ?? 0,
     colSpan: placement?.colSpan ?? 1,
     rowSpan: placement?.rowSpan ?? 1,
     xPercent: placement?.xPercent ?? 0,
@@ -252,9 +263,11 @@ function SelectedCardControls({ page, actions, selectedDish, placement }) {
       <div>
         <p className="eyebrow">Selected card</p>
         <strong>{selectedDish?.nameEn || 'Click a preview card'}</strong>
-        <small>{selectedDish ? (isFreeResize ? `${current.widthPercent}% × ${current.heightPercent}%` : `${current.colSpan} columns × ${current.rowSpan} rows`) : 'Select a preview card to edit its size.'}</small>
+        <small>{selectedDish ? (isFluid ? `${current.widthWeight.toFixed(2)} width × ${current.heightWeight.toFixed(2)} height` : isFreeResize ? `${current.widthPercent}% × ${current.heightPercent}%` : `${current.colSpan} columns × ${current.rowSpan} rows`) : 'Select a preview card to edit its size.'}</small>
       </div>
-      {isFreeResize ? (
+      {isFluid ? (
+        <FluidSelectedCardControls current={current} selectedDish={selectedDish} updatePlacement={updatePlacement} actions={actions} />
+      ) : isFreeResize ? (
         <div className="selected-free-controls">
           <label className="field-label">Width %<input type="number" min="10" max="100" value={current.widthPercent} onChange={updatePercent('widthPercent')} disabled={!selectedDish} /></label>
           <label className="field-label">Height %<input type="number" min="8" max="100" value={current.heightPercent} onChange={updatePercent('heightPercent')} disabled={!selectedDish} /></label>
@@ -268,9 +281,28 @@ function SelectedCardControls({ page, actions, selectedDish, placement }) {
           <label className="field-label">Row span<select value={current.rowSpan} onChange={(event) => updatePlacement({ rowSpan: Number(event.target.value), mode: 'grid' })} disabled={!selectedDish}>{(rowSpanOptions.length ? rowSpanOptions : [1]).map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
         </div>
       )}
+      {!isFluid ? (
+        <div className="print-action-row">
+          <button className="secondary-action compact" type="button" onClick={() => selectedDish && actions.resetSelectedPageItemPlacement(selectedDish.id)} disabled={!selectedDish}>Reset selected card</button>
+          <button className="secondary-action compact" type="button" onClick={actions.resetSelectedPageItemPlacements}>Reset all card sizes</button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+
+function FluidSelectedCardControls({ current, selectedDish, updatePlacement, actions }) {
+  const updateWeight = (field) => (event) => updatePlacement({ [field]: Number(event.target.value), mode: 'fluid' });
+  const resetAllFluidSizes = () => actions.resetSelectedPageItemPlacements();
+  return (
+    <div className="selected-fluid-controls">
+      <p className="muted-text">Selected card size</p>
+      <label className="slider-label"><span>Width weight<strong>{current.widthWeight.toFixed(2)}</strong></span><input type="range" min="0.5" max="4" step="0.05" value={current.widthWeight} onChange={updateWeight('widthWeight')} disabled={!selectedDish} /></label>
+      <label className="slider-label"><span>Height weight<strong>{current.heightWeight.toFixed(2)}</strong></span><input type="range" min="0.5" max="4" step="0.05" value={current.heightWeight} onChange={updateWeight('heightWeight')} disabled={!selectedDish} /></label>
       <div className="print-action-row">
-        <button className="secondary-action compact" type="button" onClick={() => selectedDish && actions.resetSelectedPageItemPlacement(selectedDish.id)} disabled={!selectedDish}>Reset selected card</button>
-        <button className="secondary-action compact" type="button" onClick={actions.resetSelectedPageItemPlacements}>Reset all card sizes</button>
+        <button className="secondary-action compact" type="button" onClick={() => selectedDish && actions.resetSelectedPageItemPlacement(selectedDish.id)} disabled={!selectedDish}>Reset selected card size</button>
+        <button className="secondary-action compact" type="button" onClick={resetAllFluidSizes}>Reset all fluid sizes</button>
       </div>
     </div>
   );
