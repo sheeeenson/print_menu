@@ -534,6 +534,8 @@ const normalizePage = (page, project, index) => {
     : (page.orientation === 'landscape' ? 'a4Landscape' : 'a4Portrait'));
   const size = pageSizeFromPreset(pageType, legacySizePreset, page);
   const socialCreative = pageType === PAGE_TYPES.SOCIAL_CREATIVE;
+  const designSettings = normalizeDesignSettings({ ...(page.designSettings ?? {}), fittingMode: page.fittingMode });
+  const dividerColorFallback = designSettings.accentColor;
 
   return {
     id: page.id ?? createId('page'),
@@ -548,12 +550,18 @@ const normalizePage = (page, project, index) => {
     selectedDishIds,
     layoutTemplate: ['photoCards', 'classicList', 'compact'].includes(page.layoutTemplate) ? page.layoutTemplate : 'photoCards',
     fittingMode: ['fixed', 'autoFill', 'compact'].includes(page.fittingMode) ? page.fittingMode : 'fixed',
-    header: normalizeHeader(page.header),
-    footer: normalizeFooter(page.footer),
-    designSettings: normalizeDesignSettings({ ...(page.designSettings ?? {}), fittingMode: page.fittingMode }),
+    header: normalizeHeader(page.header, dividerColorFallback),
+    footer: normalizeFooter(page.footer, dividerColorFallback),
+    designSettings,
     creativePreset: socialCreative ? (page.creativePreset || 'sushiSetCreative') : (page.creativePreset || ''),
     creativeContent: socialCreative ? deepMerge(DEFAULT_CREATIVE_CONTENT, page.creativeContent) : page.creativeContent,
-    creativeMedia: socialCreative ? { ...DEFAULT_CREATIVE_MEDIA, ...(page.creativeMedia ?? {}), decorativeOverlays: page.creativeMedia?.decorativeOverlays ?? [] } : page.creativeMedia,
+    creativeMedia: socialCreative
+      ? {
+          ...DEFAULT_CREATIVE_MEDIA,
+          ...(page.creativeMedia ?? {}),
+          decorativeOverlays: page.creativeMedia?.decorativeOverlays ?? [],
+        }
+      : page.creativeMedia,
     creativeDesign: socialCreative ? deepMerge(DEFAULT_CREATIVE_DESIGN, page.creativeDesign) : page.creativeDesign,
     creativeTypography: socialCreative ? deepMerge(DEFAULT_CREATIVE_TYPOGRAPHY, page.creativeTypography) : page.creativeTypography,
     promoContent: pageType === PAGE_TYPES.PROMO ? deepMerge(DEFAULT_PROMO_CONTENT, page.promoContent) : page.promoContent,
