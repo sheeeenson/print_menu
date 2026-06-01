@@ -8,7 +8,7 @@ const DEFAULT_SIZE_VARIANTS = Object.freeze([
 ]);
 
 const SIZE_GROUP_ID = 'pizza_size_prices';
-const formatVariantOptionName = (label, price) => [label, typeof price === 'number' ? formatOptionalNumber(price) + ' ₾' : ''].filter(Boolean).join(' — ');
+const formatVariantOptionName = (label, price) => [label, typeof price === 'number' ? formatOptionalNumber(price) + ' ₾' : ''].filter(Boolean).join('\n');
 
 export function DishEditor({ dish, actions }) {
   const updateText = (field) => (event) => actions.updateDish(dish.id, { [field]: event.target.value });
