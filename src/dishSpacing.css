@@ -1,3 +1,7 @@
+:root {
+  --image-title-gap: 1px;
+}
+
 .preview-dish-card.card-layout-below,
 .preview-dish-card.card-style-imageTop,
 .density-airy .preview-dish-card.card-layout-below,
@@ -14,7 +18,7 @@
 .free-resize-item .preview-dish-card.card-style-imageTop,
 .fluid-grid .preview-dish-card.card-layout-below,
 .fluid-grid .preview-dish-card.card-style-imageTop {
-  gap: 1px;
+  gap: var(--image-title-gap);
 }
 
 .preview-dish-card.card-layout-below .preview-image-box,
@@ -55,12 +59,12 @@
 .free-resize-item .preview-dish-card.card-style-imageTop .preview-card-content,
 .fluid-grid .preview-dish-card.card-layout-below .preview-card-content,
 .fluid-grid .preview-dish-card.card-style-imageTop .preview-card-content {
-  gap: 1px;
+  gap: var(--image-title-gap);
 }
 
 .preview-dish-card.card-layout-below .preview-title-row,
 .preview-dish-card.card-style-imageTop .preview-title-row {
-  gap: 1px;
+  gap: min(var(--image-title-gap), 4px);
 }
 
 .preview-dish-card.card-layout-below .dish-title,
