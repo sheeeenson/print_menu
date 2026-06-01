@@ -9,20 +9,23 @@ const DEFAULT_SIZE_VARIANTS = Object.freeze([
 
 const SIZE_GROUP_ID = 'pizza_size_prices';
 const variantNewPrice = (variant) => (typeof variant.newPrice === 'number' ? variant.newPrice : variant.price);
-const formatPriceCell = (price) => (typeof price === 'number' ? `${formatOptionalNumber(price)} ₾` : '-');
+const formatPriceCell = (price) => (typeof price === 'number' ? `${formatOptionalNumber(price)} ₾` : '');
+const strikeText = (value) => String(value).split('').map((char) => `${char}\u0336`).join('');
 const normalizeVariant = (variant) => ({
   labelEn: variant.labelEn ?? '',
   labelGe: variant.labelGe ?? '',
   oldPrice: typeof variant.oldPrice === 'number' ? variant.oldPrice : null,
   newPrice: typeof variant.newPrice === 'number' ? variant.newPrice : (typeof variant.price === 'number' ? variant.price : null),
 });
-const formatSizePriceTable = (variants, labelField) => {
-  const visibleVariants = variants.map(normalizeVariant).filter((variant) => variant[labelField] || typeof variant.oldPrice === 'number' || typeof variant.newPrice === 'number');
-  const labels = visibleVariants.map((variant) => variant[labelField] || '-').join('     ');
-  const oldPrices = visibleVariants.map((variant) => formatPriceCell(variant.oldPrice)).join('     ');
-  const newPrices = visibleVariants.map((variant) => formatPriceCell(variant.newPrice)).join('     ');
-  return [labels, oldPrices, newPrices].join('\n');
-};
+const formatSizePriceBlock = (variants, labelField) => variants
+  .map(normalizeVariant)
+  .filter((variant) => variant[labelField] || typeof variant.oldPrice === 'number' || typeof variant.newPrice === 'number')
+  .map((variant) => [
+    variant[labelField] || '-',
+    typeof variant.oldPrice === 'number' ? strikeText(formatPriceCell(variant.oldPrice)) : '',
+    formatPriceCell(variant.newPrice),
+  ].filter(Boolean).join('\n'))
+  .join('\n\n');
 
 export function DishEditor({ dish, actions }) {
   const updateText = (field) => (event) => actions.updateDish(dish.id, { [field]: event.target.value });
@@ -125,8 +128,8 @@ function withSizeOptionGroup(dish, nextVariants) {
     maxSelect: 1,
     options: [{
       id: 'pizza_size_price_table',
-      nameEn: formatSizePriceTable(variants, 'labelEn'),
-      nameGe: formatSizePriceTable(variants, 'labelGe'),
+      nameEn: formatSizePriceBlock(variants, 'labelEn'),
+      nameGe: formatSizePriceBlock(variants, 'labelGe'),
       priceDelta: 0,
     }],
   };
