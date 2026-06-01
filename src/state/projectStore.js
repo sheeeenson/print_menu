@@ -158,7 +158,7 @@ const blankDish = (categoryId) => ({
   optionGroups: [],
 });
 
-const duplicateDish = (dish, categoryId = dish.categoryId) => ({
+const duplicateDishData = (dish, categoryId = dish.categoryId) => ({
   ...dish,
   id: createId('dish'),
   categoryId,
@@ -172,47 +172,34 @@ const duplicateDish = (dish, categoryId = dish.categoryId) => ({
   })),
 });
 
-const fallbackCategoryId = (categories, preferredId) => {
-  if (preferredId && categories.some((category) => category.id === preferredId)) {
-    return preferredId;
-  }
-
-  return categories[0]?.id ?? null;
+const clampNumber = (value, fallback, min, max) => {
+  const number = Number(value ?? fallback);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(max, Math.max(min, number));
 };
-
-const visibleDishIdsForCategories = (dishes, categoryIds) =>
-  dishes.filter((dish) => dish.visible && categoryIds.includes(dish.categoryId)).map((dish) => dish.id);
 
 const normalizeAlignment = (alignment) => (['top', 'center', 'bottom'].includes(alignment) ? alignment : 'center');
 const normalizeImageType = (type) => (type === 'url' ? 'url' : 'none');
 const normalizeImageFit = (fit) => (['contain', 'cover', 'fill'].includes(fit) ? fit : 'contain');
 const normalizeColor = (color, fallback) => (/^#[0-9a-fA-F]{3,8}$/.test(color ?? '') ? color : fallback);
-const LEGACY_CARD_CONTENT_LAYOUTS = Object.freeze({
-  textBelowImage: 'below',
-  textRightOfImage: 'imageLeft',
-  textLeftOfImage: 'imageRight',
-});
-const normalizeCardContentLayout = (layout) => {
-  const normalized = LEGACY_CARD_CONTENT_LAYOUTS[layout] ?? layout;
-  return ['below', 'imageLeft', 'imageRight'].includes(normalized) ? normalized : 'below';
-};
-const GRID_PRESETS = ['oneColumn', 'twoColumns', 'threeColumns', 'fourColumns', 'fiveColumns', 'catalogGrid', 'magazineGrid', 'heroGrid', 'bentoGrid', 'textColumns'];
-const LEGACY_GRID_PRESETS = { autoSmart: 'twoColumns', compactList: 'textColumns', magazine: 'magazineGrid' };
-const normalizeGridPreset = (preset) => {
-  const normalized = LEGACY_GRID_PRESETS[preset] ?? preset;
-  return GRID_PRESETS.includes(normalized) ? normalized : 'twoColumns';
-};
-const normalizeGridMode = (mode) => (['preset', 'custom', 'autoFill'].includes(mode) ? mode : 'preset');
-const GRID_PRESET_COLUMNS = Object.freeze({ oneColumn: 1, twoColumns: 2, threeColumns: 3, fourColumns: 4, fiveColumns: 5 });
-const columnPresetFor = (columns) => ({ 1: 'oneColumn', 2: 'twoColumns', 3: 'threeColumns', 4: 'fourColumns', 5: 'fiveColumns' }[columns] ?? 'twoColumns');
-const normalizeLayoutMode = (mode) => {
-  if (mode === 'elasticGrid') return 'fluidGrid';
-  return ['classicColumns', 'smartAutoFit', 'snapGrid', 'fluidGrid', 'manualDesigner'].includes(mode) ? mode : 'classicColumns';
-};
 const normalizeCardStyle = (style) => (['imageTop', 'imageLeft', 'imageRight', 'textOnly'].includes(style) ? style : 'imageTop');
 const normalizeResizeMode = (mode) => (['snapToGrid', 'freeResize'].includes(mode) ? mode : 'snapToGrid');
+const normalizeGridMode = (mode) => (['preset', 'custom', 'autoFill'].includes(mode) ? mode : 'preset');
+const normalizeLayoutMode = (mode) => ['classicColumns', 'smartAutoFit', 'snapGrid', 'fluidGrid', 'manualDesigner'].includes(mode) ? mode : 'classicColumns';
 const normalizeImagePosition = (position) => (['center', 'top', 'bottom', 'left', 'right', 'custom'].includes(position) ? position : 'center');
+const normalizeBadgePosition = (position) => ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(position) ? position : 'topLeft';
+const normalizeBadgeShape = (shape) => ['pill', 'rounded', 'square', 'circle', 'ribbon'].includes(shape) ? shape : DEFAULT_BADGE_STYLE.shape;
 const normalizeSpanOption = (value, fallback, allowed) => (allowed.includes(value) ? value : fallback);
+const GRID_PRESETS = ['oneColumn', 'twoColumns', 'threeColumns', 'fourColumns', 'fiveColumns', 'catalogGrid', 'magazineGrid', 'heroGrid', 'bentoGrid', 'textColumns'];
+const GRID_PRESET_COLUMNS = Object.freeze({ oneColumn: 1, twoColumns: 2, threeColumns: 3, fourColumns: 4, fiveColumns: 5 });
+const columnPresetFor = (columns) => ({ 1: 'oneColumn', 2: 'twoColumns', 3: 'threeColumns', 4: 'fourColumns', 5: 'fiveColumns' }[columns] ?? 'twoColumns');
+
+const normalizeGridPreset = (preset) => GRID_PRESETS.includes(preset) ? preset : 'twoColumns';
+const normalizeCardContentLayout = (layout) => ['below', 'imageLeft', 'imageRight'].includes(layout) ? layout : 'below';
+const normalizeDishType = (type) => ['simple', 'configurable', 'combo'].includes(type) ? type : 'simple';
+const fallbackCategoryId = (categories, preferredId) => preferredId && categories.some((category) => category.id === preferredId) ? preferredId : categories[0]?.id ?? null;
+const visibleDishIdsForCategories = (dishes, categoryIds) => dishes.filter((dish) => dish.visible && categoryIds.includes(dish.categoryId)).map((dish) => dish.id);
+
 const normalizeCustomGrid = (customGrid = {}, fallbackGap = DEFAULT_PAGE_DESIGN_SETTINGS.cardGap) => ({
   rows: clampNumber(customGrid.rows, DEFAULT_CUSTOM_GRID.rows, 1, 12),
   columns: clampNumber(customGrid.columns, DEFAULT_CUSTOM_GRID.columns, 1, 6),
@@ -220,6 +207,7 @@ const normalizeCustomGrid = (customGrid = {}, fallbackGap = DEFAULT_PAGE_DESIGN_
   autoRows: customGrid.autoRows === undefined ? DEFAULT_CUSTOM_GRID.autoRows : Boolean(customGrid.autoRows),
   densePacking: customGrid.densePacking === undefined ? DEFAULT_CUSTOM_GRID.densePacking : Boolean(customGrid.densePacking),
 });
+
 const normalizeGridPresetList = (presets = [], fallbackGap = DEFAULT_PAGE_DESIGN_SETTINGS.cardGap) => Array.isArray(presets)
   ? presets.map((preset) => ({
       id: preset.id || createId('gridPreset'),
@@ -232,14 +220,13 @@ const normalizeGridPresetList = (presets = [], fallbackGap = DEFAULT_PAGE_DESIGN
       },
     })).slice(0, 24)
   : [];
+
 const normalizeItemPlacements = (placements = {}) => Object.fromEntries(
   Object.entries(placements ?? {}).map(([dishId, placement]) => {
     const widthPercent = clampNumber(placement?.widthPercent, 30, 10, 100);
     const heightPercent = clampNumber(placement?.heightPercent, 22, 8, 100);
-    const xPercent = clampNumber(placement?.xPercent, 0, 0, 100 - widthPercent);
-    const yPercent = clampNumber(placement?.yPercent, 0, 0, 100 - heightPercent);
     return [dishId, {
-      mode: ['free', 'fluid'].includes(placement?.mode) ? placement.mode : 'grid',
+      mode: ['free', 'fluid', 'grid'].includes(placement?.mode) ? placement.mode : 'grid',
       widthWeight: clampNumber(placement?.widthWeight, 1, 0.5, 4),
       heightWeight: clampNumber(placement?.heightWeight, 1, 0.5, 4),
       minWidthPercent: clampNumber(placement?.minWidthPercent, 12, 5, 100),
@@ -249,8 +236,8 @@ const normalizeItemPlacements = (placements = {}) => Object.fromEntries(
       order: clampNumber(placement?.order, 0, -9999, 9999),
       colSpan: clampNumber(placement?.colSpan, 1, 1, 8),
       rowSpan: clampNumber(placement?.rowSpan, 1, 1, 12),
-      xPercent,
-      yPercent,
+      xPercent: clampNumber(placement?.xPercent, 0, 0, 100 - widthPercent),
+      yPercent: clampNumber(placement?.yPercent, 0, 0, 100 - heightPercent),
       widthPercent,
       heightPercent,
       zIndex: clampNumber(placement?.zIndex, 1, 1, 999),
@@ -258,18 +245,16 @@ const normalizeItemPlacements = (placements = {}) => Object.fromEntries(
     }];
   }),
 );
-const normalizeBadgePosition = (position) =>
-  ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(position) ? position : 'topLeft';
-const normalizeBadgeShape = (shape) => ['pill', 'rounded', 'square', 'circle', 'ribbon'].includes(shape) ? shape : DEFAULT_BADGE_STYLE.shape;
+
 const normalizeBadgeStyle = (style = {}, accentColor = DEFAULT_PAGE_DESIGN_SETTINGS.accentColor) => ({
-  backgroundColor: style.backgroundColor === 'accentColor' ? accentColor : (/^#[0-9a-fA-F]{3,8}$/.test(style.backgroundColor ?? '') ? style.backgroundColor : accentColor),
-  textColor: /^#[0-9a-fA-F]{3,8}$/.test(style.textColor ?? '') ? style.textColor : DEFAULT_BADGE_STYLE.textColor,
-  borderColor: style.borderColor === 'transparent' || /^#[0-9a-fA-F]{3,8}$/.test(style.borderColor ?? '') ? style.borderColor : DEFAULT_BADGE_STYLE.borderColor,
+  backgroundColor: style.backgroundColor === 'accentColor' ? accentColor : normalizeColor(style.backgroundColor, accentColor),
+  textColor: normalizeColor(style.textColor, DEFAULT_BADGE_STYLE.textColor),
+  borderColor: style.borderColor === 'transparent' ? 'transparent' : normalizeColor(style.borderColor, DEFAULT_BADGE_STYLE.borderColor),
   borderWidth: clampNumber(style.borderWidth, DEFAULT_BADGE_STYLE.borderWidth, 0, 8),
   opacity: clampNumber(style.opacity, DEFAULT_BADGE_STYLE.opacity, 0, 100),
   shape: normalizeBadgeShape(style.shape),
 });
-const normalizeDishType = (type) => ['simple', 'configurable', 'combo'].includes(type) ? type : 'simple';
+
 const normalizeOptionGroups = (groups = []) => Array.isArray(groups) ? groups.map((group) => ({
   id: group.id || createId('group'),
   nameEn: group.nameEn ?? 'Option group',
@@ -284,11 +269,6 @@ const normalizeOptionGroups = (groups = []) => Array.isArray(groups) ? groups.ma
     priceDelta: clampNumber(option.priceDelta, 0, -999, 999),
   })) : [],
 })) : [];
-const clampNumber = (value, fallback, min, max) => {
-  const number = Number(value ?? fallback);
-  if (!Number.isFinite(number)) return fallback;
-  return Math.min(max, Math.max(min, number));
-};
 
 const normalizeHeader = (header = {}, dividerColorFallback = DEFAULT_PAGE_HEADER.dividerColor) => ({
   ...DEFAULT_PAGE_HEADER,
@@ -319,68 +299,49 @@ const normalizeFooter = (footer = {}, dividerColorFallback = DEFAULT_PAGE_FOOTER
 });
 
 const normalizeDesignSettings = (settings = {}) => {
-  const merged = {
-    ...DEFAULT_PAGE_DESIGN_SETTINGS,
-    ...settings,
-    fitStrategy: { ...DEFAULT_FIT_STRATEGY, ...(settings.fitStrategy ?? {}) },
-  };
-  const normalizedGridMode = normalizeGridMode(merged.gridMode);
-  const normalizedGridPreset = normalizeGridPreset(merged.gridPreset);
-  const derivedClassicColumns = GRID_PRESET_COLUMNS[normalizedGridPreset] ?? clampNumber(merged.classicColumns, DEFAULT_PAGE_DESIGN_SETTINGS.classicColumns, 1, 5);
-  const derivedLayoutMode = settings.layoutMode
-    ? normalizeLayoutMode(settings.layoutMode)
-    : (normalizedGridMode === 'autoFill' || settings.fittingMode === 'autoFill')
-      ? 'smartAutoFit'
-      : normalizedGridMode === 'custom'
-        ? 'manualDesigner'
-        : 'classicColumns';
-  const classicColumns = clampNumber(merged.classicColumns ?? derivedClassicColumns, derivedClassicColumns, 1, 5);
-  const derivedCardStyle = settings.showImages === false
-    ? 'textOnly'
-    : normalizeCardStyle(settings.cardStyle ?? ({ below: 'imageTop', imageLeft: 'imageLeft', imageRight: 'imageRight' }[normalizeCardContentLayout(settings.cardContentLayout)]));
-  const imageFitMode = normalizeImageFit(settings.imageFitMode ?? settings.imageFit);
-
+  const merged = { ...DEFAULT_PAGE_DESIGN_SETTINGS, ...settings, fitStrategy: { ...DEFAULT_FIT_STRATEGY, ...(settings.fitStrategy ?? {}) } };
+  const layoutMode = normalizeLayoutMode(merged.layoutMode);
+  const classicColumns = clampNumber(merged.classicColumns, DEFAULT_PAGE_DESIGN_SETTINGS.classicColumns, 1, 5);
+  const imageFitMode = normalizeImageFit(merged.imageFitMode ?? merged.imageFit);
+  const cardStyle = merged.showImages === false ? 'textOnly' : normalizeCardStyle(merged.cardStyle);
   return {
     ...merged,
-    showDescriptions:
-      settings.showDescriptions === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.showDescriptions : Boolean(settings.showDescriptions),
-    showImages: settings.showImages === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.showImages : Boolean(settings.showImages),
-    fitAllItems: settings.fitAllItems === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.fitAllItems : Boolean(settings.fitAllItems),
-    fontPreset: Object.keys(FONT_PRESETS).includes(merged.fontPreset) || merged.fontPreset === 'custom' ? merged.fontPreset : 'custom',
-    layoutMode: derivedLayoutMode,
+    layoutMode,
     classicColumns,
-    cardStyle: derivedCardStyle,
+    cardStyle,
     resizeMode: normalizeResizeMode(merged.resizeMode),
-    gridMode: derivedLayoutMode === 'smartAutoFit' ? 'autoFill' : (derivedLayoutMode === 'manualDesigner' || derivedLayoutMode === 'snapGrid') ? 'custom' : 'preset',
-    gridPreset: derivedLayoutMode === 'classicColumns' ? columnPresetFor(classicColumns) : normalizedGridPreset,
+    gridMode: layoutMode === 'smartAutoFit' ? 'autoFill' : (layoutMode === 'manualDesigner' || layoutMode === 'snapGrid') ? 'custom' : normalizeGridMode(merged.gridMode),
+    gridPreset: layoutMode === 'classicColumns' ? columnPresetFor(classicColumns) : normalizeGridPreset(merged.gridPreset),
     customGrid: normalizeCustomGrid(merged.customGrid, merged.cardGap),
-    makeFirstItemHero: Boolean(merged.makeFirstItemHero),
-    heroItemSpan: normalizeSpanOption(merged.heroItemSpan, '2x2', ['2x1', '2x2', '3x2']),
-    defaultItemSpan: normalizeSpanOption(merged.defaultItemSpan, '1x1', ['1x1', '2x1']),
     customGridPresets: normalizeGridPresetList(merged.customGridPresets, merged.cardGap),
     cardDensity: ['airy', 'balanced', 'compact'].includes(merged.cardDensity) ? merged.cardDensity : 'balanced',
     categoryTitleStyle: ['plain', 'underline', 'accentBar', 'pill', 'centered'].includes(merged.categoryTitleStyle) ? merged.categoryTitleStyle : 'plain',
     imageRatio: ['square', 'fourThree', 'sixteenNine', 'wide', 'custom'].includes(merged.imageRatio) ? merged.imageRatio : 'custom',
-    imageTitleGap: clampNumber(settings.imageTitleGap, DEFAULT_PAGE_DESIGN_SETTINGS.imageTitleGap, 0, 40),
-    cardContentLayout: { imageTop: 'below', imageLeft: 'imageLeft', imageRight: 'imageRight', textOnly: normalizeCardContentLayout(settings.cardContentLayout) }[derivedCardStyle] ?? normalizeCardContentLayout(settings.cardContentLayout),
-    badgePosition: normalizeBadgePosition(settings.badgePosition),
-    badgeStyle: normalizeBadgeStyle(settings.badgeStyle ?? merged.badgeStyle, merged.accentColor),
-    configurableDisplayMode: ['compactOptions', 'stepList'].includes(settings.configurableDisplayMode) ? settings.configurableDisplayMode : DEFAULT_PAGE_DESIGN_SETTINGS.configurableDisplayMode,
-    cardBorderEnabled:
-      settings.cardBorderEnabled === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderEnabled : Boolean(settings.cardBorderEnabled),
-    cardBorderWidth: clampNumber(settings.cardBorderWidth, DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderWidth, 0, 12),
-    cardBorderOpacity: clampNumber(settings.cardBorderOpacity, DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderOpacity, 0, 100),
-    cardShadowEnabled:
-      settings.cardShadowEnabled === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.cardShadowEnabled : Boolean(settings.cardShadowEnabled),
+    imageTitleGap: clampNumber(merged.imageTitleGap, DEFAULT_PAGE_DESIGN_SETTINGS.imageTitleGap, 0, 40),
+    cardContentLayout: { imageTop: 'below', imageLeft: 'imageLeft', imageRight: 'imageRight', textOnly: normalizeCardContentLayout(merged.cardContentLayout) }[cardStyle] ?? normalizeCardContentLayout(merged.cardContentLayout),
+    badgePosition: normalizeBadgePosition(merged.badgePosition),
+    badgeStyle: normalizeBadgeStyle(merged.badgeStyle, merged.accentColor),
+    configurableDisplayMode: ['compactOptions', 'stepList'].includes(merged.configurableDisplayMode) ? merged.configurableDisplayMode : DEFAULT_PAGE_DESIGN_SETTINGS.configurableDisplayMode,
+    cardBorderEnabled: merged.cardBorderEnabled === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderEnabled : Boolean(merged.cardBorderEnabled),
+    cardBorderWidth: clampNumber(merged.cardBorderWidth, DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderWidth, 0, 12),
+    cardBorderOpacity: clampNumber(merged.cardBorderOpacity, DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderOpacity, 0, 100),
+    cardShadowEnabled: merged.cardShadowEnabled === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.cardShadowEnabled : Boolean(merged.cardShadowEnabled),
+    showDescriptions: merged.showDescriptions === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.showDescriptions : Boolean(merged.showDescriptions),
+    showImages: merged.showImages === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.showImages : Boolean(merged.showImages),
+    fitAllItems: merged.fitAllItems === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.fitAllItems : Boolean(merged.fitAllItems),
+    fontPreset: Object.keys(FONT_PRESETS).includes(merged.fontPreset) || merged.fontPreset === 'custom' ? merged.fontPreset : 'custom',
+    makeFirstItemHero: Boolean(merged.makeFirstItemHero),
+    heroItemSpan: normalizeSpanOption(merged.heroItemSpan, '2x2', ['2x1', '2x2', '3x2']),
+    defaultItemSpan: normalizeSpanOption(merged.defaultItemSpan, '1x1', ['1x1', '2x1']),
     imageFit: imageFitMode,
     imageFitMode,
-    imagePosition: normalizeImagePosition(settings.imagePosition),
-    imageZoom: clampNumber(settings.imageZoom, DEFAULT_PAGE_DESIGN_SETTINGS.imageZoom, 50, 200),
-    imagePanX: clampNumber(settings.imagePanX, DEFAULT_PAGE_DESIGN_SETTINGS.imagePanX, -50, 50),
-    imagePanY: clampNumber(settings.imagePanY, DEFAULT_PAGE_DESIGN_SETTINGS.imagePanY, -50, 50),
-    imageAreaPercent: clampNumber(settings.imageAreaPercent, DEFAULT_PAGE_DESIGN_SETTINGS.imageAreaPercent, 10, 80),
-    titleLineClamp: Number(settings.titleLineClamp ?? DEFAULT_PAGE_DESIGN_SETTINGS.titleLineClamp),
-    descriptionLineClamp: Number(settings.descriptionLineClamp ?? DEFAULT_PAGE_DESIGN_SETTINGS.descriptionLineClamp),
+    imagePosition: normalizeImagePosition(merged.imagePosition),
+    imageZoom: clampNumber(merged.imageZoom, DEFAULT_PAGE_DESIGN_SETTINGS.imageZoom, 50, 200),
+    imagePanX: clampNumber(merged.imagePanX, DEFAULT_PAGE_DESIGN_SETTINGS.imagePanX, -50, 50),
+    imagePanY: clampNumber(merged.imagePanY, DEFAULT_PAGE_DESIGN_SETTINGS.imagePanY, -50, 50),
+    imageAreaPercent: clampNumber(merged.imageAreaPercent, DEFAULT_PAGE_DESIGN_SETTINGS.imageAreaPercent, 10, 80),
+    titleLineClamp: Number(merged.titleLineClamp ?? DEFAULT_PAGE_DESIGN_SETTINGS.titleLineClamp),
+    descriptionLineClamp: Number(merged.descriptionLineClamp ?? DEFAULT_PAGE_DESIGN_SETTINGS.descriptionLineClamp),
     fitStrategy: {
       allowShrinkCards: Boolean(merged.fitStrategy.allowShrinkCards),
       allowShrinkImages: Boolean(merged.fitStrategy.allowShrinkImages),
@@ -415,17 +376,11 @@ const buildDefaultPage = (project, name = 'Page 1') => {
 
 const normalizePage = (page, project, index) => {
   const fallbackCategoryIds = project.categories.map((category) => category.id);
-  const selectedCategoryIds = (page.selectedCategoryIds ?? page.categoryIds ?? fallbackCategoryIds).filter((id) =>
-    project.categories.some((category) => category.id === id),
-  );
+  const selectedCategoryIds = (page.selectedCategoryIds ?? page.categoryIds ?? fallbackCategoryIds).filter((id) => project.categories.some((category) => category.id === id));
   const visibleDishIds = visibleDishIdsForCategories(project.dishes, selectedCategoryIds);
-  const selectedDishIds = Array.isArray(page.selectedDishIds)
-    ? page.selectedDishIds.filter((dishId) => visibleDishIds.includes(dishId))
-    : visibleDishIds;
-
+  const selectedDishIds = Array.isArray(page.selectedDishIds) ? page.selectedDishIds.filter((dishId) => visibleDishIds.includes(dishId)) : visibleDishIds;
   const designSettings = normalizeDesignSettings({ ...(page.designSettings ?? {}), fittingMode: page.fittingMode });
   const dividerColorFallback = normalizeColor(designSettings.accentColor, DEFAULT_PAGE_DIVIDER_COLOR);
-
   return {
     id: page.id ?? createId('page'),
     name: page.name || `Page ${index + 1}`,
@@ -443,7 +398,7 @@ const normalizePage = (page, project, index) => {
   };
 };
 
-const normalizeProject = (project) => {
+export const normalizeProject = (project) => {
   const categories = (project.categories ?? []).map((category) => ({ ...blankCategory(), ...category }));
   const categoryIds = new Set(categories.map((category) => category.id));
   const fallbackId = categories[0]?.id ?? createId('cat');
@@ -453,225 +408,121 @@ const normalizeProject = (project) => {
     categoryId: fallbackCategoryId(categories, dish.categoryId) ?? fallbackId,
     dishType: normalizeDishType(dish.dishType),
     optionGroups: normalizeOptionGroups(dish.optionGroups),
+    badges: dish.badges ?? [],
   }));
-  const safeProject = { ...project, categories, dishes };
-  return {
-    ...safeProject,
-    activeSection: APP_SECTIONS.includes(project.activeSection) ? project.activeSection : 'dishes',
-    pages: (project.pages ?? []).map((page, index) => normalizePage(page, safeProject, index)),
-  };
+  const safeProject = { ...project, categories, dishes, pages: project.pages ?? [] };
+  let pages = safeProject.pages.map((page, index) => normalizePage(page, safeProject, index));
+  if (pages.length === 0) pages = [buildDefaultPage(safeProject)];
+  const selectedPageId = pages.some((page) => page.id === project.selectedPageId) ? project.selectedPageId : pages[0].id;
+  const selectedCategoryId = categoryIds.has(project.selectedCategoryId) ? project.selectedCategoryId : categories[0]?.id ?? null;
+  const selectedSection = Object.values(APP_SECTIONS).includes(project.selectedSection) ? project.selectedSection : APP_SECTIONS.LAYOUT_PRINT;
+  return { ...safeProject, pages, selectedPageId, selectedCategoryId, selectedSection };
 };
 
+function createInitialProject() {
+  try {
+    return normalizeProject(loadProject() ?? deepClone(demoProject));
+  } catch (error) {
+    console.warn('Unable to restore project from localStorage. Loading demo project instead.', error);
+    return normalizeProject(deepClone(demoProject));
+  }
+}
+
 export function createProjectStore() {
-  let project = normalizeProject(loadProject() ?? demoProject);
-  let listeners = new Set();
+  let project = createInitialProject();
   let saveStatus = SAVE_STATUSES.SAVED;
   let saveTimer = null;
-  let lastError = '';
+  const listeners = new Set();
 
-  const notify = () => listeners.forEach((listener) => listener());
-  const setStatus = (status, error = '') => {
-    saveStatus = status;
-    lastError = error;
-    notify();
-  };
+  const getSnapshot = () => ({ project, saveStatus });
+  const notify = () => listeners.forEach((listener) => listener(getSnapshot()));
+  const setSaveStatus = (status) => { saveStatus = status; notify(); };
 
-  const persist = () => {
-    try {
-      saveProject(project);
-      setStatus(SAVE_STATUSES.SAVED);
-    } catch (error) {
-      setStatus(SAVE_STATUSES.ERROR, error.message);
-    }
+  const saveImmediately = (status) => {
+    window.clearTimeout(saveTimer);
+    saveTimer = null;
+    saveProject(project);
+    setSaveStatus(status ?? SAVE_STATUSES.SAVED);
   };
 
   const scheduleSave = () => {
     window.clearTimeout(saveTimer);
-    setStatus(SAVE_STATUSES.SAVING);
-    saveTimer = window.setTimeout(persist, 250);
+    setSaveStatus(SAVE_STATUSES.UNSAVED);
+    saveTimer = window.setTimeout(() => {
+      setSaveStatus(SAVE_STATUSES.SAVING);
+      saveProject(project);
+      setSaveStatus(SAVE_STATUSES.SAVED);
+    }, 350);
   };
 
-  const updateProject = (updater) => {
-    project = normalizeProject(typeof updater === 'function' ? updater(project) : updater);
+  const update = (producer) => {
+    project = normalizeProject(producer(project));
     notify();
     scheduleSave();
   };
 
-  const updateSelectedPage = (updates) => {
-    updateProject((current) => ({
-      ...current,
-      pages: current.pages.map((page) =>
-        page.id === current.selectedPageId
-          ? { ...page, ...updates }
-          : page,
-      ),
-    }));
-  };
-
-  const updateSelectedPageDesign = (field, value) => {
-    updateProject((current) => ({
-      ...current,
-      pages: current.pages.map((page) =>
-        page.id === current.selectedPageId
-          ? {
-              ...page,
-              designSettings: {
-                ...page.designSettings,
-                [field]: value,
-              },
-            }
-          : page,
-      ),
-    }));
-  };
-
-  const updateSelectedPageFitStrategy = (field, value) => {
-    updateProject((current) => ({
-      ...current,
-      pages: current.pages.map((page) =>
-        page.id === current.selectedPageId
-          ? {
-              ...page,
-              designSettings: {
-                ...page.designSettings,
-                fitStrategy: {
-                  ...page.designSettings.fitStrategy,
-                  [field]: value,
-                },
-              },
-            }
-          : page,
-      ),
-    }));
-  };
-
-  const updateSelectedPageCustomGrid = (field, value) => {
-    updateProject((current) => ({
-      ...current,
-      pages: current.pages.map((page) =>
-        page.id === current.selectedPageId
-          ? {
-              ...page,
-              designSettings: {
-                ...page.designSettings,
-                customGrid: {
-                  ...page.designSettings.customGrid,
-                  [field]: value,
-                },
-              },
-            }
-          : page,
-      ),
-    }));
-  };
-
-  const saveSelectedPageCustomGridPreset = (name) => {
-    const safeName = name.trim();
-    if (!safeName) return;
-    updateProject((current) => ({
-      ...current,
-      pages: current.pages.map((page) => page.id === current.selectedPageId
-        ? {
-            ...page,
-            designSettings: {
-              ...page.designSettings,
-              customGridPresets: [
-                ...page.designSettings.customGridPresets,
-                {
-                  id: createId('gridPreset'),
-                  name: safeName,
-                  ...page.designSettings.customGrid,
-                  itemSpanRules: {
-                    makeFirstItemHero: page.designSettings.makeFirstItemHero,
-                    heroItemSpan: page.designSettings.heroItemSpan,
-                    defaultItemSpan: page.designSettings.defaultItemSpan,
-                  },
-                },
-              ],
-            },
-          }
-        : page),
-    }));
-  };
-
-  const applySelectedPageCustomGridPreset = (presetId) => {
-    updateProject((current) => ({
-      ...current,
-      pages: current.pages.map((page) => {
-        if (page.id !== current.selectedPageId) return page;
-        const preset = page.designSettings.customGridPresets.find((item) => item.id === presetId);
-        if (!preset) return page;
-        return {
-          ...page,
-          designSettings: {
-            ...page.designSettings,
-            customGrid: {
-              rows: preset.rows,
-              columns: preset.columns,
-              gap: preset.gap,
-              autoRows: preset.autoRows,
-              densePacking: preset.densePacking,
-            },
-            makeFirstItemHero: preset.itemSpanRules?.makeFirstItemHero ?? page.designSettings.makeFirstItemHero,
-            heroItemSpan: preset.itemSpanRules?.heroItemSpan ?? page.designSettings.heroItemSpan,
-            defaultItemSpan: preset.itemSpanRules?.defaultItemSpan ?? page.designSettings.defaultItemSpan,
-          },
-        };
+  const updateSelectedPage = (changesOrUpdater) => {
+    update((state) => ({
+      ...state,
+      pages: state.pages.map((page) => {
+        if (page.id !== state.selectedPageId) return page;
+        const changes = typeof changesOrUpdater === 'function' ? changesOrUpdater(page, state) : changesOrUpdater;
+        return { ...page, ...changes };
       }),
     }));
   };
 
-  const deleteSelectedPageCustomGridPreset = (presetId) => {
-    updateProject((current) => ({
-      ...current,
-      pages: current.pages.map((page) => page.id === current.selectedPageId
-        ? {
-            ...page,
-            designSettings: {
-              ...page.designSettings,
-              customGridPresets: page.designSettings.customGridPresets.filter((preset) => preset.id !== presetId),
-            },
-          }
-        : page),
-    }));
-  };
-
-  const updatePreviewPlacement = (dishId, placement) => {
-    updateSelectedPage({
-      itemPlacements: {
-        ...project.pages.find((page) => page.id === project.selectedPageId)?.itemPlacements,
-        [dishId]: placement,
-      },
-    });
+  const actions = {
+    setProjectName(name) { update((state) => ({ ...state, projectName: name })); },
+    setSection(section) { update((state) => ({ ...state, selectedSection: section })); },
+    saveProjectManually() { saveImmediately(`Saved manually at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`); },
+    importProject(importedProject) { project = normalizeProject(deepClone(importedProject)); saveImmediately('Imported project successfully'); },
+    resetDemoData() { window.clearTimeout(saveTimer); saveTimer = null; clearProject(); project = normalizeProject(deepClone(demoProject)); saveStatus = SAVE_STATUSES.SAVED; notify(); },
+    showProjectImportError(message) { setSaveStatus(message); },
+    selectCategory(categoryId) { update((state) => ({ ...state, selectedCategoryId: categoryId })); },
+    addCategory() { const category = blankCategory(); update((state) => ({ ...state, categories: [...state.categories, category], selectedCategoryId: category.id })); },
+    updateCategory(categoryId, changes) { update((state) => ({ ...state, categories: state.categories.map((category) => category.id === categoryId ? { ...category, ...changes } : category) })); },
+    deleteCategory(categoryId) { update((state) => { const categories = state.categories.filter((category) => category.id !== categoryId); const dishes = state.dishes.filter((dish) => dish.categoryId !== categoryId); return { ...state, categories, dishes, selectedCategoryId: fallbackCategoryId(categories, state.selectedCategoryId), pages: state.pages.map((page) => ({ ...page, selectedCategoryIds: page.selectedCategoryIds.filter((id) => id !== categoryId), selectedDishIds: page.selectedDishIds.filter((dishId) => dishes.some((dish) => dish.id === dishId)) })) }; }); },
+    duplicateCategory(categoryId) { update((state) => { const source = state.categories.find((category) => category.id === categoryId); if (!source) return state; const category = { ...source, id: createId('cat'), nameEn: `${source.nameEn} copy`, nameGe: source.nameGe ? `${source.nameGe} ასლი` : '' }; const copiedDishes = state.dishes.filter((dish) => dish.categoryId === categoryId).map((dish) => duplicateDishData(dish, category.id)); return { ...state, categories: [...state.categories, category], dishes: [...state.dishes, ...copiedDishes], selectedCategoryId: category.id, pages: state.pages.map((page) => ({ ...page, selectedCategoryIds: [...page.selectedCategoryIds, category.id] })) }; }); },
+    addDish(categoryId) { update((state) => ({ ...state, dishes: [...state.dishes, blankDish(categoryId)] })); },
+    updateDish(dishId, changes, priceField) { update((state) => ({ ...state, dishes: state.dishes.map((dish) => { if (dish.id !== dishId) return dish; const updated = { ...dish, ...changes }; return priceField ? recalculatePricing(updated, priceField) : updated; }) })); },
+    deleteDish(dishId) { update((state) => ({ ...state, dishes: state.dishes.filter((dish) => dish.id !== dishId), pages: state.pages.map((page) => ({ ...page, selectedDishIds: page.selectedDishIds.filter((id) => id !== dishId) })) })); },
+    duplicateDish(dishId) { update((state) => { const source = state.dishes.find((dish) => dish.id === dishId); return source ? { ...state, dishes: [...state.dishes, duplicateDishData(source)] } : state; }); },
+    toggleDishVisibility(dishId) { update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, visible: !dish.visible } : dish) })); },
+    addBadge(dishId) { update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, badges: [...(dish.badges ?? []), { id: createId('badge'), type: 'New', customText: '', emoji: '' }] } : dish) })); },
+    updateBadge(dishId, badgeId, changes) { update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, badges: (dish.badges ?? []).map((badge) => badge.id === badgeId ? { ...badge, ...changes } : badge) } : dish) })); },
+    deleteBadge(dishId, badgeId) { update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, badges: (dish.badges ?? []).filter((badge) => badge.id !== badgeId) } : dish) })); },
+    addOptionGroup(dishId) { update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, optionGroups: [...(dish.optionGroups ?? []), { id: createId('group'), nameEn: 'Option group', nameGe: '', required: false, minSelect: 0, maxSelect: 1, options: [] }] } : dish) })); },
+    updateOptionGroup(dishId, groupId, changes) { update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, optionGroups: (dish.optionGroups ?? []).map((group) => group.id === groupId ? { ...group, ...changes } : group) } : dish) })); },
+    deleteOptionGroup(dishId, groupId) { update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, optionGroups: (dish.optionGroups ?? []).filter((group) => group.id !== groupId) } : dish) })); },
+    addOption(dishId, groupId) { update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, optionGroups: (dish.optionGroups ?? []).map((group) => group.id === groupId ? { ...group, options: [...(group.options ?? []), { id: createId('option'), nameEn: 'Option', nameGe: '', priceDelta: 0 }] } : group) } : dish) })); },
+    updateOption(dishId, groupId, optionId, changes) { update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, optionGroups: (dish.optionGroups ?? []).map((group) => group.id === groupId ? { ...group, options: (group.options ?? []).map((option) => option.id === optionId ? { ...option, ...changes } : option) } : group) } : dish) })); },
+    deleteOption(dishId, groupId, optionId) { update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, optionGroups: (dish.optionGroups ?? []).map((group) => group.id === groupId ? { ...group, options: (group.options ?? []).filter((option) => option.id !== optionId) } : group) } : dish) })); },
+    selectPage(pageId) { update((state) => ({ ...state, selectedPageId: pageId })); },
+    addPage() { update((state) => { const page = buildDefaultPage(state, `Page ${state.pages.length + 1}`); return { ...state, pages: [...state.pages, page], selectedPageId: page.id }; }); },
+    duplicateSelectedPage() { update((state) => { const source = state.pages.find((page) => page.id === state.selectedPageId); if (!source) return state; const page = { ...deepClone(source), id: createId('page'), name: `${source.name} copy` }; return { ...state, pages: [...state.pages, page], selectedPageId: page.id }; }); },
+    deleteSelectedPage() { update((state) => { const currentIndex = state.pages.findIndex((page) => page.id === state.selectedPageId); const pages = state.pages.filter((page) => page.id !== state.selectedPageId); if (!pages.length) { const page = buildDefaultPage(state); return { ...state, pages: [page], selectedPageId: page.id }; } return { ...state, pages, selectedPageId: pages[Math.max(0, currentIndex - 1)]?.id ?? pages[0].id }; }); },
+    updateSelectedPage(changes) { updateSelectedPage(changes); },
+    setPageCategories(categoryIds) { updateSelectedPage((page, state) => ({ selectedCategoryIds: categoryIds, selectedDishIds: visibleDishIdsForCategories(state.dishes, categoryIds) })); },
+    updateSelectedPageDesign(setting, value) { updateSelectedPage((page) => ({ designSettings: { ...page.designSettings, [setting]: value } })); },
+    updateSelectedPageCustomGrid(setting, value) { updateSelectedPage((page) => ({ designSettings: { ...page.designSettings, customGrid: { ...page.designSettings.customGrid, [setting]: value } } })); },
+    updateSelectedPageFitStrategy(setting, value) { updateSelectedPage((page) => ({ designSettings: { ...page.designSettings, fitStrategy: { ...page.designSettings.fitStrategy, [setting]: value } } })); },
+    updateSelectedPageHeader(setting, value) { updateSelectedPage((page) => ({ header: { ...page.header, [setting]: value } })); },
+    updateSelectedPageFooter(setting, value) { updateSelectedPage((page) => ({ footer: { ...page.footer, [setting]: value } })); },
+    updateSelectedPageItemPlacement(dishId, placement) { updateSelectedPage((page) => ({ itemPlacements: { ...(page.itemPlacements ?? {}), [dishId]: { ...(page.itemPlacements?.[dishId] ?? {}), ...placement } } })); },
+    resetSelectedPageItemPlacement(dishId) { updateSelectedPage((page) => { const { [dishId]: _removed, ...itemPlacements } = page.itemPlacements ?? {}; return { itemPlacements }; }); },
+    resetSelectedPageItemPlacements() { updateSelectedPage({ itemPlacements: {} }); },
+    saveSelectedPageCustomGridPreset(name) { updateSelectedPage((page) => { const trimmedName = name.trim() || `Custom grid ${(page.designSettings.customGridPresets?.length ?? 0) + 1}`; const preset = { id: createId('gridPreset'), name: trimmedName, ...page.designSettings.customGrid, itemSpanRules: { makeFirstItemHero: page.designSettings.makeFirstItemHero, heroItemSpan: page.designSettings.heroItemSpan, defaultItemSpan: page.designSettings.defaultItemSpan } }; return { designSettings: { ...page.designSettings, customGridPresets: [...(page.designSettings.customGridPresets ?? []), preset] } }; }); },
+    applySelectedPageCustomGridPreset(presetId) { updateSelectedPage((page) => { const preset = page.designSettings.customGridPresets?.find((item) => item.id === presetId); if (!preset) return {}; return { designSettings: { ...page.designSettings, gridMode: 'custom', customGrid: { rows: preset.rows, columns: preset.columns, gap: preset.gap, autoRows: preset.autoRows, densePacking: preset.densePacking }, makeFirstItemHero: preset.itemSpanRules?.makeFirstItemHero ?? page.designSettings.makeFirstItemHero, heroItemSpan: preset.itemSpanRules?.heroItemSpan ?? page.designSettings.heroItemSpan, defaultItemSpan: preset.itemSpanRules?.defaultItemSpan ?? page.designSettings.defaultItemSpan } }; }); },
+    deleteSelectedPageCustomGridPreset(presetId) { updateSelectedPage((page) => ({ designSettings: { ...page.designSettings, customGridPresets: (page.designSettings.customGridPresets ?? []).filter((preset) => preset.id !== presetId) } })); },
   };
 
   return {
-    getSnapshot: () => ({ project, saveStatus, lastError }),
+    getSnapshot,
+    actions,
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
-    },
-    actions: {
-      updateProject,
-      updateSelectedPage,
-      updateSelectedPageDesign,
-      updateSelectedPageFitStrategy,
-      updateSelectedPageCustomGrid,
-      saveSelectedPageCustomGridPreset,
-      applySelectedPageCustomGridPreset,
-      deleteSelectedPageCustomGridPreset,
-      updatePreviewPlacement,
-      clearProject: () => {
-        clearProject();
-        project = normalizeProject(demoProject);
-        setStatus(SAVE_STATUSES.SAVED);
-        notify();
-      },
-      resetDemoProject: () => {
-        project = normalizeProject(demoProject);
-        persist();
-        notify();
-      },
     },
   };
 }
