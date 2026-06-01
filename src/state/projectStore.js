@@ -1,5 +1,5 @@
 import { demoProject } from '../data/demoProject.js';
-import { SAVE_STATUSES } from '../models/menu.js';
+import { APP_SECTIONS, SAVE_STATUSES } from '../models/menu.js';
 import { createId } from '../utils/id.js';
 import { recalculatePricing } from '../utils/pricing.js';
 import { FONT_PRESETS } from '../utils/typography.js';
