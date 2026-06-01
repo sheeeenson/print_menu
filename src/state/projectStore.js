@@ -24,6 +24,9 @@ export const DEFAULT_PAGE_HEADER = Object.freeze({
   rightImageSize: 56,
   fontSize: 14,
   alignment: 'center',
+  showDivider: true,
+  dividerColor: DEFAULT_PAGE_DIVIDER_COLOR,
+  dividerWidth: 1,
 });
 
 export const DEFAULT_PAGE_FOOTER = Object.freeze({
@@ -37,6 +40,9 @@ export const DEFAULT_PAGE_FOOTER = Object.freeze({
   rightTextGe: 'შეუკვეთე ახლა',
   fontSize: 12,
   alignment: 'center',
+  showDivider: true,
+  dividerColor: DEFAULT_PAGE_DIVIDER_COLOR,
+  dividerWidth: 1,
 });
 
 
@@ -355,9 +361,9 @@ const clampNumber = (value, fallback, min, max) => {
   return Math.min(max, Math.max(min, number));
 };
 
-const normalizeColor = (color, fallback) => /^#[0-9a-fA-F]{3,8}$/.test(color ?? '') ? color : fallback;
+const normalizeColor = (color, fallback) => (/^#[0-9a-fA-F]{3,8}$/.test(color ?? '') ? color : fallback);
 
-const normalizeHeader = (header = {}) => ({
+const normalizeHeader = (header = {}, dividerColorFallback = DEFAULT_PAGE_HEADER.dividerColor) => ({
   ...DEFAULT_PAGE_HEADER,
   ...header,
   enabled: header.enabled === undefined ? DEFAULT_PAGE_HEADER.enabled : Boolean(header.enabled),
@@ -368,15 +374,21 @@ const normalizeHeader = (header = {}) => ({
   rightImageSize: Number(header.rightImageSize ?? DEFAULT_PAGE_HEADER.rightImageSize),
   fontSize: Number(header.fontSize ?? DEFAULT_PAGE_HEADER.fontSize),
   alignment: normalizeAlignment(header.alignment),
+  showDivider: header.showDivider === undefined ? DEFAULT_PAGE_HEADER.showDivider : Boolean(header.showDivider),
+  dividerColor: normalizeColor(header.dividerColor, dividerColorFallback),
+  dividerWidth: clampNumber(header.dividerWidth, DEFAULT_PAGE_HEADER.dividerWidth, 0, 12),
 });
 
-const normalizeFooter = (footer = {}) => ({
+const normalizeFooter = (footer = {}, dividerColorFallback = DEFAULT_PAGE_FOOTER.dividerColor) => ({
   ...DEFAULT_PAGE_FOOTER,
   ...footer,
   enabled: footer.enabled === undefined ? DEFAULT_PAGE_FOOTER.enabled : Boolean(footer.enabled),
   height: Number(footer.height ?? DEFAULT_PAGE_FOOTER.height),
   fontSize: Number(footer.fontSize ?? DEFAULT_PAGE_FOOTER.fontSize),
   alignment: normalizeAlignment(footer.alignment),
+  showDivider: footer.showDivider === undefined ? DEFAULT_PAGE_FOOTER.showDivider : Boolean(footer.showDivider),
+  dividerColor: normalizeColor(footer.dividerColor, dividerColorFallback),
+  dividerWidth: clampNumber(footer.dividerWidth, DEFAULT_PAGE_FOOTER.dividerWidth, 0, 12),
 });
 
 const normalizeDesignSettings = (settings = {}) => {
