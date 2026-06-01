@@ -115,7 +115,7 @@ h1, h2, h3, h4, p { margin-top: 0; } h1, h2, h3, h4 { line-height: 1.15; }
 .template-classicList .preview-dish-card { grid-template-columns: 130px 1fr; align-items: start; }
 .template-classicList .preview-image-box { grid-row: span 4; }
 .template-compact .preview-dish-grid, .fit-compact .preview-dish-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: max(6px, calc(var(--card-gap) * 0.7)); }
-.template-compact .preview-dish-card, .fit-compact .preview-dish-card { gap: 6px; padding: max(6px, calc(var(--card-padding) * 0.75)); }
+.template-compact .preview-dish-card, .fit-compact .preview-dish-card { gap: 3px; padding: max(6px, calc(var(--card-padding) * 0.75)); }
 .template-compact .preview-image-box, .fit-compact .preview-image-box { height: max(54px, calc(var(--image-height) * 0.72)); }
 .preview-empty { border: 1px dashed #d8cbbd; border-radius: 22px; color: #7c7065; padding: 28px; text-align: center; }
 .fit-autoFill .page-content { display: flex; padding-top: 0; }
