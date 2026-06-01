@@ -7,6 +7,9 @@ const DEFAULT_SIZE_VARIANTS = Object.freeze([
   { labelEn: '40 cm', labelGe: '40 სმ', price: null },
 ]);
 
+const SIZE_GROUP_ID = 'pizza_size_prices';
+const formatVariantOptionName = (label, price) => [label, typeof price === 'number' ? formatOptionalNumber(price) + ' ₾' : ''].filter(Boolean).join(' — ');
+
 export function DishEditor({ dish, actions }) {
   const updateText = (field) => (event) => actions.updateDish(dish.id, { [field]: event.target.value });
   const updatePrice = (field) => (event) => actions.updateDish(dish.id, { [field]: parseOptionalNumber(event.target.value) }, field);
@@ -94,9 +97,37 @@ function NumberInput({ dish, field, label, step, onChange }) {
   );
 }
 
+function withSizeOptionGroup(dish, nextVariants) {
+  const variants = nextVariants.slice(0, 3);
+  const regularGroups = (dish.optionGroups ?? []).filter((group) => group.id !== SIZE_GROUP_ID);
+  if (!variants.length) return { priceVariants: [], optionGroups: regularGroups };
+
+  const sizeGroup = {
+    id: SIZE_GROUP_ID,
+    nameEn: 'Size',
+    nameGe: 'ზომა',
+    required: true,
+    minSelect: 1,
+    maxSelect: 1,
+    options: variants.map((variant, index) => ({
+      id: `pizza_size_${index}`,
+      nameEn: formatVariantOptionName(variant.labelEn, variant.price),
+      nameGe: formatVariantOptionName(variant.labelGe, variant.price),
+      priceDelta: 0,
+    })),
+  };
+
+  return {
+    dishType: 'configurable',
+    priceVariants: variants,
+    optionGroups: [sizeGroup, ...regularGroups],
+    newPrice: variants.find((variant) => typeof variant.price === 'number')?.price ?? dish.newPrice,
+  };
+}
+
 function SizePriceEditor({ dish, actions }) {
   const variants = (dish.priceVariants ?? []).slice(0, 3);
-  const updateVariants = (nextVariants) => actions.updateDish(dish.id, { priceVariants: nextVariants.slice(0, 3) });
+  const updateVariants = (nextVariants) => actions.updateDish(dish.id, withSizeOptionGroup(dish, nextVariants));
   const ensureDefaultVariants = () => updateVariants(variants.length ? variants : DEFAULT_SIZE_VARIANTS.map((variant) => ({ ...variant })));
   const addVariant = () => updateVariants([...variants, { labelEn: '', labelGe: '', price: null }]);
   const updateVariant = (index, changes) => updateVariants(variants.map((variant, variantIndex) => variantIndex === index ? { ...variant, ...changes } : variant));
