@@ -1,0 +1,31 @@
+.preview-dish-card.card-layout-below,
+.density-airy .preview-dish-card.card-layout-below,
+.density-compact .preview-dish-card.card-layout-below,
+.fit-autoFill .preview-dish-card.card-layout-below,
+.fit-all-dish-grid .preview-dish-card.card-layout-below,
+.custom-grid-item .preview-dish-card.card-layout-below,
+.free-resize-item .preview-dish-card.card-layout-below,
+.fluid-grid .preview-dish-card.card-layout-below {
+  gap: 1px;
+}
+
+.preview-dish-card.card-layout-below .preview-card-content,
+.density-airy .preview-dish-card.card-layout-below .preview-card-content,
+.density-compact .preview-dish-card.card-layout-below .preview-card-content,
+.fit-autoFill .preview-dish-card.card-layout-below .preview-card-content,
+.fit-all-dish-grid .preview-dish-card.card-layout-below .preview-card-content,
+.custom-grid-item .preview-dish-card.card-layout-below .preview-card-content,
+.free-resize-item .preview-dish-card.card-layout-below .preview-card-content,
+.fluid-grid .preview-dish-card.card-layout-below .preview-card-content {
+  gap: 1px;
+}
+
+.preview-dish-card.card-layout-below .preview-title-row {
+  gap: 1px;
+}
+
+.preview-dish-card.card-layout-below .dish-title,
+.preview-dish-card.card-layout-below h3 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
