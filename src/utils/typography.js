@@ -1,9 +1,28 @@
+export const GOOGLE_FONT_OPTIONS = Object.freeze([
+  ['Inter, "Noto Sans Georgian", system-ui, sans-serif', 'Inter'],
+  ['Roboto, "Noto Sans Georgian", Arial, sans-serif', 'Roboto'],
+  ['Open Sans, "Noto Sans Georgian", Arial, sans-serif', 'Open Sans'],
+  ['Montserrat, "Noto Sans Georgian", Arial, sans-serif', 'Montserrat'],
+  ['Poppins, "Noto Sans Georgian", Arial, sans-serif', 'Poppins'],
+  ['Lato, "Noto Sans Georgian", Arial, sans-serif', 'Lato'],
+  ['Nunito Sans, "Noto Sans Georgian", Arial, sans-serif', 'Nunito Sans'],
+  ['Raleway, "Noto Sans Georgian", Arial, sans-serif', 'Raleway'],
+  ['Oswald, "Noto Sans Georgian", Arial, sans-serif', 'Oswald'],
+  ['Bebas Neue, "Noto Sans Georgian", Arial, sans-serif', 'Bebas Neue'],
+  ['Playfair Display, "Noto Serif Georgian", Georgia, serif', 'Playfair Display'],
+  ['Merriweather, "Noto Serif Georgian", Georgia, serif', 'Merriweather'],
+  ['Cormorant Garamond, "Noto Serif Georgian", Georgia, serif', 'Cormorant Garamond'],
+  ['Libre Baskerville, "Noto Serif Georgian", Georgia, serif', 'Libre Baskerville'],
+  ['Noto Sans Georgian, Inter, system-ui, sans-serif', 'Noto Sans Georgian'],
+  ['Noto Serif Georgian, Georgia, serif', 'Noto Serif Georgian'],
+]);
+
 export const FONT_STACKS = Object.freeze({
-  modernSans: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans Georgian", sans-serif',
-  premiumSerif: 'Georgia, "Times New Roman", "Noto Serif Georgian", serif',
-  georgianClean: 'system-ui, "Noto Sans Georgian", "Segoe UI", sans-serif',
-  boldPromo: 'Impact, Haettenschweiler, "Arial Black", "Noto Sans Georgian", sans-serif',
-  classicMenu: 'Georgia, "Noto Serif Georgian", serif',
+  modernSans: GOOGLE_FONT_OPTIONS[0][0],
+  premiumSerif: GOOGLE_FONT_OPTIONS[10][0],
+  georgianClean: GOOGLE_FONT_OPTIONS[14][0],
+  boldPromo: GOOGLE_FONT_OPTIONS[9][0],
+  classicMenu: GOOGLE_FONT_OPTIONS[11][0],
 });
 
 export const FONT_PRESETS = Object.freeze({
