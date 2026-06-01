@@ -91,6 +91,7 @@ export const DEFAULT_PAGE_DESIGN_SETTINGS = Object.freeze({
   cardPadding: 14,
   cardRadius: 18,
   imageHeight: 118,
+  imageTitleGap: 1,
   imageRatio: 'custom',
   categoryTitleFontSize: 28,
   dishTitleFontSize: 17,
@@ -360,6 +361,7 @@ const normalizeDesignSettings = (settings = {}) => {
     cardDensity: ['airy', 'balanced', 'compact'].includes(merged.cardDensity) ? merged.cardDensity : 'balanced',
     categoryTitleStyle: ['plain', 'underline', 'accentBar', 'pill', 'centered'].includes(merged.categoryTitleStyle) ? merged.categoryTitleStyle : 'plain',
     imageRatio: ['square', 'fourThree', 'sixteenNine', 'wide', 'custom'].includes(merged.imageRatio) ? merged.imageRatio : 'custom',
+    imageTitleGap: clampNumber(settings.imageTitleGap, DEFAULT_PAGE_DESIGN_SETTINGS.imageTitleGap, 0, 40),
     cardContentLayout: { imageTop: 'below', imageLeft: 'imageLeft', imageRight: 'imageRight', textOnly: normalizeCardContentLayout(settings.cardContentLayout) }[derivedCardStyle] ?? normalizeCardContentLayout(settings.cardContentLayout),
     badgePosition: normalizeBadgePosition(settings.badgePosition),
     badgeStyle: normalizeBadgeStyle(settings.badgeStyle ?? merged.badgeStyle, merged.accentColor),
@@ -441,356 +443,168 @@ const normalizePage = (page, project, index) => {
   };
 };
 
-export const normalizeProject = (project) => {
-  const nextProject = {
-    ...project,
-    categories: project.categories ?? [],
-    dishes: (project.dishes ?? []).map((dish) => ({
-      ...dish,
-      dishType: normalizeDishType(dish.dishType),
-      optionGroups: normalizeOptionGroups(dish.optionGroups),
-      badges: dish.badges ?? [],
-    })),
-    pages: project.pages ?? [],
+const normalizeProject = (project) => {
+  const categories = (project.categories ?? []).map((category) => ({ ...blankCategory(), ...category }));
+  const categoryIds = new Set(categories.map((category) => category.id));
+  const fallbackId = categories[0]?.id ?? createId('cat');
+  const dishes = (project.dishes ?? []).map((dish) => ({
+    ...blankDish(fallbackCategoryId(categories, dish.categoryId) ?? fallbackId),
+    ...dish,
+    categoryId: fallbackCategoryId(categories, dish.categoryId) ?? fallbackId,
+    dishType: normalizeDishType(dish.dishType),
+    optionGroups: normalizeOptionGroups(dish.optionGroups),
+  }));
+  const safeProject = { ...project, categories, dishes };
+  return {
+    ...safeProject,
+    activeSection: APP_SECTIONS.includes(project.activeSection) ? project.activeSection : 'dishes',
+    pages: (project.pages ?? []).map((page, index) => normalizePage(page, safeProject, index)),
   };
-  let pages = nextProject.pages.map((page, index) => normalizePage(page, nextProject, index));
-  if (pages.length === 0) {
-    pages = [buildDefaultPage(nextProject)];
-  }
-  const selectedPageId = pages.some((page) => page.id === nextProject.selectedPageId)
-    ? nextProject.selectedPageId
-    : pages[0].id;
-
-  return { ...nextProject, pages, selectedPageId };
 };
 
-function createInitialProject() {
-  try {
-    return normalizeProject(loadProject() ?? deepClone(demoProject));
-  } catch (error) {
-    console.warn('Unable to restore project from localStorage. Loading demo project instead.', error);
-    return normalizeProject(deepClone(demoProject));
-  }
-}
-
 export function createProjectStore() {
-  let project = createInitialProject();
+  let project = normalizeProject(loadProject() ?? demoProject);
+  let listeners = new Set();
   let saveStatus = SAVE_STATUSES.SAVED;
   let saveTimer = null;
-  const listeners = new Set();
+  let lastError = '';
 
-  const notify = () => listeners.forEach((listener) => listener(getSnapshot()));
-
-  const getSnapshot = () => ({ project, saveStatus });
-
-  const setSaveStatus = (status) => {
+  const notify = () => listeners.forEach((listener) => listener());
+  const setStatus = (status, error = '') => {
     saveStatus = status;
+    lastError = error;
     notify();
   };
 
-  const saveImmediately = (status) => {
-    window.clearTimeout(saveTimer);
-    saveTimer = null;
-    saveProject(project);
-    setSaveStatus(status ?? SAVE_STATUSES.SAVED);
+  const persist = () => {
+    try {
+      saveProject(project);
+      setStatus(SAVE_STATUSES.SAVED);
+    } catch (error) {
+      setStatus(SAVE_STATUSES.ERROR, error.message);
+    }
   };
 
   const scheduleSave = () => {
     window.clearTimeout(saveTimer);
-    setSaveStatus(SAVE_STATUSES.UNSAVED);
-    saveTimer = window.setTimeout(() => {
-      setSaveStatus(SAVE_STATUSES.SAVING);
-      saveProject(project);
-      setSaveStatus(SAVE_STATUSES.SAVED);
-    }, 350);
+    setStatus(SAVE_STATUSES.SAVING);
+    saveTimer = window.setTimeout(persist, 250);
   };
 
-  const update = (producer) => {
-    project = normalizeProject(producer(project));
+  const updateProject = (updater) => {
+    project = normalizeProject(typeof updater === 'function' ? updater(project) : updater);
     notify();
     scheduleSave();
   };
 
-  const updateSelectedPage = (changesOrUpdater) => {
-    update((state) => ({
-      ...state,
-      pages: state.pages.map((page) => {
-        if (page.id !== state.selectedPageId) return page;
-        const changes = typeof changesOrUpdater === 'function' ? changesOrUpdater(page, state) : changesOrUpdater;
-        return { ...page, ...changes };
-      }),
+  const updateSelectedPage = (updates) => {
+    updateProject((current) => ({
+      ...current,
+      pages: current.pages.map((page) =>
+        page.id === current.selectedPageId
+          ? { ...page, ...updates }
+          : page,
+      ),
     }));
   };
 
-  const actions = {
-    setProjectName(name) {
-      update((state) => ({ ...state, projectName: name }));
-    },
-    setSection(section) {
-      update((state) => ({ ...state, selectedSection: section }));
-    },
-    saveProjectManually() {
-      const savedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      saveImmediately(`Saved manually at ${savedAt}`);
-    },
-    importProject(importedProject) {
-      project = normalizeProject(deepClone(importedProject));
-      saveImmediately('Imported project successfully');
-    },
-    resetDemoData() {
-      window.clearTimeout(saveTimer);
-      saveTimer = null;
-      clearProject();
-      project = normalizeProject(deepClone(demoProject));
-      saveStatus = SAVE_STATUSES.SAVED;
-      notify();
-    },
-    showProjectImportError(message) {
-      setSaveStatus(message);
-    },
-    selectCategory(categoryId) {
-      update((state) => ({ ...state, selectedCategoryId: categoryId }));
-    },
-    addCategory() {
-      const category = blankCategory();
-      update((state) => ({ ...state, categories: [...state.categories, category], selectedCategoryId: category.id }));
-    },
-    updateCategory(categoryId, changes) {
-      update((state) => ({
-        ...state,
-        categories: state.categories.map((category) =>
-          category.id === categoryId ? { ...category, ...changes } : category,
-        ),
-      }));
-    },
-    deleteCategory(categoryId) {
-      update((state) => {
-        const categories = state.categories.filter((category) => category.id !== categoryId);
-        return {
-          ...state,
-          categories,
-          dishes: state.dishes.filter((dish) => dish.categoryId !== categoryId),
-          pages: state.pages.map((page) => ({
+  const updateSelectedPageDesign = (field, value) => {
+    updateProject((current) => ({
+      ...current,
+      pages: current.pages.map((page) =>
+        page.id === current.selectedPageId
+          ? {
+              ...page,
+              designSettings: {
+                ...page.designSettings,
+                [field]: value,
+              },
+            }
+          : page,
+      ),
+    }));
+  };
+
+  const updateSelectedPageFitStrategy = (field, value) => {
+    updateProject((current) => ({
+      ...current,
+      pages: current.pages.map((page) =>
+        page.id === current.selectedPageId
+          ? {
+              ...page,
+              designSettings: {
+                ...page.designSettings,
+                fitStrategy: {
+                  ...page.designSettings.fitStrategy,
+                  [field]: value,
+                },
+              },
+            }
+          : page,
+      ),
+    }));
+  };
+
+  const updateSelectedPageCustomGrid = (field, value) => {
+    updateProject((current) => ({
+      ...current,
+      pages: current.pages.map((page) =>
+        page.id === current.selectedPageId
+          ? {
+              ...page,
+              designSettings: {
+                ...page.designSettings,
+                customGrid: {
+                  ...page.designSettings.customGrid,
+                  [field]: value,
+                },
+              },
+            }
+          : page,
+      ),
+    }));
+  };
+
+  const saveSelectedPageCustomGridPreset = (name) => {
+    const safeName = name.trim();
+    if (!safeName) return;
+    updateProject((current) => ({
+      ...current,
+      pages: current.pages.map((page) => page.id === current.selectedPageId
+        ? {
             ...page,
-            selectedCategoryIds: page.selectedCategoryIds.filter((id) => id !== categoryId),
-            selectedDishIds: page.selectedDishIds.filter((dishId) => state.dishes.some((dish) => dish.id === dishId && dish.categoryId !== categoryId)),
-          })),
-          selectedCategoryId: fallbackCategoryId(categories, state.selectedCategoryId),
-        };
-      });
-    },
-    duplicateCategory(categoryId) {
-      update((state) => {
-        const source = state.categories.find((category) => category.id === categoryId);
-        if (!source) return state;
-        const category = {
-          ...source,
-          id: createId('cat'),
-          nameEn: `${source.nameEn} copy`,
-          nameGe: source.nameGe ? `${source.nameGe} ასლი` : '',
-        };
-        const copiedDishes = state.dishes
-          .filter((dish) => dish.categoryId === categoryId)
-          .map((dish) => duplicateDish(dish, category.id));
+            designSettings: {
+              ...page.designSettings,
+              customGridPresets: [
+                ...page.designSettings.customGridPresets,
+                {
+                  id: createId('gridPreset'),
+                  name: safeName,
+                  ...page.designSettings.customGrid,
+                  itemSpanRules: {
+                    makeFirstItemHero: page.designSettings.makeFirstItemHero,
+                    heroItemSpan: page.designSettings.heroItemSpan,
+                    defaultItemSpan: page.designSettings.defaultItemSpan,
+                  },
+                },
+              ],
+            },
+          }
+        : page),
+    }));
+  };
+
+  const applySelectedPageCustomGridPreset = (presetId) => {
+    updateProject((current) => ({
+      ...current,
+      pages: current.pages.map((page) => {
+        if (page.id !== current.selectedPageId) return page;
+        const preset = page.designSettings.customGridPresets.find((item) => item.id === presetId);
+        if (!preset) return page;
         return {
-          ...state,
-          categories: [...state.categories, category],
-          dishes: [...state.dishes, ...copiedDishes],
-          pages: state.pages.map((page) => ({ ...page, selectedCategoryIds: [...page.selectedCategoryIds, category.id] })),
-          selectedCategoryId: category.id,
-        };
-      });
-    },
-    addDish(categoryId) {
-      update((state) => ({ ...state, dishes: [...state.dishes, blankDish(categoryId)] }));
-    },
-    updateDish(dishId, changes, priceField) {
-      update((state) => ({
-        ...state,
-        dishes: state.dishes.map((dish) => {
-          if (dish.id !== dishId) return dish;
-          const updated = { ...dish, ...changes };
-          return priceField ? recalculatePricing(updated, priceField) : updated;
-        }),
-      }));
-    },
-    deleteDish(dishId) {
-      update((state) => ({ ...state, dishes: state.dishes.filter((dish) => dish.id !== dishId) }));
-    },
-    duplicateDish(dishId) {
-      update((state) => {
-        const source = state.dishes.find((dish) => dish.id === dishId);
-        return source ? { ...state, dishes: [...state.dishes, duplicateDish(source)] } : state;
-      });
-    },
-    toggleDishVisibility(dishId) {
-      update((state) => ({
-        ...state,
-        dishes: state.dishes.map((dish) => (dish.id === dishId ? { ...dish, visible: !dish.visible } : dish)),
-      }));
-    },
-    addBadge(dishId) {
-      update((state) => ({
-        ...state,
-        dishes: state.dishes.map((dish) =>
-          dish.id === dishId
-            ? { ...dish, badges: [...dish.badges, { id: createId('badge'), type: 'New', customText: '', emoji: '' }] }
-            : dish,
-        ),
-      }));
-    },
-    updateBadge(dishId, badgeId, changes) {
-      update((state) => ({
-        ...state,
-        dishes: state.dishes.map((dish) =>
-          dish.id === dishId
-            ? {
-                ...dish,
-                badges: dish.badges.map((badge) => (badge.id === badgeId ? { ...badge, ...changes } : badge)),
-              }
-            : dish,
-        ),
-      }));
-    },
-    deleteBadge(dishId, badgeId) {
-      update((state) => ({
-        ...state,
-        dishes: state.dishes.map((dish) =>
-          dish.id === dishId ? { ...dish, badges: dish.badges.filter((badge) => badge.id !== badgeId) } : dish,
-        ),
-      }));
-    },
-    addOptionGroup(dishId) {
-      update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, optionGroups: [...(dish.optionGroups ?? []), { id: createId('group'), nameEn: 'Option group', nameGe: '', required: false, minSelect: 0, maxSelect: 1, options: [] }] } : dish) }));
-    },
-    updateOptionGroup(dishId, groupId, changes) {
-      update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, optionGroups: (dish.optionGroups ?? []).map((group) => group.id === groupId ? { ...group, ...changes } : group) } : dish) }));
-    },
-    deleteOptionGroup(dishId, groupId) {
-      update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, optionGroups: (dish.optionGroups ?? []).filter((group) => group.id !== groupId) } : dish) }));
-    },
-    addOption(dishId, groupId) {
-      update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, optionGroups: (dish.optionGroups ?? []).map((group) => group.id === groupId ? { ...group, options: [...(group.options ?? []), { id: createId('option'), nameEn: 'Option', nameGe: '', priceDelta: 0 }] } : group) } : dish) }));
-    },
-    updateOption(dishId, groupId, optionId, changes) {
-      update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, optionGroups: (dish.optionGroups ?? []).map((group) => group.id === groupId ? { ...group, options: (group.options ?? []).map((option) => option.id === optionId ? { ...option, ...changes } : option) } : group) } : dish) }));
-    },
-    deleteOption(dishId, groupId, optionId) {
-      update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, optionGroups: (dish.optionGroups ?? []).map((group) => group.id === groupId ? { ...group, options: (group.options ?? []).filter((option) => option.id !== optionId) } : group) } : dish) }));
-    },
-    selectPage(pageId) {
-      update((state) => ({ ...state, selectedPageId: pageId }));
-    },
-    addPage() {
-      update((state) => {
-        const page = buildDefaultPage(state, `Page ${state.pages.length + 1}`);
-        return { ...state, pages: [...state.pages, page], selectedPageId: page.id };
-      });
-    },
-    duplicateSelectedPage() {
-      update((state) => {
-        const source = state.pages.find((page) => page.id === state.selectedPageId);
-        if (!source) return state;
-        const page = { ...deepClone(source), id: createId('page'), name: `${source.name} copy` };
-        return { ...state, pages: [...state.pages, page], selectedPageId: page.id };
-      });
-    },
-    deleteSelectedPage() {
-      update((state) => {
-        const currentIndex = state.pages.findIndex((page) => page.id === state.selectedPageId);
-        const pages = state.pages.filter((page) => page.id !== state.selectedPageId);
-        if (pages.length === 0) {
-          const page = buildDefaultPage(state);
-          return { ...state, pages: [page], selectedPageId: page.id };
-        }
-        const selectedPageId = pages[Math.max(0, currentIndex - 1)]?.id ?? pages[0].id;
-        return { ...state, pages, selectedPageId };
-      });
-    },
-    updateSelectedPage(changes) {
-      updateSelectedPage(changes);
-    },
-    setPageCategories(categoryIds) {
-      updateSelectedPage((page, state) => ({
-        selectedCategoryIds: categoryIds,
-        selectedDishIds: visibleDishIdsForCategories(state.dishes, categoryIds),
-      }));
-    },
-    updateSelectedPageDesign(setting, value) {
-      updateSelectedPage((page) => ({ designSettings: { ...page.designSettings, [setting]: value } }));
-    },
-    updateSelectedPageCustomGrid(setting, value) {
-      updateSelectedPage((page) => ({
-        designSettings: {
-          ...page.designSettings,
-          customGrid: { ...page.designSettings.customGrid, [setting]: value },
-        },
-      }));
-    },
-    updateSelectedPageItemPlacement(dishId, placement) {
-      updateSelectedPage((page) => ({
-        itemPlacements: {
-          ...(page.itemPlacements ?? {}),
-          [dishId]: {
-            ...(page.itemPlacements?.[dishId] ?? {}),
-            mode: placement?.mode ?? page.itemPlacements?.[dishId]?.mode ?? 'grid',
-            widthWeight: placement?.widthWeight ?? page.itemPlacements?.[dishId]?.widthWeight ?? 1,
-            heightWeight: placement?.heightWeight ?? page.itemPlacements?.[dishId]?.heightWeight ?? 1,
-            minWidthPercent: placement?.minWidthPercent ?? page.itemPlacements?.[dishId]?.minWidthPercent ?? 12,
-            minHeightPercent: placement?.minHeightPercent ?? page.itemPlacements?.[dishId]?.minHeightPercent ?? 8,
-            maxWidthPercent: placement?.maxWidthPercent ?? page.itemPlacements?.[dishId]?.maxWidthPercent ?? 100,
-            maxHeightPercent: placement?.maxHeightPercent ?? page.itemPlacements?.[dishId]?.maxHeightPercent ?? 100,
-            order: placement?.order ?? page.itemPlacements?.[dishId]?.order ?? 0,
-            colSpan: placement?.colSpan ?? page.itemPlacements?.[dishId]?.colSpan ?? 1,
-            rowSpan: placement?.rowSpan ?? page.itemPlacements?.[dishId]?.rowSpan ?? 1,
-            xPercent: placement?.xPercent ?? page.itemPlacements?.[dishId]?.xPercent ?? 0,
-            yPercent: placement?.yPercent ?? page.itemPlacements?.[dishId]?.yPercent ?? 0,
-            widthPercent: placement?.widthPercent ?? page.itemPlacements?.[dishId]?.widthPercent ?? 30,
-            heightPercent: placement?.heightPercent ?? page.itemPlacements?.[dishId]?.heightPercent ?? 22,
-            zIndex: placement?.zIndex ?? page.itemPlacements?.[dishId]?.zIndex ?? 1,
-            priority: placement?.priority ?? page.itemPlacements?.[dishId]?.priority ?? 0,
-          },
-        },
-      }));
-    },
-    resetSelectedPageItemPlacement(dishId) {
-      updateSelectedPage((page) => {
-        const { [dishId]: _removed, ...itemPlacements } = page.itemPlacements ?? {};
-        return { itemPlacements };
-      });
-    },
-    resetSelectedPageItemPlacements() {
-      updateSelectedPage({ itemPlacements: {} });
-    },
-    saveSelectedPageCustomGridPreset(name) {
-      updateSelectedPage((page) => {
-        const trimmedName = name.trim() || `Custom grid ${(page.designSettings.customGridPresets?.length ?? 0) + 1}`;
-        const preset = {
-          id: createId('gridPreset'),
-          name: trimmedName,
-          ...page.designSettings.customGrid,
-          itemSpanRules: {
-            makeFirstItemHero: page.designSettings.makeFirstItemHero,
-            heroItemSpan: page.designSettings.heroItemSpan,
-            defaultItemSpan: page.designSettings.defaultItemSpan,
-          },
-        };
-        return {
+          ...page,
           designSettings: {
             ...page.designSettings,
-            customGridPresets: [...(page.designSettings.customGridPresets ?? []), preset],
-          },
-        };
-      });
-    },
-    applySelectedPageCustomGridPreset(presetId) {
-      updateSelectedPage((page) => {
-        const preset = page.designSettings.customGridPresets?.find((item) => item.id === presetId);
-        if (!preset) return {};
-        return {
-          designSettings: {
-            ...page.designSettings,
-            gridMode: 'custom',
             customGrid: {
               rows: preset.rows,
               columns: preset.columns,
@@ -803,38 +617,61 @@ export function createProjectStore() {
             defaultItemSpan: preset.itemSpanRules?.defaultItemSpan ?? page.designSettings.defaultItemSpan,
           },
         };
-      });
-    },
-    deleteSelectedPageCustomGridPreset(presetId) {
-      updateSelectedPage((page) => ({
-        designSettings: {
-          ...page.designSettings,
-          customGridPresets: (page.designSettings.customGridPresets ?? []).filter((preset) => preset.id !== presetId),
-        },
-      }));
-    },
-    updateSelectedPageFitStrategy(setting, value) {
-      updateSelectedPage((page) => ({
-        designSettings: {
-          ...page.designSettings,
-          fitStrategy: { ...page.designSettings.fitStrategy, [setting]: value },
-        },
-      }));
-    },
-    updateSelectedPageHeader(setting, value) {
-      updateSelectedPage((page) => ({ header: { ...page.header, [setting]: value } }));
-    },
-    updateSelectedPageFooter(setting, value) {
-      updateSelectedPage((page) => ({ footer: { ...page.footer, [setting]: value } }));
-    },
+      }),
+    }));
+  };
+
+  const deleteSelectedPageCustomGridPreset = (presetId) => {
+    updateProject((current) => ({
+      ...current,
+      pages: current.pages.map((page) => page.id === current.selectedPageId
+        ? {
+            ...page,
+            designSettings: {
+              ...page.designSettings,
+              customGridPresets: page.designSettings.customGridPresets.filter((preset) => preset.id !== presetId),
+            },
+          }
+        : page),
+    }));
+  };
+
+  const updatePreviewPlacement = (dishId, placement) => {
+    updateSelectedPage({
+      itemPlacements: {
+        ...project.pages.find((page) => page.id === project.selectedPageId)?.itemPlacements,
+        [dishId]: placement,
+      },
+    });
   };
 
   return {
-    getSnapshot,
-    actions,
+    getSnapshot: () => ({ project, saveStatus, lastError }),
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
+    },
+    actions: {
+      updateProject,
+      updateSelectedPage,
+      updateSelectedPageDesign,
+      updateSelectedPageFitStrategy,
+      updateSelectedPageCustomGrid,
+      saveSelectedPageCustomGridPreset,
+      applySelectedPageCustomGridPreset,
+      deleteSelectedPageCustomGridPreset,
+      updatePreviewPlacement,
+      clearProject: () => {
+        clearProject();
+        project = normalizeProject(demoProject);
+        setStatus(SAVE_STATUSES.SAVED);
+        notify();
+      },
+      resetDemoProject: () => {
+        project = normalizeProject(demoProject);
+        persist();
+        notify();
+      },
     },
   };
 }
