@@ -453,17 +453,30 @@ const normalizeDesignSettings = (settings = {}) => {
 const pageTypeFrom = (value) => Object.values(PAGE_TYPES).includes(value) ? value : PAGE_TYPES.MENU;
 const deepMerge = (base, value = {}) => ({ ...base, ...(value ?? {}) });
 
+const actualSizeFromPage = (page = {}) => ({
+  width: Number(page.customSize?.width ?? page.canvasWidth),
+  height: Number(page.customSize?.height ?? page.canvasHeight),
+  cssWidth: page.customSize?.cssWidth ?? page.cssWidth,
+  cssHeight: page.customSize?.cssHeight ?? page.cssHeight,
+});
+
 const pageSizeFromPreset = (pageType, sizePresetId, fallbackPage = {}) => {
   const printPage = isPrintPageType(pageType);
   const preset = printPage ? findPrintSizePreset(sizePresetId ?? fallbackPage.sizePreset) : findSocialSizePreset(sizePresetId ?? fallbackPage.sizePreset);
+  const fallbackSize = actualSizeFromPage(fallbackPage);
+  const customPreset = preset.id === 'customPrint' || preset.id === 'customSocial';
+  const width = customPreset && Number.isFinite(fallbackSize.width) ? fallbackSize.width : preset.width;
+  const height = customPreset && Number.isFinite(fallbackSize.height) ? fallbackSize.height : preset.height;
   return {
     sizePreset: preset.id,
     paperSize: preset.paperSize ?? (printPage ? 'A4' : preset.ratioLabel),
     orientation: preset.orientation ?? (preset.width >= preset.height ? 'landscape' : 'portrait'),
-    canvasWidth: Number(fallbackPage.canvasWidth ?? preset.width),
-    canvasHeight: Number(fallbackPage.canvasHeight ?? preset.height),
-    cssWidth: preset.cssWidth,
-    cssHeight: preset.cssHeight,
+    customSize: {
+      width,
+      height,
+      cssWidth: customPreset ? fallbackSize.cssWidth : preset.cssWidth,
+      cssHeight: customPreset ? fallbackSize.cssHeight : preset.cssHeight,
+    },
   };
 };
 
@@ -483,7 +496,10 @@ const buildDefaultPage = (project, name = 'Page 1', options = {}) => {
     id: createId('page'),
     name,
     pageType,
-    ...size,
+    paperSize: size.paperSize,
+    orientation: size.orientation,
+    sizePreset: size.sizePreset,
+    customSize: size.customSize,
     languageMode: 'bilingual',
     selectedCategoryIds,
     selectedDishIds: visibleDishIdsForCategories(project.dishes, selectedCategoryIds),
@@ -523,7 +539,10 @@ const normalizePage = (page, project, index) => {
     id: page.id ?? createId('page'),
     name: page.name || `Page ${index + 1}`,
     pageType,
-    ...size,
+    paperSize: size.paperSize,
+    orientation: size.orientation,
+    sizePreset: size.sizePreset,
+    customSize: size.customSize,
     languageMode: ['en', 'ge', 'bilingual'].includes(page.languageMode) ? page.languageMode : 'bilingual',
     selectedCategoryIds,
     selectedDishIds,
@@ -841,7 +860,7 @@ export function createProjectStore() {
         if (!source || source.pageType !== PAGE_TYPES.SOCIAL_CREATIVE) return state;
         const size = pageSizeFromPreset(PAGE_TYPES.SOCIAL_CREATIVE, sizePreset, source);
         const preset = SOCIAL_SIZE_PRESETS.find((item) => item.id === size.sizePreset);
-        const page = { ...deepClone(source), ...size, id: createId('page'), name: `${source.name} ${preset?.ratioLabel ?? ''}`.trim() };
+        const page = { ...deepClone(source), paperSize: size.paperSize, orientation: size.orientation, sizePreset: size.sizePreset, customSize: size.customSize, id: createId('page'), name: `${source.name} ${preset?.ratioLabel ?? ''}`.trim() };
         return { ...state, pages: [...state.pages, page], selectedPageId: page.id };
       });
     },
@@ -853,7 +872,7 @@ export function createProjectStore() {
         const created = targetPresets.map((presetId) => {
           const size = pageSizeFromPreset(PAGE_TYPES.SOCIAL_CREATIVE, presetId, source);
           const preset = SOCIAL_SIZE_PRESETS.find((item) => item.id === presetId);
-          return { ...deepClone(source), ...size, id: createId('page'), name: `${source.name} ${preset?.ratioLabel ?? ''}`.trim() };
+          return { ...deepClone(source), paperSize: size.paperSize, orientation: size.orientation, sizePreset: size.sizePreset, customSize: size.customSize, id: createId('page'), name: `${source.name} ${preset?.ratioLabel ?? ''}`.trim() };
         });
         return { ...state, pages: [...state.pages, ...created], selectedPageId: created[created.length - 1]?.id ?? state.selectedPageId };
       });

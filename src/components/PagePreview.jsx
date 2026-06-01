@@ -98,7 +98,7 @@ export function PagePreview({ project, page, selectedPreviewDishId = '', onSelec
           <p className="eyebrow">Live preview</p>
           <h1>{page.name}</h1>
         </div>
-        <span>{page.pageType} · {page.canvasWidth}×{page.canvasHeight}</span>
+        <span>{page.pageType} · {page.customSize?.width}×{page.customSize?.height}</span>
       </div>
       <div className="paper-scroll">
         <div className="preview-page-wrapper print-root">
@@ -193,10 +193,10 @@ function previewStyle(page, autoFillLayout, fitAllLayout, itemCount = 0) {
       };
 
   return {
-    '--canvas-width': page.canvasWidth ?? paperDimensions(page.paperSize, page.orientation, page).width,
-    '--canvas-height': page.canvasHeight ?? paperDimensions(page.paperSize, page.orientation, page).height,
-    '--print-css-width': page.cssWidth ?? '210mm',
-    '--print-css-height': page.cssHeight ?? '297mm',
+    '--canvas-width': page.customSize?.width ?? paperDimensions(page.paperSize, page.orientation, page).width,
+    '--canvas-height': page.customSize?.height ?? paperDimensions(page.paperSize, page.orientation, page).height,
+    '--print-css-width': page.customSize?.cssWidth ?? '210mm',
+    '--print-css-height': page.customSize?.cssHeight ?? '297mm',
     '--page-margin': `${settings.pageMargin}px`,
     '--card-gap': `${Math.round(settings.cardGap * density.gapMultiplier)}px`,
     '--card-padding': `${Math.round(settings.cardPadding * density.paddingMultiplier)}px`,

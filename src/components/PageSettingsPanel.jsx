@@ -13,7 +13,7 @@ export function PageSettingsPanel({ page, actions }) {
   const sizePresets = sizePresetsForPageType(page.pageType);
   const selectedSize = sizePresets.find((preset) => preset.id === page.sizePreset);
 
-  const updateCustomSize = (field) => (event) => actions.updateSelectedPage({ [field]: Number(event.target.value) });
+  const updateCustomSize = (field) => (event) => actions.updateSelectedPage({ customSize: { ...page.customSize, [field]: Number(event.target.value) } });
 
   return (
     <section className="panel-section" aria-labelledby="page-settings-title">
@@ -26,10 +26,10 @@ export function PageSettingsPanel({ page, actions }) {
       <SelectField label="Size preset" value={page.sizePreset} onChange={(event) => actions.updateSelectedPageSize(event.target.value)} options={sizePresets.map((preset) => [preset.id, preset.label])} />
       <div className="two-column-fields panel-two-column">
         <label className="field-label">Width
-          <input type="number" min="120" value={page.canvasWidth} onChange={updateCustomSize('canvasWidth')} disabled={selectedSize?.id !== 'customPrint' && selectedSize?.id !== 'customSocial'} />
+          <input type="number" min="120" value={page.customSize?.width ?? 0} onChange={updateCustomSize('width')} disabled={selectedSize?.id !== 'customPrint' && selectedSize?.id !== 'customSocial'} />
         </label>
         <label className="field-label">Height
-          <input type="number" min="120" value={page.canvasHeight} onChange={updateCustomSize('canvasHeight')} disabled={selectedSize?.id !== 'customPrint' && selectedSize?.id !== 'customSocial'} />
+          <input type="number" min="120" value={page.customSize?.height ?? 0} onChange={updateCustomSize('height')} disabled={selectedSize?.id !== 'customPrint' && selectedSize?.id !== 'customSocial'} />
         </label>
       </div>
       {printOrMenu ? (

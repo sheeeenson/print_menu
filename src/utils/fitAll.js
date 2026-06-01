@@ -13,8 +13,8 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const number = (value, fallback) => (Number.isFinite(Number(value)) ? Number(value) : fallback);
 
 export function paperDimensions(paperSize = 'A4', orientation = 'portrait', page = {}) {
-  if (Number.isFinite(Number(page.canvasWidth)) && Number.isFinite(Number(page.canvasHeight))) {
-    return { width: Number(page.canvasWidth), height: Number(page.canvasHeight) };
+  if (Number.isFinite(Number(page.customSize?.width ?? page.canvasWidth)) && Number.isFinite(Number(page.customSize?.height ?? page.canvasHeight))) {
+    return { width: Number(page.customSize?.width ?? page.canvasWidth), height: Number(page.customSize?.height ?? page.canvasHeight) };
   }
   const size = PAPER_DIMENSIONS[paperSize] ? paperSize : 'A4';
   const direction = orientation === 'landscape' ? 'landscape' : 'portrait';

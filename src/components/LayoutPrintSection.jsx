@@ -27,8 +27,8 @@ export function LayoutPrintSection({ project, actions }) {
   const exportSelectedPageImage = async (format = 'png') => {
     const node = document.querySelector('.print-page');
     if (!node || !selectedPage) return;
-    const width = Number(selectedPage.canvasWidth) || node.offsetWidth;
-    const height = Number(selectedPage.canvasHeight) || node.offsetHeight;
+    const width = Number(selectedPage.customSize?.width) || node.offsetWidth;
+    const height = Number(selectedPage.customSize?.height) || node.offsetHeight;
     const clone = node.cloneNode(true);
     clone.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
     clone.style.width = `${width}px`;

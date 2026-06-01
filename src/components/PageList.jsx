@@ -51,7 +51,7 @@ export function PageList({ project, actions }) {
             onClick={() => actions.selectPage(page.id)}
           >
             <span>{page.name}</span>
-            <small>{page.pageType} · {page.sizePreset} · {page.canvasWidth}×{page.canvasHeight}</small>
+            <small>{page.pageType} · {page.sizePreset} · {page.customSize?.width}×{page.customSize?.height}</small>
           </button>
         ))}
       </div>
