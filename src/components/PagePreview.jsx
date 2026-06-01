@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { PageFooterPreview } from './PageFooterPreview.jsx';
 import { PageHeaderPreview } from './PageHeaderPreview.jsx';
+import { PAGE_TYPES } from '../models/menu.js';
 import { calculateAutoFillGrid } from '../utils/autoFill.js';
 import { calculateFitAllLayout, paperDimensions } from '../utils/fitAll.js';
 
@@ -10,7 +11,7 @@ export function PagePreview({ project, page, selectedPreviewDishId = '', onSelec
   const selectedCategoryIds = new Set(page.selectedCategoryIds);
   const categories = project.categories.filter((category) => selectedCategoryIds.has(category.id));
   const selectedDishes = selectedVisibleDishes(project, page);
-  const paper = paperDimensions(page.paperSize, page.orientation);
+  const paper = paperDimensions(page.paperSize, page.orientation, page);
   const isAutoFillMode = page.designSettings.layoutMode === 'smartAutoFit' || page.designSettings.gridMode === 'autoFill' || page.fittingMode === 'autoFill';
   const fitAllLayout = page.designSettings.fitAllItems
     ? calculateFitAllLayout({
@@ -97,32 +98,42 @@ export function PagePreview({ project, page, selectedPreviewDishId = '', onSelec
           <p className="eyebrow">Live preview</p>
           <h1>{page.name}</h1>
         </div>
-        <span>{page.paperSize} {page.orientation}</span>
+        <span>{page.pageType} · {page.canvasWidth}×{page.canvasHeight}</span>
       </div>
       <div className="paper-scroll">
         <div className="preview-page-wrapper print-root">
           <article onPointerDown={(event) => { if (event.target === event.currentTarget) onSelectPreviewDish(''); }} className={`paper-page print-page ${page.paperSize.toLowerCase()} ${page.orientation} paper-${page.paperSize.toLowerCase()} paper-${page.orientation} ${templateClass} ${fittingClass} ${gridClass} ${densityClass} ${categoryStyleClass} layout-mode-${page.designSettings.layoutMode}`} style={style}>
             <div className="print-page-inner">
-              <PageHeaderPreview page={page} renderLocalizedText={renderLocalizedText} />
-              <main className="page-content" onPointerDown={(event) => { if (event.target === event.currentTarget) onSelectPreviewDish(''); }}>
-                {fitAllLayout?.warning ? <div className="fit-warning" role="alert">{fitAllLayout.warning}</div> : null}
-                {customGridWarning ? <div className="fit-warning" role="alert">{customGridWarning}</div> : null}
-                {manualGridWarning ? <div className="fit-warning" role="alert">{manualGridWarning}</div> : null}
-                {isFluidGridMode
-                  ? <FluidGridPreview dishes={selectedDishes} page={page} selectedDishId={selectedPreviewDishId} onSelectDish={onSelectPreviewDish} onResizeDish={updatePreviewPlacement} onFitWarning={setManualGridWarning} />
-                  : isFreeResizeMode
-                    ? <FreeResizePreview dishes={selectedDishes} page={page} selectedDishId={selectedPreviewDishId} onSelectDish={onSelectPreviewDish} onResizeDish={updatePreviewPlacement} />
-                    : isSnapGridMode
-                    ? <CustomGridPreview dishes={selectedDishes} page={page} fitAllLayout={fitAllLayout} selectedDishId={selectedPreviewDishId} onSelectDish={onSelectPreviewDish} onResizeDish={updatePreviewPlacement} />
-                  : page.designSettings.layoutMode === 'classicColumns'
-                    ? <ClassicColumnsPreview dishes={selectedDishes} page={page} />
-                    : fitAllLayout
-                    ? <FitAllPreview dishes={selectedDishes} page={page} fitAllLayout={fitAllLayout} />
-                    : isAutoFillMode
-                      ? <AutoFillPreview dishes={selectedDishes} page={page} />
-                      : categories.length ? categories.map((category) => <PreviewCategory key={category.id} project={project} page={page} category={category} />) : <EmptyPage />}
-              </main>
-              <PageFooterPreview page={page} renderLocalizedText={renderLocalizedText} />
+              {page.pageType === PAGE_TYPES.SOCIAL_CREATIVE ? (
+                <SocialCreativePreview page={page} />
+              ) : page.pageType === PAGE_TYPES.PROMO ? (
+                <PromoPagePreview page={page} />
+              ) : page.pageType === PAGE_TYPES.FLYER ? (
+                <FlyerPagePreview page={page} />
+              ) : (
+                <>
+                  <PageHeaderPreview page={page} renderLocalizedText={renderLocalizedText} />
+                  <main className="page-content" onPointerDown={(event) => { if (event.target === event.currentTarget) onSelectPreviewDish(''); }}>
+                    {fitAllLayout?.warning ? <div className="fit-warning" role="alert">{fitAllLayout.warning}</div> : null}
+                    {customGridWarning ? <div className="fit-warning" role="alert">{customGridWarning}</div> : null}
+                    {manualGridWarning ? <div className="fit-warning" role="alert">{manualGridWarning}</div> : null}
+                    {isFluidGridMode
+                      ? <FluidGridPreview dishes={selectedDishes} page={page} selectedDishId={selectedPreviewDishId} onSelectDish={onSelectPreviewDish} onResizeDish={updatePreviewPlacement} onFitWarning={setManualGridWarning} />
+                      : isFreeResizeMode
+                        ? <FreeResizePreview dishes={selectedDishes} page={page} selectedDishId={selectedPreviewDishId} onSelectDish={onSelectPreviewDish} onResizeDish={updatePreviewPlacement} />
+                        : isSnapGridMode
+                        ? <CustomGridPreview dishes={selectedDishes} page={page} fitAllLayout={fitAllLayout} selectedDishId={selectedPreviewDishId} onSelectDish={onSelectPreviewDish} onResizeDish={updatePreviewPlacement} />
+                      : page.designSettings.layoutMode === 'classicColumns'
+                        ? <ClassicColumnsPreview dishes={selectedDishes} page={page} />
+                        : fitAllLayout
+                        ? <FitAllPreview dishes={selectedDishes} page={page} fitAllLayout={fitAllLayout} />
+                        : isAutoFillMode
+                          ? <AutoFillPreview dishes={selectedDishes} page={page} />
+                          : categories.length ? categories.map((category) => <PreviewCategory key={category.id} project={project} page={page} category={category} />) : <EmptyPage />}
+                  </main>
+                  <PageFooterPreview page={page} renderLocalizedText={renderLocalizedText} />
+                </>
+              )}
             </div>
           </article>
         </div>
@@ -182,6 +193,10 @@ function previewStyle(page, autoFillLayout, fitAllLayout, itemCount = 0) {
       };
 
   return {
+    '--canvas-width': page.canvasWidth ?? paperDimensions(page.paperSize, page.orientation, page).width,
+    '--canvas-height': page.canvasHeight ?? paperDimensions(page.paperSize, page.orientation, page).height,
+    '--print-css-width': page.cssWidth ?? '210mm',
+    '--print-css-height': page.cssHeight ?? '297mm',
     '--page-margin': `${settings.pageMargin}px`,
     '--card-gap': `${Math.round(settings.cardGap * density.gapMultiplier)}px`,
     '--card-padding': `${Math.round(settings.cardPadding * density.paddingMultiplier)}px`,
@@ -892,4 +907,85 @@ export function renderLocalizedText(item, field, languageMode, fallback) {
 
 function EmptyPage() {
   return <div className="preview-empty">Select categories to add content to this page.</div>;
+}
+
+function SocialCreativePreview({ page }) {
+  const content = page.creativeContent;
+  const media = page.creativeMedia;
+  const design = page.creativeDesign;
+  const type = page.creativeTypography;
+  return (
+    <div className={`social-creative-preview pattern-${design.decorativePatternPreset}`} style={{
+      '--creative-top': design.topBackgroundColor,
+      '--creative-bottom': design.lowerBlockColor,
+      '--creative-text': design.textColor,
+      '--creative-muted': design.mutedTextColor,
+      '--creative-badge': design.badgeColor,
+      '--creative-badge-text': design.badgeTextColor,
+      '--creative-cta': design.ctaColor,
+      '--creative-new-price': design.newPriceColor,
+      '--creative-old-price': design.oldPriceColor,
+      '--product-scale': design.productImageScale / 100,
+      '--product-x': `${design.productImageX}%`,
+      '--product-y': `${design.productImageY}%`,
+      '--label-size': `${type.labelFontSize}px`,
+      '--title-size': `${type.titleFontSize}px`,
+      '--composition-size': `${type.compositionFontSize}px`,
+      '--badge-font-size': `${type.badgeFontSize}px`,
+      '--old-price-font-size': `${type.oldPriceFontSize}px`,
+      '--new-price-font-size': `${type.newPriceFontSize}px`,
+      '--cta-font-size': `${type.ctaFontSize}px`,
+    }}>
+      <div className="creative-top-area" />
+      <div className="creative-bottom-area" />
+      <div className="creative-text-block">
+        {content.logo ? <img className="creative-logo" src={content.logo} alt="Logo" /> : null}
+        <p className="creative-label">{content.label}</p>
+        <h2>{content.title}</h2>
+        <p className="creative-subtitle">{content.subtitle}</p>
+        <p className="creative-composition">{content.compositionText}</p>
+      </div>
+      <div className="creative-product-wrap">
+        {media.mainProductImage ? <img src={media.mainProductImage} alt="Main product" /> : <div className="creative-product-placeholder">Product image</div>}
+      </div>
+      <div className={`creative-badge badge-${design.badgeStyle}`}><span>-{content.discountPercent}%</span></div>
+      {design.ctaVisible ? <div className="creative-cta">{content.ctaText}</div> : null}
+      <div className="creative-prices">
+        {design.oldPriceVisible ? <div className="creative-old-price">{design.currencyVisible ? content.currency : ''}{content.oldPrice}</div> : null}
+        {design.newPriceVisible ? <div className="creative-new-price">{design.currencyVisible ? content.currency : ''}{content.newPrice}</div> : null}
+      </div>
+      {content.note ? <div className="creative-note">{content.note}</div> : null}
+    </div>
+  );
+}
+
+function PromoPagePreview({ page }) {
+  const content = page.promoContent;
+  return (
+    <div className="promo-page-preview">
+      <section className="promo-hero">
+        <div><p className="promo-badge">{content.promoBadge}</p><h2>{content.heroTitle}</h2><p>{content.heroSubtitle}</p></div>
+        {content.productImage ? <img src={content.productImage} alt="Promo product" /> : null}
+      </section>
+      <section className="promo-card-grid">
+        {['Signature set', 'Roll combo', 'Chef special'].map((title, index) => <article key={title}><strong>{title}</strong><span>{index === 0 ? content.newPrice : `from ${content.newPrice}`}{index === 0 ? ` instead of ${content.oldPrice}` : ''}</span></article>)}
+      </section>
+      <footer><strong>{content.cta}</strong><span>{content.footerNote}</span></footer>
+    </div>
+  );
+}
+
+function FlyerPagePreview({ page }) {
+  const content = page.flyerContent;
+  return (
+    <div className="flyer-page-preview">
+      <p className="flyer-badge">{content.badge}</p>
+      <h2>{content.title}</h2>
+      <p>{content.subtitle}</p>
+      {content.image ? <img src={content.image} alt="Flyer product" /> : null}
+      <div className="flyer-price">{content.price}</div>
+      <button type="button">{content.cta}</button>
+      <footer>{content.footerNote}</footer>
+    </div>
+  );
 }

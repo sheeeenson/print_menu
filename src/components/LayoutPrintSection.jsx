@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { CreativePageControls } from './CreativePageControls.jsx';
 import { DesignControls } from './DesignControls.jsx';
 import { FooterSettingsPanel } from './FooterSettingsPanel.jsx';
 import { HeaderSettingsPanel } from './HeaderSettingsPanel.jsx';
@@ -6,6 +7,7 @@ import { PageContentSelector } from './PageContentSelector.jsx';
 import { PageList } from './PageList.jsx';
 import { PagePreview } from './PagePreview.jsx';
 import { PageSettingsPanel } from './PageSettingsPanel.jsx';
+import { PAGE_TYPES, isPrintPageType } from '../models/menu.js';
 import { calculateFitAllLayout, paperDimensions } from '../utils/fitAll.js';
 
 export function LayoutPrintSection({ project, actions }) {
@@ -22,6 +24,42 @@ export function LayoutPrintSection({ project, actions }) {
     window.print();
   };
 
+  const exportSelectedPageImage = async (format = 'png') => {
+    const node = document.querySelector('.print-page');
+    if (!node || !selectedPage) return;
+    const width = Number(selectedPage.canvasWidth) || node.offsetWidth;
+    const height = Number(selectedPage.canvasHeight) || node.offsetHeight;
+    const clone = node.cloneNode(true);
+    clone.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+    clone.style.width = `${width}px`;
+    clone.style.height = `${height}px`;
+    const html = new XMLSerializer().serializeToString(clone);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><foreignObject width="100%" height="100%">${html}</foreignObject></svg>`;
+    const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const image = new Image();
+    image.decoding = 'async';
+    await new Promise((resolve, reject) => {
+      image.onload = resolve;
+      image.onerror = reject;
+      image.src = url;
+    });
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d');
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, width, height);
+    context.drawImage(image, 0, 0, width, height);
+    URL.revokeObjectURL(url);
+    const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+    const dataUrl = canvas.toDataURL(mimeType, 0.94);
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = `${selectedPage.name || 'creative'}.${format === 'jpeg' ? 'jpg' : 'png'}`;
+    link.click();
+  };
+
   return (
     <section className="layout-print-section" aria-label="Layout and print workspace">
       <aside className="layout-admin-panel layout-sidebar">
@@ -33,14 +71,16 @@ export function LayoutPrintSection({ project, actions }) {
             actions={actions}
             onPrint={printPage}
             onSaveAsPdf={() => setIsPdfModalOpen(true)}
+            onExportImage={exportSelectedPageImage}
             selectedDish={selectedPreviewDish}
           />
         ) : null}
         <PageList project={project} actions={actions} />
         {selectedPage ? <PageSettingsPanel page={selectedPage} actions={actions} /> : null}
-        {selectedPage ? <PageContentSelector project={project} page={selectedPage} actions={actions} /> : null}
-        {selectedPage ? <HeaderSettingsPanel page={selectedPage} actions={actions} /> : null}
-        {selectedPage ? <FooterSettingsPanel page={selectedPage} actions={actions} /> : null}
+        {selectedPage && selectedPage.pageType === PAGE_TYPES.MENU ? <PageContentSelector project={project} page={selectedPage} actions={actions} /> : null}
+        {selectedPage && isPrintPageType(selectedPage.pageType) ? <HeaderSettingsPanel page={selectedPage} actions={actions} /> : null}
+        {selectedPage && isPrintPageType(selectedPage.pageType) ? <FooterSettingsPanel page={selectedPage} actions={actions} /> : null}
+        {selectedPage ? <CreativePageControls page={selectedPage} actions={actions} /> : null}
         {selectedPage ? (
           <details className="panel-section advanced-layout-section">
             <summary>Advanced layout controls</summary>
@@ -56,7 +96,7 @@ export function LayoutPrintSection({ project, actions }) {
 }
 
 
-function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish }) {
+function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, onExportImage, selectedDish }) {
   const settings = page.designSettings;
   const selectedPlacement = selectedDish ? page.itemPlacements?.[selectedDish.id] : null;
   const update = (field) => (event) => {
@@ -96,9 +136,18 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
     <div className="panel-section preview-controls layout-print-controls">
       <p className="eyebrow">Layout &amp; Print</p>
       <h2>Layout</h2>
-      <div className="print-action-row" aria-label="Print and demo actions">
-        <button className="primary-action compact" type="button" onClick={onPrint}>Print</button>
-        <button className="secondary-action compact" type="button" onClick={onSaveAsPdf}>Save as PDF</button>
+      <div className="print-action-row" aria-label="Print and export actions">
+        {isPrintPageType(page.pageType) ? (
+          <>
+            <button className="primary-action compact" type="button" onClick={onPrint}>Print</button>
+            <button className="secondary-action compact" type="button" onClick={onSaveAsPdf}>Save as PDF</button>
+          </>
+        ) : (
+          <>
+            <button className="primary-action compact" type="button" onClick={() => onExportImage('png')}>Export PNG</button>
+            <button className="secondary-action compact" type="button" onClick={() => onExportImage('jpeg')}>Export JPG</button>
+          </>
+        )}
         <button className="secondary-action compact" type="button" onClick={actions.resetDemoData}>Reset demo data</button>
       </div>
 
@@ -332,7 +381,7 @@ function getFitWarning(project, page) {
   const selectedCategoryIds = new Set(page.selectedCategoryIds ?? []);
   const selectedDishIds = new Set(page.selectedDishIds ?? []);
   const itemCount = project.dishes.filter((dish) => dish.visible && selectedCategoryIds.has(dish.categoryId) && selectedDishIds.has(dish.id)).length;
-  const paper = paperDimensions(page.paperSize, page.orientation);
+  const paper = paperDimensions(page.paperSize, page.orientation, page);
   const layout = calculateFitAllLayout({
     itemCount,
     pageWidthPx: paper.width,

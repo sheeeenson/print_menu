@@ -1,6 +1,10 @@
 const PAPER_DIMENSIONS = {
+  A6: { portrait: { width: 298, height: 420 }, landscape: { width: 420, height: 298 } },
+  A5: { portrait: { width: 420, height: 595 }, landscape: { width: 595, height: 420 } },
   A4: { portrait: { width: 595, height: 842 }, landscape: { width: 842, height: 595 } },
   A3: { portrait: { width: 842, height: 1191 }, landscape: { width: 1191, height: 842 } },
+  DL: { portrait: { width: 312, height: 624 }, landscape: { width: 624, height: 312 } },
+  Square: { portrait: { width: 595, height: 595 }, landscape: { width: 595, height: 595 } },
 };
 
 const WARNING = 'Too many dishes for this page with current design settings. Try compact mode, hide descriptions, reduce image size, or split into another page.';
@@ -8,8 +12,11 @@ const WARNING = 'Too many dishes for this page with current design settings. Try
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const number = (value, fallback) => (Number.isFinite(Number(value)) ? Number(value) : fallback);
 
-export function paperDimensions(paperSize = 'A4', orientation = 'portrait') {
-  const size = paperSize === 'A3' ? 'A3' : 'A4';
+export function paperDimensions(paperSize = 'A4', orientation = 'portrait', page = {}) {
+  if (Number.isFinite(Number(page.canvasWidth)) && Number.isFinite(Number(page.canvasHeight))) {
+    return { width: Number(page.canvasWidth), height: Number(page.canvasHeight) };
+  }
+  const size = PAPER_DIMENSIONS[paperSize] ? paperSize : 'A4';
   const direction = orientation === 'landscape' ? 'landscape' : 'portrait';
   return PAPER_DIMENSIONS[size][direction];
 }

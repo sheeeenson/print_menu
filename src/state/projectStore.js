@@ -1,5 +1,5 @@
 import { demoProject } from '../data/demoProject.js';
-import { SAVE_STATUSES } from '../models/menu.js';
+import { findPrintSizePreset, findSocialSizePreset, isPrintPageType, PAGE_TYPES, SAVE_STATUSES, SOCIAL_SIZE_PRESETS } from '../models/menu.js';
 import { createId } from '../utils/id.js';
 import { recalculatePricing } from '../utils/pricing.js';
 import { FONT_PRESETS } from '../utils/typography.js';
@@ -35,6 +35,78 @@ export const DEFAULT_PAGE_FOOTER = Object.freeze({
   rightTextGe: 'შეუკვეთე ახლა',
   fontSize: 12,
   alignment: 'center',
+});
+
+
+export const DEFAULT_CREATIVE_CONTENT = Object.freeze({
+  label: 'Set',
+  title: 'Tokyo Sushi Set',
+  subtitle: 'Fresh rolls for a limited-time offer',
+  compositionText: 'Salmon nigiri · California rolls · Tuna maki · Ginger · Wasabi',
+  ctaText: 'ORDER NOW →',
+  oldPrice: '78',
+  newPrice: '65',
+  discountPercent: '17',
+  currency: '₾',
+  logo: '',
+  note: 'Free delivery over 50₾',
+});
+
+export const DEFAULT_CREATIVE_MEDIA = Object.freeze({
+  mainProductImage: 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?auto=format&fit=crop&w=1200&q=85',
+  decorativeOverlays: [],
+});
+
+export const DEFAULT_CREATIVE_DESIGN = Object.freeze({
+  topBackgroundColor: '#f25f4c',
+  lowerBlockColor: '#181313',
+  decorativePatternPreset: 'japaneseWaves',
+  badgeStyle: 'hangingTag',
+  badgeColor: '#ffd166',
+  badgeTextColor: '#181313',
+  oldPriceColor: '#ffffff',
+  newPriceColor: '#ffd166',
+  ctaColor: '#ffffff',
+  textColor: '#ffffff',
+  mutedTextColor: '#ffe7dd',
+  productImageScale: 112,
+  productImageX: 50,
+  productImageY: 56,
+  ctaVisible: true,
+  oldPriceVisible: true,
+  newPriceVisible: true,
+  currencyVisible: true,
+});
+
+export const DEFAULT_CREATIVE_TYPOGRAPHY = Object.freeze({
+  labelFontSize: 34,
+  titleFontSize: 94,
+  compositionFontSize: 30,
+  badgeFontSize: 38,
+  oldPriceFontSize: 30,
+  newPriceFontSize: 92,
+  ctaFontSize: 34,
+});
+
+export const DEFAULT_PROMO_CONTENT = Object.freeze({
+  heroTitle: 'Weekend Sushi Promo',
+  heroSubtitle: 'Limited-time sets, rolls, and drink pairings.',
+  promoBadge: 'SPECIAL OFFER',
+  oldPrice: '78',
+  newPrice: '65',
+  productImage: 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?auto=format&fit=crop&w=900&q=80',
+  cta: 'Order today',
+  footerNote: 'Prices include VAT. Available while supplies last.',
+});
+
+export const DEFAULT_FLYER_CONTENT = Object.freeze({
+  title: 'Fresh Sushi Delivery',
+  subtitle: 'Chef-made rolls, hot wok, drinks, and combo sets.',
+  image: 'https://images.unsplash.com/photo-1617196034796-73dfa7b1fd56?auto=format&fit=crop&w=900&q=80',
+  cta: 'ORDER NOW',
+  badge: 'NEW MENU',
+  price: 'from 18₾',
+  footerNote: 'Call or message us for same-day delivery.',
 });
 
 export const DEFAULT_FIT_STRATEGY = Object.freeze({
@@ -378,26 +450,61 @@ const normalizeDesignSettings = (settings = {}) => {
   };
 };
 
-const buildDefaultPage = (project, name = 'Page 1') => {
+const pageTypeFrom = (value) => Object.values(PAGE_TYPES).includes(value) ? value : PAGE_TYPES.MENU;
+const deepMerge = (base, value = {}) => ({ ...base, ...(value ?? {}) });
+
+const pageSizeFromPreset = (pageType, sizePresetId, fallbackPage = {}) => {
+  const printPage = isPrintPageType(pageType);
+  const preset = printPage ? findPrintSizePreset(sizePresetId ?? fallbackPage.sizePreset) : findSocialSizePreset(sizePresetId ?? fallbackPage.sizePreset);
+  return {
+    sizePreset: preset.id,
+    paperSize: preset.paperSize ?? (printPage ? 'A4' : preset.ratioLabel),
+    orientation: preset.orientation ?? (preset.width >= preset.height ? 'landscape' : 'portrait'),
+    canvasWidth: Number(fallbackPage.canvasWidth ?? preset.width),
+    canvasHeight: Number(fallbackPage.canvasHeight ?? preset.height),
+    cssWidth: preset.cssWidth,
+    cssHeight: preset.cssHeight,
+  };
+};
+
+const buildCreativeContent = () => ({ ...DEFAULT_CREATIVE_CONTENT });
+const buildCreativeMedia = () => ({ ...DEFAULT_CREATIVE_MEDIA, decorativeOverlays: [] });
+const buildCreativeDesign = () => ({ ...DEFAULT_CREATIVE_DESIGN });
+const buildCreativeTypography = () => ({ ...DEFAULT_CREATIVE_TYPOGRAPHY });
+const buildPromoContent = () => ({ ...DEFAULT_PROMO_CONTENT });
+const buildFlyerContent = () => ({ ...DEFAULT_FLYER_CONTENT });
+
+const buildDefaultPage = (project, name = 'Page 1', options = {}) => {
+  const pageType = pageTypeFrom(options.pageType);
   const selectedCategoryIds = project.categories.map((category) => category.id);
+  const size = pageSizeFromPreset(pageType, options.sizePreset);
+  const socialCreative = pageType === PAGE_TYPES.SOCIAL_CREATIVE;
   return {
     id: createId('page'),
     name,
-    paperSize: 'A4',
-    orientation: 'portrait',
+    pageType,
+    ...size,
     languageMode: 'bilingual',
     selectedCategoryIds,
     selectedDishIds: visibleDishIdsForCategories(project.dishes, selectedCategoryIds),
     layoutTemplate: 'photoCards',
     fittingMode: 'fixed',
-    header: { ...DEFAULT_PAGE_HEADER },
-    footer: { ...DEFAULT_PAGE_FOOTER },
+    header: socialCreative ? { ...DEFAULT_PAGE_HEADER, enabled: false } : { ...DEFAULT_PAGE_HEADER },
+    footer: socialCreative ? { ...DEFAULT_PAGE_FOOTER, enabled: false } : { ...DEFAULT_PAGE_FOOTER },
     designSettings: { ...DEFAULT_PAGE_DESIGN_SETTINGS, customGrid: { ...DEFAULT_CUSTOM_GRID }, customGridPresets: [] },
+    creativePreset: socialCreative ? (options.creativePreset || 'sushiSetCreative') : '',
+    creativeContent: socialCreative ? buildCreativeContent() : undefined,
+    creativeMedia: socialCreative ? buildCreativeMedia() : undefined,
+    creativeDesign: socialCreative ? buildCreativeDesign() : undefined,
+    creativeTypography: socialCreative ? buildCreativeTypography() : undefined,
+    promoContent: pageType === PAGE_TYPES.PROMO ? buildPromoContent() : undefined,
+    flyerContent: pageType === PAGE_TYPES.FLYER ? buildFlyerContent() : undefined,
     itemPlacements: {},
   };
 };
 
 const normalizePage = (page, project, index) => {
+  const pageType = pageTypeFrom(page.pageType);
   const fallbackCategoryIds = project.categories.map((category) => category.id);
   const selectedCategoryIds = (page.selectedCategoryIds ?? page.categoryIds ?? fallbackCategoryIds).filter((id) =>
     project.categories.some((category) => category.id === id),
@@ -406,12 +513,17 @@ const normalizePage = (page, project, index) => {
   const selectedDishIds = Array.isArray(page.selectedDishIds)
     ? page.selectedDishIds.filter((dishId) => visibleDishIds.includes(dishId))
     : visibleDishIds;
+  const legacySizePreset = page.sizePreset ?? (page.paperSize === 'A3'
+    ? (page.orientation === 'landscape' ? 'a3Landscape' : 'a3Portrait')
+    : (page.orientation === 'landscape' ? 'a4Landscape' : 'a4Portrait'));
+  const size = pageSizeFromPreset(pageType, legacySizePreset, page);
+  const socialCreative = pageType === PAGE_TYPES.SOCIAL_CREATIVE;
 
   return {
     id: page.id ?? createId('page'),
     name: page.name || `Page ${index + 1}`,
-    paperSize: page.paperSize === 'A3' ? 'A3' : 'A4',
-    orientation: page.orientation === 'landscape' ? 'landscape' : 'portrait',
+    pageType,
+    ...size,
     languageMode: ['en', 'ge', 'bilingual'].includes(page.languageMode) ? page.languageMode : 'bilingual',
     selectedCategoryIds,
     selectedDishIds,
@@ -420,6 +532,13 @@ const normalizePage = (page, project, index) => {
     header: normalizeHeader(page.header),
     footer: normalizeFooter(page.footer),
     designSettings: normalizeDesignSettings({ ...(page.designSettings ?? {}), fittingMode: page.fittingMode }),
+    creativePreset: socialCreative ? (page.creativePreset || 'sushiSetCreative') : (page.creativePreset || ''),
+    creativeContent: socialCreative ? deepMerge(DEFAULT_CREATIVE_CONTENT, page.creativeContent) : page.creativeContent,
+    creativeMedia: socialCreative ? { ...DEFAULT_CREATIVE_MEDIA, ...(page.creativeMedia ?? {}), decorativeOverlays: page.creativeMedia?.decorativeOverlays ?? [] } : page.creativeMedia,
+    creativeDesign: socialCreative ? deepMerge(DEFAULT_CREATIVE_DESIGN, page.creativeDesign) : page.creativeDesign,
+    creativeTypography: socialCreative ? deepMerge(DEFAULT_CREATIVE_TYPOGRAPHY, page.creativeTypography) : page.creativeTypography,
+    promoContent: pageType === PAGE_TYPES.PROMO ? deepMerge(DEFAULT_PROMO_CONTENT, page.promoContent) : page.promoContent,
+    flyerContent: pageType === PAGE_TYPES.FLYER ? deepMerge(DEFAULT_FLYER_CONTENT, page.flyerContent) : page.flyerContent,
     itemPlacements: normalizeItemPlacements(page.itemPlacements),
   };
 };
@@ -664,9 +783,11 @@ export function createProjectStore() {
     selectPage(pageId) {
       update((state) => ({ ...state, selectedPageId: pageId }));
     },
-    addPage() {
+    addPage(options = {}) {
       update((state) => {
-        const page = buildDefaultPage(state, `Page ${state.pages.length + 1}`);
+        const pageType = pageTypeFrom(options.pageType);
+        const label = { menu: 'Menu', promo: 'Promo', flyer: 'Flyer', socialCreative: 'Creative' }[pageType] ?? 'Page';
+        const page = buildDefaultPage(state, options.name || `${label} ${state.pages.length + 1}`, options);
         return { ...state, pages: [...state.pages, page], selectedPageId: page.id };
       });
     },
@@ -692,6 +813,50 @@ export function createProjectStore() {
     },
     updateSelectedPage(changes) {
       updateSelectedPage(changes);
+    },
+    updateSelectedPageSize(sizePreset) {
+      updateSelectedPage((page) => pageSizeFromPreset(page.pageType, sizePreset, page));
+    },
+    updateSelectedPageCreativeContent(field, value) {
+      updateSelectedPage((page) => ({ creativeContent: { ...(page.creativeContent ?? buildCreativeContent()), [field]: value } }));
+    },
+    updateSelectedPageCreativeMedia(field, value) {
+      updateSelectedPage((page) => ({ creativeMedia: { ...(page.creativeMedia ?? buildCreativeMedia()), [field]: value } }));
+    },
+    updateSelectedPageCreativeDesign(field, value) {
+      updateSelectedPage((page) => ({ creativeDesign: { ...(page.creativeDesign ?? buildCreativeDesign()), [field]: value } }));
+    },
+    updateSelectedPageCreativeTypography(field, value) {
+      updateSelectedPage((page) => ({ creativeTypography: { ...(page.creativeTypography ?? buildCreativeTypography()), [field]: value } }));
+    },
+    updateSelectedPagePromoContent(field, value) {
+      updateSelectedPage((page) => ({ promoContent: { ...(page.promoContent ?? buildPromoContent()), [field]: value } }));
+    },
+    updateSelectedPageFlyerContent(field, value) {
+      updateSelectedPage((page) => ({ flyerContent: { ...(page.flyerContent ?? buildFlyerContent()), [field]: value } }));
+    },
+    duplicateSocialCreativeToSize(sizePreset) {
+      update((state) => {
+        const source = state.pages.find((page) => page.id === state.selectedPageId);
+        if (!source || source.pageType !== PAGE_TYPES.SOCIAL_CREATIVE) return state;
+        const size = pageSizeFromPreset(PAGE_TYPES.SOCIAL_CREATIVE, sizePreset, source);
+        const preset = SOCIAL_SIZE_PRESETS.find((item) => item.id === size.sizePreset);
+        const page = { ...deepClone(source), ...size, id: createId('page'), name: `${source.name} ${preset?.ratioLabel ?? ''}`.trim() };
+        return { ...state, pages: [...state.pages, page], selectedPageId: page.id };
+      });
+    },
+    generateAllSocialCreativeSizes() {
+      update((state) => {
+        const source = state.pages.find((page) => page.id === state.selectedPageId);
+        if (!source || source.pageType !== PAGE_TYPES.SOCIAL_CREATIVE) return state;
+        const targetPresets = ['socialSquare', 'socialPortrait', 'socialStory'];
+        const created = targetPresets.map((presetId) => {
+          const size = pageSizeFromPreset(PAGE_TYPES.SOCIAL_CREATIVE, presetId, source);
+          const preset = SOCIAL_SIZE_PRESETS.find((item) => item.id === presetId);
+          return { ...deepClone(source), ...size, id: createId('page'), name: `${source.name} ${preset?.ratioLabel ?? ''}`.trim() };
+        });
+        return { ...state, pages: [...state.pages, ...created], selectedPageId: created[created.length - 1]?.id ?? state.selectedPageId };
+      });
     },
     setPageCategories(categoryIds) {
       updateSelectedPage((page, state) => ({
