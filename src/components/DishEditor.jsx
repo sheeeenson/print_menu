@@ -2,17 +2,26 @@ import { BADGE_TYPES } from '../models/menu.js';
 import { formatOptionalNumber, parseOptionalNumber } from '../utils/pricing.js';
 
 const DEFAULT_SIZE_VARIANTS = Object.freeze([
-  { labelEn: '24 cm', labelGe: '24 სმ', price: null },
-  { labelEn: '33 cm', labelGe: '33 სმ', price: null },
-  { labelEn: '40 cm', labelGe: '40 სმ', price: null },
+  { labelEn: '24 cm', labelGe: '24 სმ', oldPrice: null, newPrice: null },
+  { labelEn: '33 cm', labelGe: '33 სმ', oldPrice: null, newPrice: null },
+  { labelEn: '40 cm', labelGe: '40 სმ', oldPrice: null, newPrice: null },
 ]);
 
 const SIZE_GROUP_ID = 'pizza_size_prices';
+const variantNewPrice = (variant) => (typeof variant.newPrice === 'number' ? variant.newPrice : variant.price);
+const formatPriceCell = (price) => (typeof price === 'number' ? `${formatOptionalNumber(price)} ₾` : '-');
+const normalizeVariant = (variant) => ({
+  labelEn: variant.labelEn ?? '',
+  labelGe: variant.labelGe ?? '',
+  oldPrice: typeof variant.oldPrice === 'number' ? variant.oldPrice : null,
+  newPrice: typeof variant.newPrice === 'number' ? variant.newPrice : (typeof variant.price === 'number' ? variant.price : null),
+});
 const formatSizePriceTable = (variants, labelField) => {
-  const visibleVariants = variants.filter((variant) => variant[labelField] || typeof variant.price === 'number');
+  const visibleVariants = variants.map(normalizeVariant).filter((variant) => variant[labelField] || typeof variant.oldPrice === 'number' || typeof variant.newPrice === 'number');
   const labels = visibleVariants.map((variant) => variant[labelField] || '-').join('     ');
-  const prices = visibleVariants.map((variant) => (typeof variant.price === 'number' ? `${formatOptionalNumber(variant.price)} ₾` : '-')).join('     ');
-  return [labels, prices].filter(Boolean).join('\n');
+  const oldPrices = visibleVariants.map((variant) => formatPriceCell(variant.oldPrice)).join('     ');
+  const newPrices = visibleVariants.map((variant) => formatPriceCell(variant.newPrice)).join('     ');
+  return [labels, oldPrices, newPrices].join('\n');
 };
 
 export function DishEditor({ dish, actions }) {
@@ -103,7 +112,7 @@ function NumberInput({ dish, field, label, step, onChange }) {
 }
 
 function withSizeOptionGroup(dish, nextVariants) {
-  const variants = nextVariants.slice(0, 3);
+  const variants = nextVariants.slice(0, 3).map(normalizeVariant);
   const regularGroups = (dish.optionGroups ?? []).filter((group) => group.id !== SIZE_GROUP_ID);
   if (!variants.length) return { priceVariants: [], optionGroups: regularGroups };
 
@@ -126,15 +135,16 @@ function withSizeOptionGroup(dish, nextVariants) {
     dishType: 'configurable',
     priceVariants: variants,
     optionGroups: [sizeGroup, ...regularGroups],
-    newPrice: variants.find((variant) => typeof variant.price === 'number')?.price ?? dish.newPrice,
+    oldPrice: variants.find((variant) => typeof variant.oldPrice === 'number')?.oldPrice ?? dish.oldPrice,
+    newPrice: variants.find((variant) => typeof variant.newPrice === 'number')?.newPrice ?? dish.newPrice,
   };
 }
 
 function SizePriceEditor({ dish, actions }) {
-  const variants = (dish.priceVariants ?? []).slice(0, 3);
+  const variants = (dish.priceVariants ?? []).slice(0, 3).map(normalizeVariant);
   const updateVariants = (nextVariants) => actions.updateDish(dish.id, withSizeOptionGroup(dish, nextVariants));
   const ensureDefaultVariants = () => updateVariants(variants.length ? variants : DEFAULT_SIZE_VARIANTS.map((variant) => ({ ...variant })));
-  const addVariant = () => updateVariants([...variants, { labelEn: '', labelGe: '', price: null }]);
+  const addVariant = () => updateVariants([...variants, { labelEn: '', labelGe: '', oldPrice: null, newPrice: null }]);
   const updateVariant = (index, changes) => updateVariants(variants.map((variant, variantIndex) => variantIndex === index ? { ...variant, ...changes } : variant));
   const removeVariant = (index) => updateVariants(variants.filter((_, variantIndex) => variantIndex !== index));
 
@@ -148,12 +158,13 @@ function SizePriceEditor({ dish, actions }) {
           <button type="button" onClick={addVariant} disabled={variants.length >= 3}>+ Size</button>
         )}
       </div>
-      {variants.length === 0 ? <p className="muted-text">Use for pizza sizes such as 24 cm, 33 cm and 40 cm with separate prices.</p> : null}
+      {variants.length === 0 ? <p className="muted-text">Use for pizza sizes such as 24 cm, 33 cm and 40 cm with old/new prices.</p> : null}
       {variants.map((variant, index) => (
         <div className="option-row size-price-row" key={`${variant.labelEn}-${index}`}>
           <input aria-label="Size English label" placeholder="24 cm" value={variant.labelEn ?? ''} onChange={(event) => updateVariant(index, { labelEn: event.target.value })} />
           <input aria-label="Size Georgian label" placeholder="24 სმ" value={variant.labelGe ?? ''} onChange={(event) => updateVariant(index, { labelGe: event.target.value })} />
-          <input aria-label="Size price" type="number" min="0" step="0.01" placeholder="Price" value={formatOptionalNumber(variant.price)} onChange={(event) => updateVariant(index, { price: parseOptionalNumber(event.target.value) })} />
+          <input aria-label="Size old price" type="number" min="0" step="0.01" placeholder="Old" value={formatOptionalNumber(variant.oldPrice)} onChange={(event) => updateVariant(index, { oldPrice: parseOptionalNumber(event.target.value) })} />
+          <input aria-label="Size new price" type="number" min="0" step="0.01" placeholder="New" value={formatOptionalNumber(variantNewPrice(variant))} onChange={(event) => updateVariant(index, { newPrice: parseOptionalNumber(event.target.value) })} />
           <button type="button" onClick={() => removeVariant(index)}>Remove</button>
         </div>
       ))}
