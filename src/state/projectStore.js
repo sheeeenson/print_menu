@@ -7,6 +7,8 @@ import { clearProject, loadProject, saveProject } from '../utils/storage.js';
 
 const deepClone = (value) => JSON.parse(JSON.stringify(value));
 
+export const DEFAULT_PAGE_DIVIDER_COLOR = '#eadfd4';
+
 export const DEFAULT_PAGE_HEADER = Object.freeze({
   enabled: true,
   height: 80,
@@ -353,6 +355,8 @@ const clampNumber = (value, fallback, min, max) => {
   return Math.min(max, Math.max(min, number));
 };
 
+const normalizeColor = (color, fallback) => /^#[0-9a-fA-F]{3,8}$/.test(color ?? '') ? color : fallback;
+
 const normalizeHeader = (header = {}) => ({
   ...DEFAULT_PAGE_HEADER,
   ...header,
@@ -535,7 +539,7 @@ const normalizePage = (page, project, index) => {
   const size = pageSizeFromPreset(pageType, legacySizePreset, page);
   const socialCreative = pageType === PAGE_TYPES.SOCIAL_CREATIVE;
   const designSettings = normalizeDesignSettings({ ...(page.designSettings ?? {}), fittingMode: page.fittingMode });
-  const dividerColorFallback = designSettings.accentColor;
+  const dividerColorFallback = normalizeColor(designSettings.accentColor, DEFAULT_PAGE_DIVIDER_COLOR);
 
   return {
     id: page.id ?? createId('page'),
