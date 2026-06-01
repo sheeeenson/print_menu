@@ -424,7 +424,7 @@ const normalizePage = (page, project, index) => {
   };
 };
 
-const normalizeProject = (project) => {
+export const normalizeProject = (project) => {
   const nextProject = {
     ...project,
     categories: project.categories ?? [],
@@ -471,6 +471,13 @@ export function createProjectStore() {
     notify();
   };
 
+  const saveImmediately = (status) => {
+    window.clearTimeout(saveTimer);
+    saveTimer = null;
+    saveProject(project);
+    setSaveStatus(status ?? SAVE_STATUSES.SAVED);
+  };
+
   const scheduleSave = () => {
     window.clearTimeout(saveTimer);
     setSaveStatus(SAVE_STATUSES.UNSAVED);
@@ -505,6 +512,14 @@ export function createProjectStore() {
     setSection(section) {
       update((state) => ({ ...state, selectedSection: section }));
     },
+    saveProjectManually() {
+      const savedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      saveImmediately(`Saved manually at ${savedAt}`);
+    },
+    importProject(importedProject) {
+      project = normalizeProject(deepClone(importedProject));
+      saveImmediately('Imported project successfully');
+    },
     resetDemoData() {
       window.clearTimeout(saveTimer);
       saveTimer = null;
@@ -512,6 +527,9 @@ export function createProjectStore() {
       project = normalizeProject(deepClone(demoProject));
       saveStatus = SAVE_STATUSES.SAVED;
       notify();
+    },
+    showProjectImportError(message) {
+      setSaveStatus(message);
     },
     selectCategory(categoryId) {
       update((state) => ({ ...state, selectedCategoryId: categoryId }));

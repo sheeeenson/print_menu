@@ -4,17 +4,20 @@ body { margin: 0; min-width: 1120px; min-height: 100vh; }
 button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
 .app-shell { min-height: 100vh; display: flex; flex-direction: column; }
-.main-navigation { height: 76px; padding: 0 28px; border-bottom: 1px solid #dfd6c9; background: rgba(255, 252, 247, 0.95); display: flex; align-items: center; gap: 28px; position: sticky; top: 0; z-index: 5; }
-.brand-block { display: flex; align-items: center; gap: 14px; min-width: 360px; }
+.main-navigation { min-height: 76px; padding: 10px 28px; border-bottom: 1px solid #dfd6c9; background: rgba(255, 252, 247, 0.95); display: flex; align-items: center; gap: 20px; position: sticky; top: 0; z-index: 5; }
+.brand-block { display: flex; align-items: center; gap: 14px; min-width: 320px; }
 .brand-mark { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 14px; background: #231f20; color: #fffaf2; font-weight: 800; letter-spacing: 0.08em; font-size: 0.78rem; }
-.project-name-input { border: 0; background: transparent; font-size: 1.15rem; font-weight: 750; color: #231f20; width: 290px; }
+.project-name-input { border: 0; background: transparent; font-size: 1.15rem; font-weight: 750; color: #231f20; width: 250px; }
 .project-name-input:focus { outline: 2px solid #c59b57; border-radius: 8px; background: #fff; }
 .section-tabs { display: flex; gap: 8px; padding: 6px; border-radius: 999px; background: #eee5d8; }
-.section-tabs button, .action-row button, .subsection-title button, .badge-row button { border: 1px solid transparent; border-radius: 999px; background: transparent; color: #574d45; padding: 9px 15px; font-weight: 700; }
-.section-tabs button.active, .section-tabs button:hover, .action-row button:hover, .subsection-title button:hover, .badge-row button:hover { background: #fffaf2; border-color: #ded1c1; color: #231f20; }
-.save-status { margin-left: auto; min-width: 92px; border-radius: 999px; padding: 8px 14px; text-align: center; font-weight: 800; font-size: 0.82rem; }
+.section-tabs button, .project-actions button, .action-row button, .subsection-title button, .badge-row button { border: 1px solid transparent; border-radius: 999px; background: transparent; color: #574d45; padding: 9px 15px; font-weight: 700; }
+.section-tabs button.active, .section-tabs button:hover, .project-actions button:hover, .action-row button:hover, .subsection-title button:hover, .badge-row button:hover { background: #fffaf2; border-color: #ded1c1; color: #231f20; }
+.project-actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px; border-radius: 18px; background: #f5ecdf; }
+.visually-hidden-file { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; clip-path: inset(50%); }
+.save-status { margin-left: auto; min-width: 92px; max-width: 240px; border-radius: 999px; padding: 8px 14px; text-align: center; font-weight: 800; font-size: 0.82rem; }
 .save-status.saved { background: #e7f5e9; color: #21733b; }
 .save-status.saving, .save-status.unsaved { background: #fff1cf; color: #8a5b00; }
+.save-status.error { background: #fde8e8; color: #a22a2a; }
 .workspace { flex: 1; min-height: calc(100vh - 76px); }
 .content-section { display: grid; grid-template-columns: 380px 1fr; min-height: calc(100vh - 76px); }
 .category-panel { border-right: 1px solid #dfd6c9; background: #fffaf2; padding: 24px; overflow-y: auto; }
