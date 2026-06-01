@@ -22,6 +22,13 @@ export function HeaderSettingsPanel({ page, actions }) {
         <HeaderSelect header={header} field="alignment" label="Header alignment" onChange={update('alignment')} options={[['top', 'Top'], ['center', 'Center'], ['bottom', 'Bottom']]} />
         <HeaderSlider header={header} field="fontSize" label="Header font size" min={9} max={28} onChange={update('fontSize')} />
       </div>
+      <h3 className="panel-subtitle">Divider line</h3>
+      <label className="toggle-label">
+        <input type="checkbox" checked={header.showDivider} onChange={update('showDivider')} />
+        Show header divider
+      </label>
+      <HeaderColorInput header={header} field="dividerColor" label="Divider color" onChange={update('dividerColor')} />
+      <HeaderSlider header={header} field="dividerWidth" label="Divider width" min={0} max={12} onChange={update('dividerWidth')} />
       <h3 className="panel-subtitle">Left side</h3>
       <HeaderSelect header={header} field="leftLogoType" label="Left logo type" onChange={update('leftLogoType')} options={[['none', 'None'], ['url', 'Image URL']]} />
       <HeaderTextInput header={header} field="leftLogoUrl" label="Left logo URL" onChange={update('leftLogoUrl')} />
@@ -40,6 +47,18 @@ export function HeaderSettingsPanel({ page, actions }) {
 
 function HeaderTextInput({ header, field, label, onChange }) {
   return <label className="field-label">{label}<input value={header[field]} onChange={onChange} /></label>;
+}
+
+function HeaderColorInput({ header, field, label, onChange }) {
+  const value = header[field];
+  return (
+    <label className="color-label">{label}
+      <span>
+        <input type="color" value={value} onChange={onChange} />
+        <input value={value} onChange={onChange} />
+      </span>
+    </label>
+  );
 }
 
 function HeaderSelect({ header, field, label, options, onChange }) {

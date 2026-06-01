@@ -22,6 +22,13 @@ export function FooterSettingsPanel({ page, actions }) {
         <FooterSelect footer={footer} field="alignment" label="Footer alignment" onChange={update('alignment')} options={[['top', 'Top'], ['center', 'Center'], ['bottom', 'Bottom']]} />
         <FooterSlider footer={footer} field="fontSize" label="Footer font size" min={8} max={24} onChange={update('fontSize')} />
       </div>
+      <h3 className="panel-subtitle">Divider line</h3>
+      <label className="toggle-label">
+        <input type="checkbox" checked={footer.showDivider} onChange={update('showDivider')} />
+        Show footer divider
+      </label>
+      <FooterColorInput footer={footer} field="dividerColor" label="Divider color" onChange={update('dividerColor')} />
+      <FooterSlider footer={footer} field="dividerWidth" label="Divider width" min={0} max={12} onChange={update('dividerWidth')} />
       <FooterTextInput footer={footer} field="leftTextEn" label="Left text EN" onChange={update('leftTextEn')} />
       <FooterTextInput footer={footer} field="leftTextGe" label="Left text GE" onChange={update('leftTextGe')} />
       <FooterTextInput footer={footer} field="centerTextEn" label="Center text EN" onChange={update('centerTextEn')} />
@@ -34,6 +41,18 @@ export function FooterSettingsPanel({ page, actions }) {
 
 function FooterTextInput({ footer, field, label, onChange }) {
   return <label className="field-label">{label}<input value={footer[field]} onChange={onChange} /></label>;
+}
+
+function FooterColorInput({ footer, field, label, onChange }) {
+  const value = footer[field];
+  return (
+    <label className="color-label">{label}
+      <span>
+        <input type="color" value={value} onChange={onChange} />
+        <input value={value} onChange={onChange} />
+      </span>
+    </label>
+  );
 }
 
 function FooterSelect({ footer, field, label, options, onChange }) {

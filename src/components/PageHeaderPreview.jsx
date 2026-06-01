@@ -5,8 +5,18 @@ export function PageHeaderPreview({ page, renderLocalizedText }) {
   const leftLogo = header.leftLogoType === 'url' && header.leftLogoUrl;
   const rightImage = header.rightImageType === 'url' && header.rightImageUrl;
 
+  const dividerWidth = header.showDivider ? header.dividerWidth : 0;
+
   return (
-    <header className={`page-header align-${header.alignment}`} style={{ '--header-height': `${header.height}px`, '--header-font-size': `${header.fontSize}px` }}>
+    <header
+      className={`page-header align-${header.alignment}`}
+      style={{
+        '--header-height': `${header.height}px`,
+        '--header-font-size': `${header.fontSize}px`,
+        '--header-divider-color': header.dividerColor,
+        '--header-divider-width': `${dividerWidth}px`,
+      }}
+    >
       <div className="page-header-block page-header-left">
         {leftLogo ? (
           <span className="header-image-box" style={{ '--header-image-size': `${safeImageSize(header.leftLogoSize, header.height)}px` }}>

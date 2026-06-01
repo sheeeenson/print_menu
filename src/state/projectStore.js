@@ -258,32 +258,84 @@ const normalizeAlignment = (alignment) => (['top', 'center', 'bottom'].includes(
 const normalizeImageType = (type) => (type === 'url' ? 'url' : 'none');
 const normalizeImageFit = (fit) => (['contain', 'cover', 'fill'].includes(fit) ? fit : 'contain');
 const normalizeColor = (color, fallback) => (/^#[0-9a-fA-F]{3,8}$/.test(color ?? '') ? color : fallback);
+
 const LEGACY_CARD_CONTENT_LAYOUTS = Object.freeze({
   textBelowImage: 'below',
   textRightOfImage: 'imageLeft',
   textLeftOfImage: 'imageRight',
 });
+
 const normalizeCardContentLayout = (layout) => {
   const normalized = LEGACY_CARD_CONTENT_LAYOUTS[layout] ?? layout;
   return ['below', 'imageLeft', 'imageRight'].includes(normalized) ? normalized : 'below';
 };
-const GRID_PRESETS = ['oneColumn', 'twoColumns', 'threeColumns', 'fourColumns', 'fiveColumns', 'catalogGrid', 'magazineGrid', 'heroGrid', 'bentoGrid', 'textColumns'];
-const LEGACY_GRID_PRESETS = { autoSmart: 'twoColumns', compactList: 'textColumns', magazine: 'magazineGrid' };
+
+const GRID_PRESETS = [
+  'oneColumn',
+  'twoColumns',
+  'threeColumns',
+  'fourColumns',
+  'fiveColumns',
+  'catalogGrid',
+  'magazineGrid',
+  'heroGrid',
+  'bentoGrid',
+  'textColumns',
+];
+
+const LEGACY_GRID_PRESETS = {
+  autoSmart: 'twoColumns',
+  compactList: 'textColumns',
+  magazine: 'magazineGrid',
+};
+
 const normalizeGridPreset = (preset) => {
   const normalized = LEGACY_GRID_PRESETS[preset] ?? preset;
   return GRID_PRESETS.includes(normalized) ? normalized : 'twoColumns';
 };
+
 const normalizeGridMode = (mode) => (['preset', 'custom', 'autoFill'].includes(mode) ? mode : 'preset');
-const GRID_PRESET_COLUMNS = Object.freeze({ oneColumn: 1, twoColumns: 2, threeColumns: 3, fourColumns: 4, fiveColumns: 5 });
-const columnPresetFor = (columns) => ({ 1: 'oneColumn', 2: 'twoColumns', 3: 'threeColumns', 4: 'fourColumns', 5: 'fiveColumns' }[columns] ?? 'twoColumns');
+
+const GRID_PRESET_COLUMNS = Object.freeze({
+  oneColumn: 1,
+  twoColumns: 2,
+  threeColumns: 3,
+  fourColumns: 4,
+  fiveColumns: 5,
+});
+
+const columnPresetFor = (columns) =>
+  ({
+    1: 'oneColumn',
+    2: 'twoColumns',
+    3: 'threeColumns',
+    4: 'fourColumns',
+    5: 'fiveColumns',
+  }[columns] ?? 'twoColumns');
+
 const normalizeLayoutMode = (mode) => {
   if (mode === 'elasticGrid') return 'fluidGrid';
-  return ['classicColumns', 'smartAutoFit', 'snapGrid', 'fluidGrid', 'manualDesigner'].includes(mode) ? mode : 'classicColumns';
+  return ['classicColumns', 'smartAutoFit', 'snapGrid', 'fluidGrid', 'manualDesigner'].includes(mode)
+    ? mode
+    : 'classicColumns';
 };
-const normalizeCardStyle = (style) => (['imageTop', 'imageLeft', 'imageRight', 'textOnly'].includes(style) ? style : 'imageTop');
+
+const normalizeCardStyle = (style) =>
+  ['imageTop', 'imageLeft', 'imageRight', 'textOnly'].includes(style) ? style : 'imageTop';
+
 const normalizeResizeMode = (mode) => (['snapToGrid', 'freeResize'].includes(mode) ? mode : 'snapToGrid');
-const normalizeImagePosition = (position) => (['center', 'top', 'bottom', 'left', 'right', 'custom'].includes(position) ? position : 'center');
+
+const normalizeImagePosition = (position) =>
+  ['center', 'top', 'bottom', 'left', 'right', 'custom'].includes(position) ? position : 'center';
+
 const normalizeSpanOption = (value, fallback, allowed) => (allowed.includes(value) ? value : fallback);
+
+const clampNumber = (value, fallback, min, max) => {
+  const number = Number(value ?? fallback);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(max, Math.max(min, number));
+};
+
 const normalizeCustomGrid = (customGrid = {}, fallbackGap = DEFAULT_PAGE_DESIGN_SETTINGS.cardGap) => ({
   rows: clampNumber(customGrid.rows, DEFAULT_CUSTOM_GRID.rows, 1, 12),
   columns: clampNumber(customGrid.columns, DEFAULT_CUSTOM_GRID.columns, 1, 6),
@@ -291,75 +343,101 @@ const normalizeCustomGrid = (customGrid = {}, fallbackGap = DEFAULT_PAGE_DESIGN_
   autoRows: customGrid.autoRows === undefined ? DEFAULT_CUSTOM_GRID.autoRows : Boolean(customGrid.autoRows),
   densePacking: customGrid.densePacking === undefined ? DEFAULT_CUSTOM_GRID.densePacking : Boolean(customGrid.densePacking),
 });
-const normalizeGridPresetList = (presets = [], fallbackGap = DEFAULT_PAGE_DESIGN_SETTINGS.cardGap) => Array.isArray(presets)
-  ? presets.map((preset) => ({
-      id: preset.id || createId('gridPreset'),
-      name: preset.name || 'Custom grid',
-      ...normalizeCustomGrid(preset, fallbackGap),
-      itemSpanRules: {
-        makeFirstItemHero: Boolean(preset.itemSpanRules?.makeFirstItemHero),
-        heroItemSpan: normalizeSpanOption(preset.itemSpanRules?.heroItemSpan, '2x2', ['2x1', '2x2', '3x2']),
-        defaultItemSpan: normalizeSpanOption(preset.itemSpanRules?.defaultItemSpan, '1x1', ['1x1', '2x1']),
-      },
-    })).slice(0, 24)
-  : [];
-const normalizeItemPlacements = (placements = {}) => Object.fromEntries(
-  Object.entries(placements ?? {}).map(([dishId, placement]) => {
-    const widthPercent = clampNumber(placement?.widthPercent, 30, 10, 100);
-    const heightPercent = clampNumber(placement?.heightPercent, 22, 8, 100);
-    const xPercent = clampNumber(placement?.xPercent, 0, 0, 100 - widthPercent);
-    const yPercent = clampNumber(placement?.yPercent, 0, 0, 100 - heightPercent);
-    return [dishId, {
-      mode: ['free', 'fluid'].includes(placement?.mode) ? placement.mode : 'grid',
-      widthWeight: clampNumber(placement?.widthWeight, 1, 0.5, 4),
-      heightWeight: clampNumber(placement?.heightWeight, 1, 0.5, 4),
-      minWidthPercent: clampNumber(placement?.minWidthPercent, 12, 5, 100),
-      minHeightPercent: clampNumber(placement?.minHeightPercent, 8, 5, 100),
-      maxWidthPercent: clampNumber(placement?.maxWidthPercent, 100, 5, 100),
-      maxHeightPercent: clampNumber(placement?.maxHeightPercent, 100, 5, 100),
-      order: clampNumber(placement?.order, 0, -9999, 9999),
-      colSpan: clampNumber(placement?.colSpan, 1, 1, 8),
-      rowSpan: clampNumber(placement?.rowSpan, 1, 1, 12),
-      xPercent,
-      yPercent,
-      widthPercent,
-      heightPercent,
-      zIndex: clampNumber(placement?.zIndex, 1, 1, 999),
-      priority: clampNumber(placement?.priority, 0, -999, 999),
-    }];
-  }),
-);
+
+const normalizeGridPresetList = (presets = [], fallbackGap = DEFAULT_PAGE_DESIGN_SETTINGS.cardGap) =>
+  Array.isArray(presets)
+    ? presets
+        .map((preset) => ({
+          id: preset.id || createId('gridPreset'),
+          name: preset.name || 'Custom grid',
+          ...normalizeCustomGrid(preset, fallbackGap),
+          itemSpanRules: {
+            makeFirstItemHero: Boolean(preset.itemSpanRules?.makeFirstItemHero),
+            heroItemSpan: normalizeSpanOption(preset.itemSpanRules?.heroItemSpan, '2x2', ['2x1', '2x2', '3x2']),
+            defaultItemSpan: normalizeSpanOption(preset.itemSpanRules?.defaultItemSpan, '1x1', ['1x1', '2x1']),
+          },
+        }))
+        .slice(0, 24)
+    : [];
+
+const normalizeItemPlacements = (placements = {}) =>
+  Object.fromEntries(
+    Object.entries(placements ?? {}).map(([dishId, placement]) => {
+      const widthPercent = clampNumber(placement?.widthPercent, 30, 10, 100);
+      const heightPercent = clampNumber(placement?.heightPercent, 22, 8, 100);
+      const xPercent = clampNumber(placement?.xPercent, 0, 0, 100 - widthPercent);
+      const yPercent = clampNumber(placement?.yPercent, 0, 0, 100 - heightPercent);
+
+      return [
+        dishId,
+        {
+          mode: ['free', 'fluid'].includes(placement?.mode) ? placement.mode : 'grid',
+          widthWeight: clampNumber(placement?.widthWeight, 1, 0.5, 4),
+          heightWeight: clampNumber(placement?.heightWeight, 1, 0.5, 4),
+          minWidthPercent: clampNumber(placement?.minWidthPercent, 12, 5, 100),
+          minHeightPercent: clampNumber(placement?.minHeightPercent, 8, 5, 100),
+          maxWidthPercent: clampNumber(placement?.maxWidthPercent, 100, 5, 100),
+          maxHeightPercent: clampNumber(placement?.maxHeightPercent, 100, 5, 100),
+          order: clampNumber(placement?.order, 0, -9999, 9999),
+          colSpan: clampNumber(placement?.colSpan, 1, 1, 8),
+          rowSpan: clampNumber(placement?.rowSpan, 1, 1, 12),
+          xPercent,
+          yPercent,
+          widthPercent,
+          heightPercent,
+          zIndex: clampNumber(placement?.zIndex, 1, 1, 999),
+          priority: clampNumber(placement?.priority, 0, -999, 999),
+        },
+      ];
+    }),
+  );
+
 const normalizeBadgePosition = (position) =>
   ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(position) ? position : 'topLeft';
-const normalizeBadgeShape = (shape) => ['pill', 'rounded', 'square', 'circle', 'ribbon'].includes(shape) ? shape : DEFAULT_BADGE_STYLE.shape;
+
+const normalizeBadgeShape = (shape) =>
+  ['pill', 'rounded', 'square', 'circle', 'ribbon'].includes(shape) ? shape : DEFAULT_BADGE_STYLE.shape;
+
 const normalizeBadgeStyle = (style = {}, accentColor = DEFAULT_PAGE_DESIGN_SETTINGS.accentColor) => ({
-  backgroundColor: style.backgroundColor === 'accentColor' ? accentColor : (/^#[0-9a-fA-F]{3,8}$/.test(style.backgroundColor ?? '') ? style.backgroundColor : accentColor),
-  textColor: /^#[0-9a-fA-F]{3,8}$/.test(style.textColor ?? '') ? style.textColor : DEFAULT_BADGE_STYLE.textColor,
-  borderColor: style.borderColor === 'transparent' || /^#[0-9a-fA-F]{3,8}$/.test(style.borderColor ?? '') ? style.borderColor : DEFAULT_BADGE_STYLE.borderColor,
+  backgroundColor:
+    style.backgroundColor === 'accentColor'
+      ? accentColor
+      : /^#[0-9a-fA-F]{3,8}$/.test(style.backgroundColor ?? '')
+        ? style.backgroundColor
+        : accentColor,
+  textColor: /^#[0-9a-fA-F]{3,8}$/.test(style.textColor ?? '')
+    ? style.textColor
+    : DEFAULT_BADGE_STYLE.textColor,
+  borderColor:
+    style.borderColor === 'transparent' || /^#[0-9a-fA-F]{3,8}$/.test(style.borderColor ?? '')
+      ? style.borderColor
+      : DEFAULT_BADGE_STYLE.borderColor,
   borderWidth: clampNumber(style.borderWidth, DEFAULT_BADGE_STYLE.borderWidth, 0, 8),
   opacity: clampNumber(style.opacity, DEFAULT_BADGE_STYLE.opacity, 0, 100),
   shape: normalizeBadgeShape(style.shape),
 });
-const normalizeDishType = (type) => ['simple', 'configurable', 'combo'].includes(type) ? type : 'simple';
-const normalizeOptionGroups = (groups = []) => Array.isArray(groups) ? groups.map((group) => ({
-  id: group.id || createId('group'),
-  nameEn: group.nameEn ?? 'Option group',
-  nameGe: group.nameGe ?? '',
-  required: Boolean(group.required),
-  minSelect: clampNumber(group.minSelect, 0, 0, 12),
-  maxSelect: clampNumber(group.maxSelect, 1, 0, 12),
-  options: Array.isArray(group.options) ? group.options.map((option) => ({
-    id: option.id || createId('option'),
-    nameEn: option.nameEn ?? 'Option',
-    nameGe: option.nameGe ?? '',
-    priceDelta: clampNumber(option.priceDelta, 0, -999, 999),
-  })) : [],
-})) : [];
-const clampNumber = (value, fallback, min, max) => {
-  const number = Number(value ?? fallback);
-  if (!Number.isFinite(number)) return fallback;
-  return Math.min(max, Math.max(min, number));
-};
+
+const normalizeDishType = (type) => (['simple', 'configurable', 'combo'].includes(type) ? type : 'simple');
+
+const normalizeOptionGroups = (groups = []) =>
+  Array.isArray(groups)
+    ? groups.map((group) => ({
+        id: group.id || createId('group'),
+        nameEn: group.nameEn ?? 'Option group',
+        nameGe: group.nameGe ?? '',
+        required: Boolean(group.required),
+        minSelect: clampNumber(group.minSelect, 0, 0, 12),
+        maxSelect: clampNumber(group.maxSelect, 1, 0, 12),
+        options: Array.isArray(group.options)
+          ? group.options.map((option) => ({
+              id: option.id || createId('option'),
+              nameEn: option.nameEn ?? 'Option',
+              nameGe: option.nameGe ?? '',
+              priceDelta: clampNumber(option.priceDelta, 0, -999, 999),
+            }))
+          : [],
+      }))
+    : [];
 
 const normalizeHeader = (header = {}, dividerColorFallback = DEFAULT_PAGE_HEADER.dividerColor) => ({
   ...DEFAULT_PAGE_HEADER,
@@ -397,32 +475,53 @@ const normalizeDesignSettings = (settings = {}) => {
   };
   const normalizedGridMode = normalizeGridMode(merged.gridMode);
   const normalizedGridPreset = normalizeGridPreset(merged.gridPreset);
-  const derivedClassicColumns = GRID_PRESET_COLUMNS[normalizedGridPreset] ?? clampNumber(merged.classicColumns, DEFAULT_PAGE_DESIGN_SETTINGS.classicColumns, 1, 5);
+  const derivedClassicColumns =
+    GRID_PRESET_COLUMNS[normalizedGridPreset] ??
+    clampNumber(merged.classicColumns, DEFAULT_PAGE_DESIGN_SETTINGS.classicColumns, 1, 5);
   const derivedLayoutMode = settings.layoutMode
     ? normalizeLayoutMode(settings.layoutMode)
-    : (normalizedGridMode === 'autoFill' || settings.fittingMode === 'autoFill')
+    : normalizedGridMode === 'autoFill' || settings.fittingMode === 'autoFill'
       ? 'smartAutoFit'
       : normalizedGridMode === 'custom'
         ? 'manualDesigner'
         : 'classicColumns';
   const classicColumns = clampNumber(merged.classicColumns ?? derivedClassicColumns, derivedClassicColumns, 1, 5);
-  const derivedCardStyle = settings.showImages === false
-    ? 'textOnly'
-    : normalizeCardStyle(settings.cardStyle ?? ({ below: 'imageTop', imageLeft: 'imageLeft', imageRight: 'imageRight' }[normalizeCardContentLayout(settings.cardContentLayout)]));
+  const derivedCardStyle =
+    settings.showImages === false
+      ? 'textOnly'
+      : normalizeCardStyle(
+          settings.cardStyle ??
+            {
+              below: 'imageTop',
+              imageLeft: 'imageLeft',
+              imageRight: 'imageRight',
+            }[normalizeCardContentLayout(settings.cardContentLayout)],
+        );
   const imageFitMode = normalizeImageFit(settings.imageFitMode ?? settings.imageFit);
 
   return {
     ...merged,
     showDescriptions:
-      settings.showDescriptions === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.showDescriptions : Boolean(settings.showDescriptions),
-    showImages: settings.showImages === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.showImages : Boolean(settings.showImages),
-    fitAllItems: settings.fitAllItems === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.fitAllItems : Boolean(settings.fitAllItems),
-    fontPreset: Object.keys(FONT_PRESETS).includes(merged.fontPreset) || merged.fontPreset === 'custom' ? merged.fontPreset : 'custom',
+      settings.showDescriptions === undefined
+        ? DEFAULT_PAGE_DESIGN_SETTINGS.showDescriptions
+        : Boolean(settings.showDescriptions),
+    showImages:
+      settings.showImages === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.showImages : Boolean(settings.showImages),
+    fitAllItems:
+      settings.fitAllItems === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.fitAllItems : Boolean(settings.fitAllItems),
+    fontPreset: Object.keys(FONT_PRESETS).includes(merged.fontPreset) || merged.fontPreset === 'custom'
+      ? merged.fontPreset
+      : 'custom',
     layoutMode: derivedLayoutMode,
     classicColumns,
     cardStyle: derivedCardStyle,
     resizeMode: normalizeResizeMode(merged.resizeMode),
-    gridMode: derivedLayoutMode === 'smartAutoFit' ? 'autoFill' : (derivedLayoutMode === 'manualDesigner' || derivedLayoutMode === 'snapGrid') ? 'custom' : 'preset',
+    gridMode:
+      derivedLayoutMode === 'smartAutoFit'
+        ? 'autoFill'
+        : derivedLayoutMode === 'manualDesigner' || derivedLayoutMode === 'snapGrid'
+          ? 'custom'
+          : 'preset',
     gridPreset: derivedLayoutMode === 'classicColumns' ? columnPresetFor(classicColumns) : normalizedGridPreset,
     customGrid: normalizeCustomGrid(merged.customGrid, merged.cardGap),
     makeFirstItemHero: Boolean(merged.makeFirstItemHero),
@@ -430,18 +529,34 @@ const normalizeDesignSettings = (settings = {}) => {
     defaultItemSpan: normalizeSpanOption(merged.defaultItemSpan, '1x1', ['1x1', '2x1']),
     customGridPresets: normalizeGridPresetList(merged.customGridPresets, merged.cardGap),
     cardDensity: ['airy', 'balanced', 'compact'].includes(merged.cardDensity) ? merged.cardDensity : 'balanced',
-    categoryTitleStyle: ['plain', 'underline', 'accentBar', 'pill', 'centered'].includes(merged.categoryTitleStyle) ? merged.categoryTitleStyle : 'plain',
-    imageRatio: ['square', 'fourThree', 'sixteenNine', 'wide', 'custom'].includes(merged.imageRatio) ? merged.imageRatio : 'custom',
-    cardContentLayout: { imageTop: 'below', imageLeft: 'imageLeft', imageRight: 'imageRight', textOnly: normalizeCardContentLayout(settings.cardContentLayout) }[derivedCardStyle] ?? normalizeCardContentLayout(settings.cardContentLayout),
+    categoryTitleStyle: ['plain', 'underline', 'accentBar', 'pill', 'centered'].includes(merged.categoryTitleStyle)
+      ? merged.categoryTitleStyle
+      : 'plain',
+    imageRatio: ['square', 'fourThree', 'sixteenNine', 'wide', 'custom'].includes(merged.imageRatio)
+      ? merged.imageRatio
+      : 'custom',
+    cardContentLayout:
+      {
+        imageTop: 'below',
+        imageLeft: 'imageLeft',
+        imageRight: 'imageRight',
+        textOnly: normalizeCardContentLayout(settings.cardContentLayout),
+      }[derivedCardStyle] ?? normalizeCardContentLayout(settings.cardContentLayout),
     badgePosition: normalizeBadgePosition(settings.badgePosition),
     badgeStyle: normalizeBadgeStyle(settings.badgeStyle ?? merged.badgeStyle, merged.accentColor),
-    configurableDisplayMode: ['compactOptions', 'stepList'].includes(settings.configurableDisplayMode) ? settings.configurableDisplayMode : DEFAULT_PAGE_DESIGN_SETTINGS.configurableDisplayMode,
+    configurableDisplayMode: ['compactOptions', 'stepList'].includes(settings.configurableDisplayMode)
+      ? settings.configurableDisplayMode
+      : DEFAULT_PAGE_DESIGN_SETTINGS.configurableDisplayMode,
     cardBorderEnabled:
-      settings.cardBorderEnabled === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderEnabled : Boolean(settings.cardBorderEnabled),
+      settings.cardBorderEnabled === undefined
+        ? DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderEnabled
+        : Boolean(settings.cardBorderEnabled),
     cardBorderWidth: clampNumber(settings.cardBorderWidth, DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderWidth, 0, 12),
     cardBorderOpacity: clampNumber(settings.cardBorderOpacity, DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderOpacity, 0, 100),
     cardShadowEnabled:
-      settings.cardShadowEnabled === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.cardShadowEnabled : Boolean(settings.cardShadowEnabled),
+      settings.cardShadowEnabled === undefined
+        ? DEFAULT_PAGE_DESIGN_SETTINGS.cardShadowEnabled
+        : Boolean(settings.cardShadowEnabled),
     imageFit: imageFitMode,
     imageFitMode,
     imagePosition: normalizeImagePosition(settings.imagePosition),
@@ -457,14 +572,19 @@ const normalizeDesignSettings = (settings = {}) => {
       allowShrinkText: Boolean(merged.fitStrategy.allowShrinkText),
       allowHideDescriptions: Boolean(merged.fitStrategy.allowHideDescriptions),
       allowCompactFallback: Boolean(merged.fitStrategy.allowCompactFallback),
-      minReadableFontSize: clampNumber(merged.fitStrategy.minReadableFontSize, DEFAULT_FIT_STRATEGY.minReadableFontSize, 6, 16),
+      minReadableFontSize: clampNumber(
+        merged.fitStrategy.minReadableFontSize,
+        DEFAULT_FIT_STRATEGY.minReadableFontSize,
+        6,
+        16,
+      ),
       minCardHeight: clampNumber(merged.fitStrategy.minCardHeight, DEFAULT_FIT_STRATEGY.minCardHeight, 48, 220),
       minImageHeight: clampNumber(merged.fitStrategy.minImageHeight, DEFAULT_FIT_STRATEGY.minImageHeight, 0, 140),
     },
   };
 };
 
-const pageTypeFrom = (value) => Object.values(PAGE_TYPES).includes(value) ? value : PAGE_TYPES.MENU;
+const pageTypeFrom = (value) => (Object.values(PAGE_TYPES).includes(value) ? value : PAGE_TYPES.MENU);
 const deepMerge = (base, value = {}) => ({ ...base, ...(value ?? {}) });
 
 const actualSizeFromPage = (page = {}) => ({
@@ -476,7 +596,9 @@ const actualSizeFromPage = (page = {}) => ({
 
 const pageSizeFromPreset = (pageType, sizePresetId, fallbackPage = {}) => {
   const printPage = isPrintPageType(pageType);
-  const preset = printPage ? findPrintSizePreset(sizePresetId ?? fallbackPage.sizePreset) : findSocialSizePreset(sizePresetId ?? fallbackPage.sizePreset);
+  const preset = printPage
+    ? findPrintSizePreset(sizePresetId ?? fallbackPage.sizePreset)
+    : findSocialSizePreset(sizePresetId ?? fallbackPage.sizePreset);
   const fallbackSize = actualSizeFromPage(fallbackPage);
   const customPreset = preset.id === 'customPrint' || preset.id === 'customSocial';
   const width = customPreset && Number.isFinite(fallbackSize.width) ? fallbackSize.width : preset.width;
@@ -521,7 +643,11 @@ const buildDefaultPage = (project, name = 'Page 1', options = {}) => {
     fittingMode: 'fixed',
     header: socialCreative ? { ...DEFAULT_PAGE_HEADER, enabled: false } : { ...DEFAULT_PAGE_HEADER },
     footer: socialCreative ? { ...DEFAULT_PAGE_FOOTER, enabled: false } : { ...DEFAULT_PAGE_FOOTER },
-    designSettings: { ...DEFAULT_PAGE_DESIGN_SETTINGS, customGrid: { ...DEFAULT_CUSTOM_GRID }, customGridPresets: [] },
+    designSettings: {
+      ...DEFAULT_PAGE_DESIGN_SETTINGS,
+      customGrid: { ...DEFAULT_CUSTOM_GRID },
+      customGridPresets: [],
+    },
     creativePreset: socialCreative ? (options.creativePreset || 'sushiSetCreative') : '',
     creativeContent: socialCreative ? buildCreativeContent() : undefined,
     creativeMedia: socialCreative ? buildCreativeMedia() : undefined,
@@ -543,12 +669,21 @@ const normalizePage = (page, project, index) => {
   const selectedDishIds = Array.isArray(page.selectedDishIds)
     ? page.selectedDishIds.filter((dishId) => visibleDishIds.includes(dishId))
     : visibleDishIds;
-  const legacySizePreset = page.sizePreset ?? (page.paperSize === 'A3'
-    ? (page.orientation === 'landscape' ? 'a3Landscape' : 'a3Portrait')
-    : (page.orientation === 'landscape' ? 'a4Landscape' : 'a4Portrait'));
+  const legacySizePreset =
+    page.sizePreset ??
+    (page.paperSize === 'A3'
+      ? page.orientation === 'landscape'
+        ? 'a3Landscape'
+        : 'a3Portrait'
+      : page.orientation === 'landscape'
+        ? 'a4Landscape'
+        : 'a4Portrait');
   const size = pageSizeFromPreset(pageType, legacySizePreset, page);
   const socialCreative = pageType === PAGE_TYPES.SOCIAL_CREATIVE;
-  const designSettings = normalizeDesignSettings({ ...(page.designSettings ?? {}), fittingMode: page.fittingMode });
+  const designSettings = normalizeDesignSettings({
+    ...(page.designSettings ?? {}),
+    fittingMode: page.fittingMode,
+  });
   const dividerColorFallback = normalizeColor(designSettings.accentColor, DEFAULT_PAGE_DIVIDER_COLOR);
 
   return {
@@ -562,12 +697,14 @@ const normalizePage = (page, project, index) => {
     languageMode: ['en', 'ge', 'bilingual'].includes(page.languageMode) ? page.languageMode : 'bilingual',
     selectedCategoryIds,
     selectedDishIds,
-    layoutTemplate: ['photoCards', 'classicList', 'compact'].includes(page.layoutTemplate) ? page.layoutTemplate : 'photoCards',
+    layoutTemplate: ['photoCards', 'classicList', 'compact'].includes(page.layoutTemplate)
+      ? page.layoutTemplate
+      : 'photoCards',
     fittingMode: ['fixed', 'autoFill', 'compact'].includes(page.fittingMode) ? page.fittingMode : 'fixed',
     header: normalizeHeader(page.header, dividerColorFallback),
     footer: normalizeFooter(page.footer, dividerColorFallback),
     designSettings,
-    creativePreset: socialCreative ? (page.creativePreset || 'sushiSetCreative') : (page.creativePreset || ''),
+    creativePreset: socialCreative ? page.creativePreset || 'sushiSetCreative' : page.creativePreset || '',
     creativeContent: socialCreative ? deepMerge(DEFAULT_CREATIVE_CONTENT, page.creativeContent) : page.creativeContent,
     creativeMedia: socialCreative
       ? {
@@ -577,7 +714,9 @@ const normalizePage = (page, project, index) => {
         }
       : page.creativeMedia,
     creativeDesign: socialCreative ? deepMerge(DEFAULT_CREATIVE_DESIGN, page.creativeDesign) : page.creativeDesign,
-    creativeTypography: socialCreative ? deepMerge(DEFAULT_CREATIVE_TYPOGRAPHY, page.creativeTypography) : page.creativeTypography,
+    creativeTypography: socialCreative
+      ? deepMerge(DEFAULT_CREATIVE_TYPOGRAPHY, page.creativeTypography)
+      : page.creativeTypography,
     promoContent: pageType === PAGE_TYPES.PROMO ? deepMerge(DEFAULT_PROMO_CONTENT, page.promoContent) : page.promoContent,
     flyerContent: pageType === PAGE_TYPES.FLYER ? deepMerge(DEFAULT_FLYER_CONTENT, page.flyerContent) : page.flyerContent,
     itemPlacements: normalizeItemPlacements(page.itemPlacements),
@@ -716,7 +855,9 @@ export function createProjectStore() {
           pages: state.pages.map((page) => ({
             ...page,
             selectedCategoryIds: page.selectedCategoryIds.filter((id) => id !== categoryId),
-            selectedDishIds: page.selectedDishIds.filter((dishId) => state.dishes.some((dish) => dish.id === dishId && dish.categoryId !== categoryId)),
+            selectedDishIds: page.selectedDishIds.filter((dishId) =>
+              state.dishes.some((dish) => dish.id === dishId && dish.categoryId !== categoryId),
+            ),
           })),
           selectedCategoryId: fallbackCategoryId(categories, state.selectedCategoryId),
         };
@@ -739,7 +880,10 @@ export function createProjectStore() {
           ...state,
           categories: [...state.categories, category],
           dishes: [...state.dishes, ...copiedDishes],
-          pages: state.pages.map((page) => ({ ...page, selectedCategoryIds: [...page.selectedCategoryIds, category.id] })),
+          pages: state.pages.map((page) => ({
+            ...page,
+            selectedCategoryIds: [...page.selectedCategoryIds, category.id],
+          })),
           selectedCategoryId: category.id,
         };
       });
@@ -777,7 +921,10 @@ export function createProjectStore() {
         ...state,
         dishes: state.dishes.map((dish) =>
           dish.id === dishId
-            ? { ...dish, badges: [...dish.badges, { id: createId('badge'), type: 'New', customText: '', emoji: '' }] }
+            ? {
+                ...dish,
+                badges: [...dish.badges, { id: createId('badge'), type: 'New', customText: '', emoji: '' }],
+              }
             : dish,
         ),
       }));
@@ -804,226 +951,104 @@ export function createProjectStore() {
       }));
     },
     addOptionGroup(dishId) {
-      update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, optionGroups: [...(dish.optionGroups ?? []), { id: createId('group'), nameEn: 'Option group', nameGe: '', required: false, minSelect: 0, maxSelect: 1, options: [] }] } : dish) }));
+      update((state) => ({
+        ...state,
+        dishes: state.dishes.map((dish) =>
+          dish.id === dishId
+            ? {
+                ...dish,
+                optionGroups: [
+                  ...(dish.optionGroups ?? []),
+                  {
+                    id: createId('group'),
+                    nameEn: 'Option group',
+                    nameGe: '',
+                    required: false,
+                    minSelect: 0,
+                    maxSelect: 1,
+                    options: [],
+                  },
+                ],
+              }
+            : dish,
+        ),
+      }));
     },
     updateOptionGroup(dishId, groupId, changes) {
-      update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, optionGroups: (dish.optionGroups ?? []).map((group) => group.id === groupId ? { ...group, ...changes } : group) } : dish) }));
+      update((state) => ({
+        ...state,
+        dishes: state.dishes.map((dish) =>
+          dish.id === dishId
+            ? {
+                ...dish,
+                optionGroups: (dish.optionGroups ?? []).map((group) =>
+                  group.id === groupId ? { ...group, ...changes } : group,
+                ),
+              }
+            : dish,
+        ),
+      }));
     },
     deleteOptionGroup(dishId, groupId) {
-      update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, optionGroups: (dish.optionGroups ?? []).filter((group) => group.id !== groupId) } : dish) }));
+      update((state) => ({
+        ...state,
+        dishes: state.dishes.map((dish) =>
+          dish.id === dishId
+            ? {
+                ...dish,
+                optionGroups: (dish.optionGroups ?? []).filter((group) => group.id !== groupId),
+              }
+            : dish,
+        ),
+      }));
     },
     addOption(dishId, groupId) {
-      update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, optionGroups: (dish.optionGroups ?? []).map((group) => group.id === groupId ? { ...group, options: [...(group.options ?? []), { id: createId('option'), nameEn: 'Option', nameGe: '', priceDelta: 0 }] } : group) } : dish) }));
+      update((state) => ({
+        ...state,
+        dishes: state.dishes.map((dish) =>
+          dish.id === dishId
+            ? {
+                ...dish,
+                optionGroups: (dish.optionGroups ?? []).map((group) =>
+                  group.id === groupId
+                    ? {
+                        ...group,
+                        options: [
+                          ...(group.options ?? []),
+                          {
+                            id: createId('option'),
+                            nameEn: 'Option',
+                            nameGe: '',
+                            priceDelta: 0,
+                          },
+                        ],
+                      }
+                    : group,
+                ),
+              }
+            : dish,
+        ),
+      }));
     },
     updateOption(dishId, groupId, optionId, changes) {
-      update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, optionGroups: (dish.optionGroups ?? []).map((group) => group.id === groupId ? { ...group, options: (group.options ?? []).map((option) => option.id === optionId ? { ...option, ...changes } : option) } : group) } : dish) }));
-    },
-    deleteOption(dishId, groupId, optionId) {
-      update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, optionGroups: (dish.optionGroups ?? []).map((group) => group.id === groupId ? { ...group, options: (group.options ?? []).filter((option) => option.id !== optionId) } : group) } : dish) }));
-    },
-    selectPage(pageId) {
-      update((state) => ({ ...state, selectedPageId: pageId }));
-    },
-    addPage(options = {}) {
-      update((state) => {
-        const pageType = pageTypeFrom(options.pageType);
-        const label = { menu: 'Menu', promo: 'Promo', flyer: 'Flyer', socialCreative: 'Creative' }[pageType] ?? 'Page';
-        const page = buildDefaultPage(state, options.name || `${label} ${state.pages.length + 1}`, options);
-        return { ...state, pages: [...state.pages, page], selectedPageId: page.id };
-      });
-    },
-    duplicateSelectedPage() {
-      update((state) => {
-        const source = state.pages.find((page) => page.id === state.selectedPageId);
-        if (!source) return state;
-        const page = { ...deepClone(source), id: createId('page'), name: `${source.name} copy` };
-        return { ...state, pages: [...state.pages, page], selectedPageId: page.id };
-      });
-    },
-    deleteSelectedPage() {
-      update((state) => {
-        const currentIndex = state.pages.findIndex((page) => page.id === state.selectedPageId);
-        const pages = state.pages.filter((page) => page.id !== state.selectedPageId);
-        if (pages.length === 0) {
-          const page = buildDefaultPage(state);
-          return { ...state, pages: [page], selectedPageId: page.id };
-        }
-        const selectedPageId = pages[Math.max(0, currentIndex - 1)]?.id ?? pages[0].id;
-        return { ...state, pages, selectedPageId };
-      });
-    },
-    updateSelectedPage(changes) {
-      updateSelectedPage(changes);
-    },
-    updateSelectedPageSize(sizePreset) {
-      updateSelectedPage((page) => pageSizeFromPreset(page.pageType, sizePreset, page));
-    },
-    updateSelectedPageCreativeContent(field, value) {
-      updateSelectedPage((page) => ({ creativeContent: { ...(page.creativeContent ?? buildCreativeContent()), [field]: value } }));
-    },
-    updateSelectedPageCreativeMedia(field, value) {
-      updateSelectedPage((page) => ({ creativeMedia: { ...(page.creativeMedia ?? buildCreativeMedia()), [field]: value } }));
-    },
-    updateSelectedPageCreativeDesign(field, value) {
-      updateSelectedPage((page) => ({ creativeDesign: { ...(page.creativeDesign ?? buildCreativeDesign()), [field]: value } }));
-    },
-    updateSelectedPageCreativeTypography(field, value) {
-      updateSelectedPage((page) => ({ creativeTypography: { ...(page.creativeTypography ?? buildCreativeTypography()), [field]: value } }));
-    },
-    updateSelectedPagePromoContent(field, value) {
-      updateSelectedPage((page) => ({ promoContent: { ...(page.promoContent ?? buildPromoContent()), [field]: value } }));
-    },
-    updateSelectedPageFlyerContent(field, value) {
-      updateSelectedPage((page) => ({ flyerContent: { ...(page.flyerContent ?? buildFlyerContent()), [field]: value } }));
-    },
-    duplicateSocialCreativeToSize(sizePreset) {
-      update((state) => {
-        const source = state.pages.find((page) => page.id === state.selectedPageId);
-        if (!source || source.pageType !== PAGE_TYPES.SOCIAL_CREATIVE) return state;
-        const size = pageSizeFromPreset(PAGE_TYPES.SOCIAL_CREATIVE, sizePreset, source);
-        const preset = SOCIAL_SIZE_PRESETS.find((item) => item.id === size.sizePreset);
-        const page = { ...deepClone(source), paperSize: size.paperSize, orientation: size.orientation, sizePreset: size.sizePreset, customSize: size.customSize, id: createId('page'), name: `${source.name} ${preset?.ratioLabel ?? ''}`.trim() };
-        return { ...state, pages: [...state.pages, page], selectedPageId: page.id };
-      });
-    },
-    generateAllSocialCreativeSizes() {
-      update((state) => {
-        const source = state.pages.find((page) => page.id === state.selectedPageId);
-        if (!source || source.pageType !== PAGE_TYPES.SOCIAL_CREATIVE) return state;
-        const targetPresets = ['socialSquare', 'socialPortrait', 'socialStory'];
-        const created = targetPresets.map((presetId) => {
-          const size = pageSizeFromPreset(PAGE_TYPES.SOCIAL_CREATIVE, presetId, source);
-          const preset = SOCIAL_SIZE_PRESETS.find((item) => item.id === presetId);
-          return { ...deepClone(source), paperSize: size.paperSize, orientation: size.orientation, sizePreset: size.sizePreset, customSize: size.customSize, id: createId('page'), name: `${source.name} ${preset?.ratioLabel ?? ''}`.trim() };
-        });
-        return { ...state, pages: [...state.pages, ...created], selectedPageId: created[created.length - 1]?.id ?? state.selectedPageId };
-      });
-    },
-    setPageCategories(categoryIds) {
-      updateSelectedPage((page, state) => ({
-        selectedCategoryIds: categoryIds,
-        selectedDishIds: visibleDishIdsForCategories(state.dishes, categoryIds),
+      update((state) => ({
+        ...state,
+        dishes: state.dishes.map((dish) =>
+          dish.id === dishId
+            ? {
+                ...dish,
+                optionGroups: (dish.optionGroups ?? []).map((group) =>
+                  group.id === groupId
+                    ? {
+                        ...group,
+                        options: (group.options ?? []).map((option) =>
+                          option.id === optionId ? { ...option, ...changes } : option,
+                        ),
+                      }
+                    : group,
+                ),
+              }
+            : dish,
+        ),
       }));
-    },
-    updateSelectedPageDesign(setting, value) {
-      updateSelectedPage((page) => ({ designSettings: { ...page.designSettings, [setting]: value } }));
-    },
-    updateSelectedPageCustomGrid(setting, value) {
-      updateSelectedPage((page) => ({
-        designSettings: {
-          ...page.designSettings,
-          customGrid: { ...page.designSettings.customGrid, [setting]: value },
-        },
-      }));
-    },
-    updateSelectedPageItemPlacement(dishId, placement) {
-      updateSelectedPage((page) => ({
-        itemPlacements: {
-          ...(page.itemPlacements ?? {}),
-          [dishId]: {
-            ...(page.itemPlacements?.[dishId] ?? {}),
-            mode: placement?.mode ?? page.itemPlacements?.[dishId]?.mode ?? 'grid',
-            widthWeight: placement?.widthWeight ?? page.itemPlacements?.[dishId]?.widthWeight ?? 1,
-            heightWeight: placement?.heightWeight ?? page.itemPlacements?.[dishId]?.heightWeight ?? 1,
-            minWidthPercent: placement?.minWidthPercent ?? page.itemPlacements?.[dishId]?.minWidthPercent ?? 12,
-            minHeightPercent: placement?.minHeightPercent ?? page.itemPlacements?.[dishId]?.minHeightPercent ?? 8,
-            maxWidthPercent: placement?.maxWidthPercent ?? page.itemPlacements?.[dishId]?.maxWidthPercent ?? 100,
-            maxHeightPercent: placement?.maxHeightPercent ?? page.itemPlacements?.[dishId]?.maxHeightPercent ?? 100,
-            order: placement?.order ?? page.itemPlacements?.[dishId]?.order ?? 0,
-            colSpan: placement?.colSpan ?? page.itemPlacements?.[dishId]?.colSpan ?? 1,
-            rowSpan: placement?.rowSpan ?? page.itemPlacements?.[dishId]?.rowSpan ?? 1,
-            xPercent: placement?.xPercent ?? page.itemPlacements?.[dishId]?.xPercent ?? 0,
-            yPercent: placement?.yPercent ?? page.itemPlacements?.[dishId]?.yPercent ?? 0,
-            widthPercent: placement?.widthPercent ?? page.itemPlacements?.[dishId]?.widthPercent ?? 30,
-            heightPercent: placement?.heightPercent ?? page.itemPlacements?.[dishId]?.heightPercent ?? 22,
-            zIndex: placement?.zIndex ?? page.itemPlacements?.[dishId]?.zIndex ?? 1,
-            priority: placement?.priority ?? page.itemPlacements?.[dishId]?.priority ?? 0,
-          },
-        },
-      }));
-    },
-    resetSelectedPageItemPlacement(dishId) {
-      updateSelectedPage((page) => {
-        const { [dishId]: _removed, ...itemPlacements } = page.itemPlacements ?? {};
-        return { itemPlacements };
-      });
-    },
-    resetSelectedPageItemPlacements() {
-      updateSelectedPage({ itemPlacements: {} });
-    },
-    saveSelectedPageCustomGridPreset(name) {
-      updateSelectedPage((page) => {
-        const trimmedName = name.trim() || `Custom grid ${(page.designSettings.customGridPresets?.length ?? 0) + 1}`;
-        const preset = {
-          id: createId('gridPreset'),
-          name: trimmedName,
-          ...page.designSettings.customGrid,
-          itemSpanRules: {
-            makeFirstItemHero: page.designSettings.makeFirstItemHero,
-            heroItemSpan: page.designSettings.heroItemSpan,
-            defaultItemSpan: page.designSettings.defaultItemSpan,
-          },
-        };
-        return {
-          designSettings: {
-            ...page.designSettings,
-            customGridPresets: [...(page.designSettings.customGridPresets ?? []), preset],
-          },
-        };
-      });
-    },
-    applySelectedPageCustomGridPreset(presetId) {
-      updateSelectedPage((page) => {
-        const preset = page.designSettings.customGridPresets?.find((item) => item.id === presetId);
-        if (!preset) return {};
-        return {
-          designSettings: {
-            ...page.designSettings,
-            gridMode: 'custom',
-            customGrid: {
-              rows: preset.rows,
-              columns: preset.columns,
-              gap: preset.gap,
-              autoRows: preset.autoRows,
-              densePacking: preset.densePacking,
-            },
-            makeFirstItemHero: preset.itemSpanRules?.makeFirstItemHero ?? page.designSettings.makeFirstItemHero,
-            heroItemSpan: preset.itemSpanRules?.heroItemSpan ?? page.designSettings.heroItemSpan,
-            defaultItemSpan: preset.itemSpanRules?.defaultItemSpan ?? page.designSettings.defaultItemSpan,
-          },
-        };
-      });
-    },
-    deleteSelectedPageCustomGridPreset(presetId) {
-      updateSelectedPage((page) => ({
-        designSettings: {
-          ...page.designSettings,
-          customGridPresets: (page.designSettings.customGridPresets ?? []).filter((preset) => preset.id !== presetId),
-        },
-      }));
-    },
-    updateSelectedPageFitStrategy(setting, value) {
-      updateSelectedPage((page) => ({
-        designSettings: {
-          ...page.designSettings,
-          fitStrategy: { ...page.designSettings.fitStrategy, [setting]: value },
-        },
-      }));
-    },
-    updateSelectedPageHeader(setting, value) {
-      updateSelectedPage((page) => ({ header: { ...page.header, [setting]: value } }));
-    },
-    updateSelectedPageFooter(setting, value) {
-      updateSelectedPage((page) => ({ footer: { ...page.footer, [setting]: value } }));
-    },
-  };
-
-  return {
-    getSnapshot,
-    actions,
-    subscribe(listener) {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
-  };
-}
+ца
