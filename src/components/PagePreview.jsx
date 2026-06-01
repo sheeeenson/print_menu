@@ -11,7 +11,7 @@ export function PagePreview({ project, page, selectedPreviewDishId = '', onSelec
   const categories = project.categories.filter((category) => selectedCategoryIds.has(category.id));
   const selectedDishes = selectedVisibleDishes(project, page);
   const paper = paperDimensions(page.paperSize, page.orientation);
-  const isAutoFillMode = page.designSettings.gridMode === 'autoFill' || page.fittingMode === 'autoFill';
+  const isAutoFillMode = page.designSettings.layoutMode === 'smartAutoFit' || page.designSettings.gridMode === 'autoFill' || page.fittingMode === 'autoFill';
   const fitAllLayout = page.designSettings.fitAllItems
     ? calculateFitAllLayout({
         itemCount: selectedDishes.length,
@@ -48,7 +48,8 @@ export function PagePreview({ project, page, selectedPreviewDishId = '', onSelec
   const densityClass = `density-${page.designSettings.cardDensity}`;
   const categoryStyleClass = `category-style-${page.designSettings.categoryTitleStyle}`;
   const [manualGridWarning, setManualGridWarning] = useState('');
-  const isManualGridMode = page.designSettings.gridMode === 'custom';
+  const isManualGridMode = page.designSettings.layoutMode === 'manualDesigner' || page.designSettings.gridMode === 'custom';
+  const isFreeResizeMode = isManualGridMode && page.designSettings.resizeMode === 'freeResize';
 
   useEffect(() => {
     setManualGridWarning('');
@@ -56,6 +57,11 @@ export function PagePreview({ project, page, selectedPreviewDishId = '', onSelec
 
   const updatePreviewPlacement = (dishId, nextPlacement, previousPlacement) => {
     if (!isManualGridMode) return false;
+    if (page.designSettings.resizeMode === 'freeResize') {
+      setManualGridWarning('');
+      onResizePreviewDish(dishId, nextPlacement);
+      return true;
+    }
     const nextPage = {
       ...page,
       itemPlacements: {
@@ -88,16 +94,20 @@ export function PagePreview({ project, page, selectedPreviewDishId = '', onSelec
       </div>
       <div className="paper-scroll">
         <div className="preview-page-wrapper print-root">
-          <article onPointerDown={(event) => { if (event.target === event.currentTarget) onSelectPreviewDish(''); }} className={`paper-page print-page ${page.paperSize.toLowerCase()} ${page.orientation} paper-${page.paperSize.toLowerCase()} paper-${page.orientation} ${templateClass} ${fittingClass} ${gridClass} ${densityClass} ${categoryStyleClass}`} style={style}>
+          <article onPointerDown={(event) => { if (event.target === event.currentTarget) onSelectPreviewDish(''); }} className={`paper-page print-page ${page.paperSize.toLowerCase()} ${page.orientation} paper-${page.paperSize.toLowerCase()} paper-${page.orientation} ${templateClass} ${fittingClass} ${gridClass} ${densityClass} ${categoryStyleClass} layout-mode-${page.designSettings.layoutMode}`} style={style}>
             <div className="print-page-inner">
               <PageHeaderPreview page={page} renderLocalizedText={renderLocalizedText} />
               <main className="page-content" onPointerDown={(event) => { if (event.target === event.currentTarget) onSelectPreviewDish(''); }}>
                 {fitAllLayout?.warning ? <div className="fit-warning" role="alert">{fitAllLayout.warning}</div> : null}
                 {customGridWarning ? <div className="fit-warning" role="alert">{customGridWarning}</div> : null}
                 {manualGridWarning ? <div className="fit-warning" role="alert">{manualGridWarning}</div> : null}
-                {page.designSettings.gridMode === 'custom'
-                  ? <CustomGridPreview dishes={selectedDishes} page={page} fitAllLayout={fitAllLayout} selectedDishId={selectedPreviewDishId} onSelectDish={onSelectPreviewDish} onResizeDish={updatePreviewPlacement} />
-                  : fitAllLayout
+                {isManualGridMode
+                  ? isFreeResizeMode
+                    ? <FreeResizePreview dishes={selectedDishes} page={page} selectedDishId={selectedPreviewDishId} onSelectDish={onSelectPreviewDish} onResizeDish={updatePreviewPlacement} />
+                    : <CustomGridPreview dishes={selectedDishes} page={page} fitAllLayout={fitAllLayout} selectedDishId={selectedPreviewDishId} onSelectDish={onSelectPreviewDish} onResizeDish={updatePreviewPlacement} />
+                  : page.designSettings.layoutMode === 'classicColumns'
+                    ? <ClassicColumnsPreview dishes={selectedDishes} page={page} />
+                    : fitAllLayout
                     ? <FitAllPreview dishes={selectedDishes} page={page} fitAllLayout={fitAllLayout} />
                     : isAutoFillMode
                       ? <AutoFillPreview dishes={selectedDishes} page={page} />
@@ -202,7 +212,11 @@ function previewStyle(page, autoFillLayout, fitAllLayout, itemCount = 0) {
     '--card-border-color': settings.cardBorderEnabled ? hexToRgba(colors.cardBorderColor, settings.cardBorderOpacity / 100) : 'transparent',
     '--card-border-width': settings.cardBorderEnabled ? `${settings.cardBorderWidth}px` : '0px',
     '--card-shadow': settings.cardShadowEnabled ? '0 14px 30px rgba(35,31,32,0.14)' : 'none',
-    '--image-fit': settings.imageFit,
+    '--image-fit': settings.imageFitMode ?? settings.imageFit,
+    '--image-position': imageObjectPosition(settings),
+    '--image-zoom': (settings.imageZoom ?? 100) / 100,
+    '--image-area-percent': `${settings.imageAreaPercent ?? 42}%`,
+    '--classic-columns': settings.classicColumns ?? 2,
     '--title-line-clamp': settings.titleLineClamp,
     '--description-line-clamp': settings.descriptionLineClamp,
     ...fitAllStyle,
@@ -211,11 +225,24 @@ function previewStyle(page, autoFillLayout, fitAllLayout, itemCount = 0) {
 }
 
 
+
+function imageObjectPosition(settings) {
+  if (settings.imagePosition === 'top') return 'center top';
+  if (settings.imagePosition === 'bottom') return 'center bottom';
+  if (settings.imagePosition === 'left') return 'left center';
+  if (settings.imagePosition === 'right') return 'right center';
+  if (settings.imagePosition === 'custom') {
+    return `${50 + (settings.imagePanX ?? 0)}% ${50 + (settings.imagePanY ?? 0)}%`;
+  }
+  return 'center center';
+}
+
 function cssLength(value) {
   return typeof value === 'number' ? `${value}px` : value;
 }
 
 function gridColumns(settings) {
+  if (settings.layoutMode === 'classicColumns') return settings.classicColumns ?? 2;
   if (settings.gridPreset === 'oneColumn') return 1;
   if (settings.gridPreset === 'twoColumns') return 2;
   if (settings.gridPreset === 'threeColumns' || settings.gridPreset === 'catalogGrid' || settings.gridPreset === 'magazineGrid' || settings.gridPreset === 'bentoGrid') return 3;
@@ -373,6 +400,121 @@ function CustomGridPreview({ dishes, page, fitAllLayout, selectedDishId, onSelec
   );
 }
 
+
+function FreeResizePreview({ dishes, page, selectedDishId, onSelectDish, onResizeDish }) {
+  const areaRef = useRef(null);
+  if (!dishes.length) return <EmptyPage />;
+  return (
+    <div ref={areaRef} className="free-resize-canvas" aria-label="Free resize dish layout" onPointerDown={(event) => { if (event.target === event.currentTarget) onSelectDish(''); }}>
+      {dishes.map((dish, index) => {
+        const placement = freePlacement(page.itemPlacements?.[dish.id], index, dishes.length);
+        const isSelected = selectedDishId === dish.id;
+        return (
+          <div
+            key={dish.id}
+            className={`free-resize-item preview-selectable-item ${isSelected ? 'selected-preview-item' : ''}`}
+            style={{ left: `${placement.xPercent}%`, top: `${placement.yPercent}%`, width: `${placement.widthPercent}%`, height: `${placement.heightPercent}%`, zIndex: placement.zIndex }}
+            onPointerDown={(event) => { event.stopPropagation(); onSelectDish(dish.id); }}
+          >
+            <DishCard dish={dish} page={page} isHero={index === 0 && page.designSettings.makeFirstItemHero} />
+            {isSelected ? <FreeResizeHandles areaRef={areaRef} dishId={dish.id} placement={placement} onResize={onResizeDish} /> : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function freePlacement(placement, index, count) {
+  const columns = Math.min(3, Math.max(1, Math.ceil(Math.sqrt(count || 1))));
+  const rows = Math.max(1, Math.ceil((count || 1) / columns));
+  const width = Math.min(100 / columns - 2, placement?.widthPercent ?? 30);
+  const height = Math.min(100 / rows - 2, placement?.heightPercent ?? 22);
+  const col = index % columns;
+  const row = Math.floor(index / columns);
+  const fallbackX = col * (100 / columns);
+  const fallbackY = row * (100 / rows);
+  return clampFreePlacement({
+    mode: 'free',
+    colSpan: placement?.colSpan ?? 1,
+    rowSpan: placement?.rowSpan ?? 1,
+    xPercent: placement?.mode === 'free' ? placement?.xPercent ?? 0 : fallbackX,
+    yPercent: placement?.mode === 'free' ? placement?.yPercent ?? 0 : fallbackY,
+    widthPercent: placement?.mode === 'free' ? placement?.widthPercent ?? 30 : width,
+    heightPercent: placement?.mode === 'free' ? placement?.heightPercent ?? 22 : height,
+    zIndex: placement?.zIndex ?? 1,
+    priority: placement?.priority ?? 0,
+  });
+}
+
+function clampFreePlacement(placement) {
+  const widthPercent = clamp(placement.widthPercent, 10, 100);
+  const heightPercent = clamp(placement.heightPercent, 8, 100);
+  return {
+    ...placement,
+    mode: 'free',
+    widthPercent,
+    heightPercent,
+    xPercent: clamp(placement.xPercent, 0, 100 - widthPercent),
+    yPercent: clamp(placement.yPercent, 0, 100 - heightPercent),
+  };
+}
+
+function FreeResizeHandles({ areaRef, dishId, placement, onResize }) {
+  const dragState = useRef(null);
+  const startDrag = (handle) => (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const area = areaRef.current;
+    if (!area) return;
+    const rect = area.getBoundingClientRect();
+    dragState.current = { handle, rect, startX: event.clientX, startY: event.clientY, start: placement };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const continueDrag = (event) => {
+    const state = dragState.current;
+    if (!state) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const dx = ((event.clientX - state.startX) / Math.max(1, state.rect.width)) * 100;
+    const dy = ((event.clientY - state.startY) / Math.max(1, state.rect.height)) * 100;
+    const next = { ...state.start };
+    if (state.handle === 'move') {
+      next.xPercent = state.start.xPercent + dx;
+      next.yPercent = state.start.yPercent + dy;
+    } else {
+      if (state.handle !== 'bottom') next.widthPercent = state.start.widthPercent + dx;
+      if (state.handle !== 'right') next.heightPercent = state.start.heightPercent + dy;
+    }
+    onResize(dishId, clampFreePlacement(next));
+  };
+  const stopDrag = (event) => {
+    if (!dragState.current) return;
+    event.preventDefault();
+    event.stopPropagation();
+    dragState.current = null;
+  };
+  return (
+    <div className="preview-resize-handles free-resize-handles" aria-hidden="true">
+      <span className="free-move-layer" onPointerDown={startDrag('move')} onPointerMove={continueDrag} onPointerUp={stopDrag} onPointerCancel={stopDrag} />
+      {['right', 'bottom', 'bottom-right'].map((handle) => (
+        <span key={handle} className={`resize-handle resize-handle-${handle}`} onPointerDown={startDrag(handle)} onPointerMove={continueDrag} onPointerUp={stopDrag} onPointerCancel={stopDrag} />
+      ))}
+    </div>
+  );
+}
+
+function ClassicColumnsPreview({ dishes, page }) {
+  if (!dishes.length) return <EmptyPage />;
+  const columns = page.designSettings.classicColumns ?? 2;
+  const rows = Math.max(1, Math.ceil(dishes.length / columns));
+  return (
+    <div className="classic-columns-grid" style={{ '--classic-rows': rows }} aria-label="Classic column dish layout">
+      {dishes.map((dish) => <DishCard key={dish.id} dish={dish} page={page} />)}
+    </div>
+  );
+}
+
 function ResizeHandles({ gridRef, dishId, page, currentPlacement, onResize }) {
   const dragState = useRef(null);
 
@@ -502,13 +644,15 @@ function PreviewCategory({ project, page, category }) {
 
 function DishCard({ dish, page, hideDescription = false, isHero = false }) {
   const settings = page.designSettings;
-  const showImages = settings.showImages && !(settings.gridMode === 'preset' && settings.gridPreset === 'textColumns');
+  const cardStyle = settings.showImages === false ? 'textOnly' : (settings.cardStyle ?? ({ below: 'imageTop', imageLeft: 'imageLeft', imageRight: 'imageRight' }[settings.cardContentLayout] ?? 'imageTop'));
+  const showImages = settings.showImages && cardStyle !== 'textOnly' && !(settings.gridMode === 'preset' && settings.gridPreset === 'textColumns');
   const hasBadges = Boolean(dish.discountPercent || dish.badges?.length);
-  const layoutClass = showImages ? `card-layout-${settings.cardContentLayout}` : 'card-layout-textOnly';
+  const legacyLayout = { imageTop: 'below', imageLeft: 'imageLeft', imageRight: 'imageRight', textOnly: 'textOnly' }[cardStyle];
+  const layoutClass = showImages ? `card-layout-${legacyLayout}` : 'card-layout-textOnly';
   const badgePositionClass = `badge-position-${settings.badgePosition}`;
 
   return (
-    <article className={`preview-dish-card ${layoutClass} ${showImages ? 'has-images' : 'no-images'} ${isHero ? 'hero-dish-card' : ''}`}>
+    <article className={`preview-dish-card ${layoutClass} card-style-${cardStyle} ${showImages ? 'has-images' : 'no-images'} ${isHero ? 'hero-dish-card' : ''}`}>
       {showImages ? (
         <div className="preview-image-box">
           {dish.imageUrl ? <img src={dish.imageUrl} alt="" loading="lazy" /> : <div className="preview-image-placeholder">Image</div>}

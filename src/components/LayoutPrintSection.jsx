@@ -41,7 +41,13 @@ export function LayoutPrintSection({ project, actions }) {
         {selectedPage ? <PageContentSelector project={project} page={selectedPage} actions={actions} /> : null}
         {selectedPage ? <HeaderSettingsPanel page={selectedPage} actions={actions} /> : null}
         {selectedPage ? <FooterSettingsPanel page={selectedPage} actions={actions} /> : null}
-        {selectedPage ? <DesignControls page={selectedPage} actions={actions} /> : null}
+        {selectedPage ? (
+          <details className="panel-section advanced-layout-section">
+            <summary>Advanced layout controls</summary>
+            <p className="muted-text">Legacy grid, fitting, typography, and technical fit-all controls remain available here.</p>
+            <DesignControls page={selectedPage} actions={actions} />
+          </details>
+        ) : null}
       </aside>
       {selectedPage ? <PagePreview project={project} page={selectedPage} selectedPreviewDishId={selectedPreviewDishId} onSelectPreviewDish={setSelectedPreviewDishId} onResizePreviewDish={actions.updateSelectedPageItemPlacement} /> : <div className="empty-state">Add a page to preview your menu.</div>}
       {isPdfModalOpen ? <SavePdfModal onCancel={() => setIsPdfModalOpen(false)} onConfirm={confirmSaveAsPdf} /> : null}
@@ -52,97 +58,164 @@ export function LayoutPrintSection({ project, actions }) {
 
 function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish }) {
   const settings = page.designSettings;
+  const selectedPlacement = selectedDish ? page.itemPlacements?.[selectedDish.id] : null;
   const update = (field) => (event) => {
     const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
     actions.updateSelectedPageDesign(field, value);
   };
   const updateNumber = (field) => (event) => actions.updateSelectedPageDesign(field, Number(event.target.value));
+  const updateLayoutMode = (event) => {
+    const layoutMode = event.target.value;
+    actions.updateSelectedPage({
+      designSettings: {
+        ...settings,
+        layoutMode,
+        gridMode: layoutMode === 'smartAutoFit' ? 'autoFill' : layoutMode === 'manualDesigner' ? 'custom' : 'preset',
+        gridPreset: layoutMode === 'classicColumns' ? columnPresetFor(settings.classicColumns) : settings.gridPreset,
+      },
+    });
+  };
+  const updateClassicColumns = (event) => {
+    const classicColumns = Number(event.target.value);
+    actions.updateSelectedPage({ designSettings: { ...settings, classicColumns, gridPreset: columnPresetFor(classicColumns), layoutMode: 'classicColumns', gridMode: 'preset' } });
+  };
+  const updateCardStyle = (event) => {
+    const cardStyle = event.target.value;
+    actions.updateSelectedPage({
+      designSettings: {
+        ...settings,
+        cardStyle,
+        showImages: cardStyle !== 'textOnly',
+        cardContentLayout: { imageTop: 'below', imageLeft: 'imageLeft', imageRight: 'imageRight', textOnly: settings.cardContentLayout }[cardStyle],
+      },
+    });
+  };
 
   return (
     <div className="panel-section preview-controls layout-print-controls">
       <p className="eyebrow">Layout &amp; Print</p>
-      <h2>Card display</h2>
-      <p className="layout-debug-label" role="status">Layout controls loaded</p>
+      <h2>Layout</h2>
       <div className="print-action-row" aria-label="Print and demo actions">
         <button className="primary-action compact" type="button" onClick={onPrint}>Print</button>
         <button className="secondary-action compact" type="button" onClick={onSaveAsPdf}>Save as PDF</button>
         <button className="secondary-action compact" type="button" onClick={actions.resetDemoData}>Reset demo data</button>
       </div>
-      {page.designSettings.gridMode === 'custom' ? (
-        <SelectedCardControls page={page} actions={actions} selectedDish={selectedDish} />
+
+      <label className="field-label">Layout mode
+        <select value={settings.layoutMode} onChange={updateLayoutMode}>
+          <option value="classicColumns">Classic columns</option>
+          <option value="smartAutoFit">Smart auto-fit</option>
+          <option value="manualDesigner">Manual designer</option>
+        </select>
+      </label>
+      {settings.layoutMode === 'classicColumns' ? (
+        <label className="field-label">Classic columns
+          <select value={settings.classicColumns} onChange={updateClassicColumns}>
+            {[1, 2, 3, 4, 5].map((value) => <option key={value} value={value}>{value}</option>)}
+          </select>
+        </label>
       ) : null}
+      <label className="field-label">Card style
+        <select value={settings.cardStyle} onChange={updateCardStyle}>
+          <option value="imageTop">Image top</option>
+          <option value="imageLeft">Image left</option>
+          <option value="imageRight">Image right</option>
+          <option value="textOnly">Text only</option>
+        </select>
+      </label>
+      {settings.layoutMode === 'manualDesigner' ? (
+        <label className="field-label">Resize mode
+          <select value={settings.resizeMode} onChange={update('resizeMode')}>
+            <option value="snapToGrid">Snap to grid</option>
+            <option value="freeResize">Free resize</option>
+          </select>
+        </label>
+      ) : null}
+
+      <h3>Image display</h3>
       <label className="toggle-label">
         <input type="checkbox" checked={settings.showImages} onChange={update('showImages')} />
         Show images
       </label>
+      <label className="field-label">Image fit
+        <select value={settings.imageFitMode} onChange={update('imageFitMode')} disabled={!settings.showImages || settings.cardStyle === 'textOnly'}>
+          <option value="contain">Contain full image</option>
+          <option value="cover">Cover crop</option>
+          <option value="fill">Stretch</option>
+        </select>
+      </label>
+      <label className="field-label">Image position
+        <select value={settings.imagePosition} onChange={update('imagePosition')} disabled={!settings.showImages || settings.cardStyle === 'textOnly'}>
+          <option value="center">Center</option>
+          <option value="top">Top</option>
+          <option value="bottom">Bottom</option>
+          <option value="left">Left</option>
+          <option value="right">Right</option>
+          <option value="custom">Custom</option>
+        </select>
+      </label>
+      <label className="slider-label"><span>Image zoom<strong>{settings.imageZoom}%</strong></span><input type="range" min="50" max="200" value={settings.imageZoom} onChange={updateNumber('imageZoom')} disabled={!settings.showImages || settings.cardStyle === 'textOnly'} /></label>
+      <label className="slider-label"><span>Image pan X<strong>{settings.imagePanX}</strong></span><input type="range" min="-50" max="50" value={settings.imagePanX} onChange={updateNumber('imagePanX')} disabled={!settings.showImages || settings.cardStyle === 'textOnly' || settings.imagePosition !== 'custom'} /></label>
+      <label className="slider-label"><span>Image pan Y<strong>{settings.imagePanY}</strong></span><input type="range" min="-50" max="50" value={settings.imagePanY} onChange={updateNumber('imagePanY')} disabled={!settings.showImages || settings.cardStyle === 'textOnly' || settings.imagePosition !== 'custom'} /></label>
+      <label className="slider-label"><span>Image area<strong>{settings.imageAreaPercent}%</strong></span><input type="range" min="10" max="80" value={settings.imageAreaPercent} onChange={updateNumber('imageAreaPercent')} disabled={!settings.showImages || settings.cardStyle === 'textOnly'} /></label>
+
+      <h3>Content</h3>
       <label className="toggle-label">
         <input type="checkbox" checked={settings.showDescriptions} onChange={update('showDescriptions')} />
         Show descriptions
       </label>
-      <label className="field-label">Card content layout
-        <select value={settings.cardContentLayout} onChange={update('cardContentLayout')} disabled={!settings.showImages}>
-          <option value="below">Below image</option>
-          <option value="imageLeft">Image left</option>
-          <option value="imageRight">Image right</option>
-        </select>
-      </label>
-      <label className="toggle-label">
-        <input type="checkbox" checked={settings.cardBorderEnabled} onChange={update('cardBorderEnabled')} />
-        Border enabled
-      </label>
-      <label className="color-label">Card border color
-        <span>
-          <input type="color" value={settings.cardBorderColor} onChange={update('cardBorderColor')} disabled={!settings.cardBorderEnabled} />
-          <input value={settings.cardBorderColor} onChange={update('cardBorderColor')} disabled={!settings.cardBorderEnabled} />
-        </span>
-      </label>
-      <label className="slider-label">
-        <span>Card border width<strong>{settings.cardBorderWidth}px</strong></span>
-        <input
-          type="range"
-          min="0"
-          max="8"
-          step="1"
-          value={settings.cardBorderWidth}
-          disabled={!settings.cardBorderEnabled}
-          onChange={updateNumber('cardBorderWidth')}
-        />
-      </label>
-      <label className="slider-label">
-        <span>Card border opacity<strong>{settings.cardBorderOpacity}%</strong></span>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          step="1"
-          value={settings.cardBorderOpacity}
-          disabled={!settings.cardBorderEnabled}
-          onChange={updateNumber('cardBorderOpacity')}
-        />
-      </label>
+      <p className="muted-text">Prices always stay pinned to the bottom of every card.</p>
+
+      {settings.layoutMode === 'manualDesigner' ? (
+        <SelectedCardControls page={page} actions={actions} selectedDish={selectedDish} placement={selectedPlacement} />
+      ) : null}
+
+      <details className="inline-advanced-controls">
+        <summary>Card border</summary>
+        <label className="toggle-label"><input type="checkbox" checked={settings.cardBorderEnabled} onChange={update('cardBorderEnabled')} /> Border enabled</label>
+        <label className="color-label">Card border color<span><input type="color" value={settings.cardBorderColor} onChange={update('cardBorderColor')} disabled={!settings.cardBorderEnabled} /><input value={settings.cardBorderColor} onChange={update('cardBorderColor')} disabled={!settings.cardBorderEnabled} /></span></label>
+        <label className="slider-label"><span>Card border width<strong>{settings.cardBorderWidth}px</strong></span><input type="range" min="0" max="8" step="1" value={settings.cardBorderWidth} disabled={!settings.cardBorderEnabled} onChange={updateNumber('cardBorderWidth')} /></label>
+        <label className="slider-label"><span>Card border opacity<strong>{settings.cardBorderOpacity}%</strong></span><input type="range" min="0" max="100" step="1" value={settings.cardBorderOpacity} disabled={!settings.cardBorderEnabled} onChange={updateNumber('cardBorderOpacity')} /></label>
+      </details>
     </div>
   );
 }
 
+function columnPresetFor(columns) {
+  return { 1: 'oneColumn', 2: 'twoColumns', 3: 'threeColumns', 4: 'fourColumns', 5: 'fiveColumns' }[columns] ?? 'twoColumns';
+}
+
 const MANUAL_GRID_SPANS = Object.freeze(['1x1', '2x1', '1x2', '2x2', '3x2', '3x3']);
 
-function SelectedCardControls({ page, actions, selectedDish }) {
-  const placement = selectedDish ? page.itemPlacements?.[selectedDish.id] : null;
-  const colSpan = placement?.colSpan ?? 1;
-  const rowSpan = placement?.rowSpan ?? 1;
+function SelectedCardControls({ page, actions, selectedDish, placement }) {
+  const isFreeResize = page.designSettings.resizeMode === 'freeResize';
+  const current = {
+    mode: isFreeResize ? 'free' : 'grid',
+    colSpan: placement?.colSpan ?? 1,
+    rowSpan: placement?.rowSpan ?? 1,
+    xPercent: placement?.xPercent ?? 0,
+    yPercent: placement?.yPercent ?? 0,
+    widthPercent: placement?.widthPercent ?? 30,
+    heightPercent: placement?.heightPercent ?? 22,
+    zIndex: placement?.zIndex ?? 1,
+    priority: placement?.priority ?? 0,
+  };
   const maxColumns = page.designSettings.customGrid.columns;
   const maxRows = page.designSettings.customGrid.rows;
-  const spanOptions = MANUAL_GRID_SPANS.map((span) => span.split('x').map(Number))
-    .filter(([columns, rows]) => columns <= maxColumns && rows <= maxRows);
-  const colSpanOptions = [...new Set(spanOptions.filter(([, rows]) => rows === rowSpan).map(([columns]) => columns))];
-  const rowSpanOptions = [...new Set(spanOptions.filter(([columns]) => columns === colSpan).map(([, rows]) => rows))];
-  const updatePlacement = (nextColSpan, nextRowSpan) => {
+  const spanOptions = MANUAL_GRID_SPANS.map((span) => span.split('x').map(Number)).filter(([columns, rows]) => columns <= maxColumns && rows <= maxRows);
+  const colSpanOptions = [...new Set(spanOptions.filter(([, rows]) => rows === current.rowSpan).map(([columns]) => columns))];
+  const rowSpanOptions = [...new Set(spanOptions.filter(([columns]) => columns === current.colSpan).map(([, rows]) => rows))];
+  const updatePlacement = (changes) => {
     if (!selectedDish) return;
-    actions.updateSelectedPageItemPlacement(selectedDish.id, {
-      colSpan: nextColSpan,
-      rowSpan: nextRowSpan,
-      priority: placement?.priority ?? 0,
-    });
+    actions.updateSelectedPageItemPlacement(selectedDish.id, { ...current, ...changes });
+  };
+  const updatePercent = (field) => (event) => {
+    const value = Number(event.target.value);
+    if (field === 'xPercent') updatePlacement({ xPercent: Math.min(value, 100 - current.widthPercent), mode: 'free' });
+    else if (field === 'yPercent') updatePlacement({ yPercent: Math.min(value, 100 - current.heightPercent), mode: 'free' });
+    else if (field === 'widthPercent') updatePlacement({ widthPercent: value, xPercent: Math.min(current.xPercent, 100 - value), mode: 'free' });
+    else if (field === 'heightPercent') updatePlacement({ heightPercent: value, yPercent: Math.min(current.yPercent, 100 - value), mode: 'free' });
+    else updatePlacement({ [field]: value, mode: 'free' });
   };
 
   return (
@@ -150,30 +223,25 @@ function SelectedCardControls({ page, actions, selectedDish }) {
       <div>
         <p className="eyebrow">Selected card</p>
         <strong>{selectedDish?.nameEn || 'Click a preview card'}</strong>
-        <small>{selectedDish ? `${colSpan} columns × ${rowSpan} rows` : 'Manual Grid cards can be resized in the preview.'}</small>
+        <small>{selectedDish ? (isFreeResize ? `${current.widthPercent}% × ${current.heightPercent}%` : `${current.colSpan} columns × ${current.rowSpan} rows`) : 'Manual designer cards can be selected in the preview.'}</small>
       </div>
-      <div className="selected-card-span-controls">
-        <label className="field-label">Col span
-          <select value={colSpan} onChange={(event) => updatePlacement(Number(event.target.value), rowSpan)} disabled={!selectedDish}>
-            {(colSpanOptions.length ? colSpanOptions : [1]).map((value) => <option key={value} value={value}>{value}</option>)}
-          </select>
-        </label>
-        <label className="field-label">Row span
-          <select value={rowSpan} onChange={(event) => updatePlacement(colSpan, Number(event.target.value))} disabled={!selectedDish}>
-            {(rowSpanOptions.length ? rowSpanOptions : [1]).map((value) => <option key={value} value={value}>{value}</option>)}
-          </select>
-        </label>
-      </div>
+      {isFreeResize ? (
+        <div className="selected-free-controls">
+          <label className="field-label">Width %<input type="number" min="10" max="100" value={current.widthPercent} onChange={updatePercent('widthPercent')} disabled={!selectedDish} /></label>
+          <label className="field-label">Height %<input type="number" min="8" max="100" value={current.heightPercent} onChange={updatePercent('heightPercent')} disabled={!selectedDish} /></label>
+          <label className="field-label">X %<input type="number" min="0" max="100" value={current.xPercent} onChange={updatePercent('xPercent')} disabled={!selectedDish} /></label>
+          <label className="field-label">Y %<input type="number" min="0" max="100" value={current.yPercent} onChange={updatePercent('yPercent')} disabled={!selectedDish} /></label>
+          <label className="field-label">Z-index<input type="number" min="1" max="999" value={current.zIndex} onChange={updatePercent('zIndex')} disabled={!selectedDish} /></label>
+        </div>
+      ) : (
+        <div className="selected-card-span-controls">
+          <label className="field-label">Col span<select value={current.colSpan} onChange={(event) => updatePlacement({ colSpan: Number(event.target.value), mode: 'grid' })} disabled={!selectedDish}>{(colSpanOptions.length ? colSpanOptions : [1]).map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+          <label className="field-label">Row span<select value={current.rowSpan} onChange={(event) => updatePlacement({ rowSpan: Number(event.target.value), mode: 'grid' })} disabled={!selectedDish}>{(rowSpanOptions.length ? rowSpanOptions : [1]).map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+        </div>
+      )}
       <div className="print-action-row">
-        <button
-          className="secondary-action compact"
-          type="button"
-          onClick={() => selectedDish && actions.resetSelectedPageItemPlacement(selectedDish.id)}
-          disabled={!selectedDish}
-        >
-          Reset selected card size
-        </button>
-        <button className="secondary-action compact" type="button" onClick={actions.resetSelectedPageItemPlacements}>Reset all card sizes</button>
+        <button className="secondary-action compact" type="button" onClick={() => selectedDish && actions.resetSelectedPageItemPlacement(selectedDish.id)} disabled={!selectedDish}>Reset selected card placement</button>
+        <button className="secondary-action compact" type="button" onClick={actions.resetSelectedPageItemPlacements}>Reset all card placements</button>
       </div>
     </div>
   );
