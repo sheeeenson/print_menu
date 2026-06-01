@@ -1,6 +1,12 @@
 import { BADGE_TYPES } from '../models/menu.js';
 import { formatOptionalNumber, parseOptionalNumber } from '../utils/pricing.js';
 
+const DEFAULT_SIZE_VARIANTS = Object.freeze([
+  { labelEn: '24 cm', labelGe: '24 სმ', price: null },
+  { labelEn: '33 cm', labelGe: '33 სმ', price: null },
+  { labelEn: '40 cm', labelGe: '40 სმ', price: null },
+]);
+
 export function DishEditor({ dish, actions }) {
   const updateText = (field) => (event) => actions.updateDish(dish.id, { [field]: event.target.value });
   const updatePrice = (field) => (event) => actions.updateDish(dish.id, { [field]: parseOptionalNumber(event.target.value) }, field);
@@ -41,6 +47,7 @@ export function DishEditor({ dish, actions }) {
         <NumberInput dish={dish} field="newPrice" label="New price" step="0.01" onChange={updatePrice('newPrice')} />
         <NumberInput dish={dish} field="discountPercent" label="Discount %" step="1" onChange={updatePrice('discountPercent')} />
       </div>
+      <SizePriceEditor dish={dish} actions={actions} />
       <TextInput dish={dish} field="imageUrl" label="Image URL" placeholder="https://..." onChange={updateText('imageUrl')} />
       {dish.imageUrl ? (
         <div className="image-preview">
@@ -87,6 +94,36 @@ function NumberInput({ dish, field, label, step, onChange }) {
   );
 }
 
+function SizePriceEditor({ dish, actions }) {
+  const variants = (dish.priceVariants ?? []).slice(0, 3);
+  const updateVariants = (nextVariants) => actions.updateDish(dish.id, { priceVariants: nextVariants.slice(0, 3) });
+  const ensureDefaultVariants = () => updateVariants(variants.length ? variants : DEFAULT_SIZE_VARIANTS.map((variant) => ({ ...variant })));
+  const addVariant = () => updateVariants([...variants, { labelEn: '', labelGe: '', price: null }]);
+  const updateVariant = (index, changes) => updateVariants(variants.map((variant, variantIndex) => variantIndex === index ? { ...variant, ...changes } : variant));
+  const removeVariant = (index) => updateVariants(variants.filter((_, variantIndex) => variantIndex !== index));
+
+  return (
+    <div className="option-group-editor size-price-editor">
+      <div className="subsection-title">
+        <h4>Size prices</h4>
+        {variants.length === 0 ? (
+          <button type="button" onClick={ensureDefaultVariants}>+ 24 / 33 / 40 cm</button>
+        ) : (
+          <button type="button" onClick={addVariant} disabled={variants.length >= 3}>+ Size</button>
+        )}
+      </div>
+      {variants.length === 0 ? <p className="muted-text">Use for pizza sizes such as 24 cm, 33 cm and 40 cm with separate prices.</p> : null}
+      {variants.map((variant, index) => (
+        <div className="option-row size-price-row" key={`${variant.labelEn}-${index}`}>
+          <input aria-label="Size English label" placeholder="24 cm" value={variant.labelEn ?? ''} onChange={(event) => updateVariant(index, { labelEn: event.target.value })} />
+          <input aria-label="Size Georgian label" placeholder="24 სმ" value={variant.labelGe ?? ''} onChange={(event) => updateVariant(index, { labelGe: event.target.value })} />
+          <input aria-label="Size price" type="number" min="0" step="0.01" placeholder="Price" value={formatOptionalNumber(variant.price)} onChange={(event) => updateVariant(index, { price: parseOptionalNumber(event.target.value) })} />
+          <button type="button" onClick={() => removeVariant(index)}>Remove</button>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function OptionGroupEditor({ dish, actions }) {
   return (
