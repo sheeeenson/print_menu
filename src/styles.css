@@ -226,7 +226,7 @@ h1, h2, h3, h4, p { margin-top: 0; } h1, h2, h3, h4 { line-height: 1.15; }
 .template-classicList .preview-dish-card.card-layout-imageLeft, .template-classicList .preview-dish-card.card-layout-imageRight { grid-template-columns: minmax(120px, 32%) minmax(0, 1fr); }
 .template-classicList .preview-dish-card.no-images { grid-template-columns: 1fr; }
 .template-classicList .preview-image-box { grid-row: auto; }
-.fit-autoFill .preview-card-content { gap: clamp(4px, calc(var(--auto-card-padding) * 0.62), 11px); }
+.fit-autoFill .preview-card-content { gap: 1px; }
 .fit-autoFill .card-layout-imageLeft .preview-image-box, .fit-autoFill .card-layout-imageRight .preview-image-box { height: auto; min-height: 0; }
 
 @page {
