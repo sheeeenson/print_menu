@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { CardStyleControls } from './CardStyleControls.jsx';
 import { ColorControls } from './ColorControls.jsx';
 import { FONT_PRESETS, FONT_STACKS } from '../utils/typography.js';
@@ -44,16 +43,15 @@ export function DesignControls({ page, actions }) {
       <summary>
         <span>
           <span className="eyebrow">Design</span>
-          <strong>Page design settings</strong>
+          <strong>Visual design settings</strong>
         </span>
       </summary>
       <ColorControls page={page} actions={actions} />
       <TypographyControls page={page} actions={actions} />
-      <GridBuilderControls page={page} actions={actions} />
       <CardStyleControls page={page} actions={actions} />
-      <FitAllControls page={page} actions={actions} />
       <div className="design-subpanel">
         <h3 className="panel-subtitle">Spacing & typography</h3>
+        <p className="muted-text">Layout-specific grid controls live in the main Layout panel above. This section only changes visual spacing, type sizes, and card styling.</p>
         <div className="design-control-list">
           {controls.map(([field, label, min, max, step]) => (
             <DesignSlider key={field} page={page} field={field} label={label} min={min} max={max} step={step} actions={actions} />
@@ -61,96 +59,6 @@ export function DesignControls({ page, actions }) {
         </div>
       </div>
     </details>
-  );
-}
-
-
-const gridPresetOptions = [
-  ['oneColumn', '1 Column'],
-  ['twoColumns', '2 Columns'],
-  ['threeColumns', '3 Columns'],
-  ['fourColumns', '4 Columns'],
-  ['fiveColumns', '5 Columns'],
-  ['catalogGrid', 'Catalog Grid'],
-  ['magazineGrid', 'Magazine Grid'],
-  ['heroGrid', 'Hero + Grid'],
-  ['bentoGrid', 'Bento Grid'],
-  ['textColumns', 'Text Columns'],
-];
-
-const heroSpanOptions = [
-  ['2x1', '2x1'],
-  ['2x2', '2x2'],
-  ['3x2', '3x2'],
-];
-
-const defaultSpanOptions = [
-  ['1x1', '1x1'],
-  ['2x1', '2x1'],
-];
-
-function GridBuilderControls({ page, actions }) {
-  const settings = page.designSettings;
-  const customGrid = settings.customGrid;
-  const [presetName, setPresetName] = useState('');
-  const updateDesign = (field) => (event) => actions.updateSelectedPageDesign(field, event.target.type === 'checkbox' ? event.target.checked : event.target.value);
-  const updateCustomGrid = (field) => (event) => actions.updateSelectedPageCustomGrid(field, event.target.type === 'checkbox' ? event.target.checked : Number(event.target.value));
-  const savePreset = () => {
-    actions.saveSelectedPageCustomGridPreset(presetName);
-    setPresetName('');
-  };
-
-  return (
-    <div className="design-subpanel grid-builder-panel">
-      <h3 className="panel-subtitle">Grid builder</h3>
-      <SelectControl label="Grid mode" value={settings.gridMode} onChange={updateDesign('gridMode')} options={[['preset', 'Preset grid'], ['custom', 'Custom grid'], ['autoFill', 'Auto-fill']]} />
-      {settings.gridMode === 'preset' ? (
-        <SelectControl label="Grid preset" value={settings.gridPreset} onChange={updateDesign('gridPreset')} options={gridPresetOptions} />
-      ) : null}
-      {settings.gridMode === 'custom' ? (
-        <>
-          <GridNumberControl label="Rows" value={customGrid.rows} min={1} max={12} onChange={updateCustomGrid('rows')} />
-          <GridNumberControl label="Columns" value={customGrid.columns} min={1} max={8} onChange={updateCustomGrid('columns')} />
-          <GridNumberControl label="Gap" value={customGrid.gap} min={0} max={64} suffix="px" onChange={updateCustomGrid('gap')} />
-          <label className="toggle-label"><input type="checkbox" checked={customGrid.autoRows} onChange={updateCustomGrid('autoRows')} />Auto rows</label>
-          <label className="toggle-label"><input type="checkbox" checked={customGrid.densePacking} onChange={updateCustomGrid('densePacking')} />Dense packing</label>
-          <label className="toggle-label"><input type="checkbox" checked={settings.makeFirstItemHero} onChange={updateDesign('makeFirstItemHero')} />Make first item hero</label>
-          <div className="two-column-fields panel-two-column">
-            <SelectControl label="Hero item span" value={settings.heroItemSpan} onChange={updateDesign('heroItemSpan')} options={heroSpanOptions} />
-            <SelectControl label="Default item span" value={settings.defaultItemSpan} onChange={updateDesign('defaultItemSpan')} options={defaultSpanOptions} />
-          </div>
-          <div className="saved-grid-card">
-            <label className="field-label">Preset name
-              <input value={presetName} onChange={(event) => setPresetName(event.target.value)} placeholder="Lunch flyer grid" />
-            </label>
-            <button className="secondary-action compact" type="button" onClick={savePreset}>Save current grid as preset</button>
-          </div>
-          {settings.customGridPresets.length ? (
-            <div className="saved-grid-list">
-              <strong>Saved grid presets</strong>
-              {settings.customGridPresets.map((preset) => (
-                <div className="saved-grid-row" key={preset.id}>
-                  <span>{preset.name}</span>
-                  <button type="button" onClick={() => actions.applySelectedPageCustomGridPreset(preset.id)}>Apply</button>
-                  <button className="danger" type="button" onClick={() => actions.deleteSelectedPageCustomGridPreset(preset.id)}>Delete</button>
-                </div>
-              ))}
-            </div>
-          ) : null}
-        </>
-      ) : null}
-      {settings.gridMode === 'autoFill' ? <p className="fit-help-text">Auto-fill uses the existing fitting engine to calculate rows, columns, and card sizing.</p> : null}
-    </div>
-  );
-}
-
-function GridNumberControl({ label, value, min, max, suffix = '', onChange }) {
-  return (
-    <label className="slider-label grid-number-control">
-      <span>{label}<strong>{value}{suffix}</strong></span>
-      <input type="range" min={min} max={max} step="1" value={value} onChange={onChange} />
-      <input type="number" min={min} max={max} value={value} onChange={onChange} />
-    </label>
   );
 }
 
@@ -207,31 +115,6 @@ function TypographyControls({ page, actions }) {
   );
 }
 
-function FitAllControls({ page, actions }) {
-  const settings = page.designSettings;
-  const strategy = settings.fitStrategy;
-  const updateStrategy = (field) => (event) => actions.updateSelectedPageFitStrategy(field, event.target.type === 'checkbox' ? event.target.checked : Number(event.target.value));
-
-  return (
-    <div className="design-subpanel">
-      <h3 className="panel-subtitle">Guaranteed fit</h3>
-      <label className="toggle-label">
-        <input type="checkbox" checked={settings.fitAllItems} onChange={(event) => actions.updateSelectedPageDesign('fitAllItems', event.target.checked)} />
-        Fit all selected dishes on this page
-      </label>
-      {settings.fitAllItems ? <p className="fit-help-text">Preview will shrink cards, images, or text only within the limits below and will warn instead of silently clipping.</p> : null}
-      <label className="toggle-label"><input type="checkbox" checked={strategy.allowShrinkCards} onChange={updateStrategy('allowShrinkCards')} />Allow shrink cards</label>
-      <label className="toggle-label"><input type="checkbox" checked={strategy.allowShrinkImages} onChange={updateStrategy('allowShrinkImages')} />Allow shrink images</label>
-      <label className="toggle-label"><input type="checkbox" checked={strategy.allowShrinkText} onChange={updateStrategy('allowShrinkText')} />Allow shrink text</label>
-      <label className="toggle-label"><input type="checkbox" checked={strategy.allowHideDescriptions} onChange={updateStrategy('allowHideDescriptions')} />Allow hide descriptions if needed</label>
-      <label className="toggle-label"><input type="checkbox" checked={strategy.allowCompactFallback} onChange={updateStrategy('allowCompactFallback')} />Allow compact fallback</label>
-      <FitSlider label="Minimum readable font size" value={strategy.minReadableFontSize} min={6} max={16} suffix="px" onChange={updateStrategy('minReadableFontSize')} />
-      <FitSlider label="Minimum card height" value={strategy.minCardHeight} min={48} max={220} suffix="px" onChange={updateStrategy('minCardHeight')} />
-      <FitSlider label="Minimum image height" value={strategy.minImageHeight} min={0} max={140} suffix="px" onChange={updateStrategy('minImageHeight')} />
-    </div>
-  );
-}
-
 function SelectControl({ label, value, onChange, options }) {
   return (
     <label className="field-label">{label}
@@ -256,15 +139,6 @@ function LetterSpacingControl({ label, field, settings, onChange }) {
     <label className="slider-label">
       <span>{label}<strong>{value.toFixed(2)}em</strong></span>
       <input type="range" min="-0.06" max="0.12" step="0.01" value={value} onChange={(event) => onChange(field, Number(event.target.value))} />
-    </label>
-  );
-}
-
-function FitSlider({ label, value, min, max, suffix, onChange }) {
-  return (
-    <label className="slider-label">
-      <span>{label}<strong>{value}{suffix}</strong></span>
-      <input type="range" min={min} max={max} step="1" value={value} onChange={onChange} />
     </label>
   );
 }
