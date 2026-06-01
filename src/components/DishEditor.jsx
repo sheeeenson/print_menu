@@ -8,7 +8,12 @@ const DEFAULT_SIZE_VARIANTS = Object.freeze([
 ]);
 
 const SIZE_GROUP_ID = 'pizza_size_prices';
-const formatVariantOptionName = (label, price) => [label, typeof price === 'number' ? formatOptionalNumber(price) + ' ₾' : ''].filter(Boolean).join('\n');
+const formatSizePriceTable = (variants, labelField) => {
+  const visibleVariants = variants.filter((variant) => variant[labelField] || typeof variant.price === 'number');
+  const labels = visibleVariants.map((variant) => variant[labelField] || '-').join('     ');
+  const prices = visibleVariants.map((variant) => (typeof variant.price === 'number' ? `${formatOptionalNumber(variant.price)} ₾` : '-')).join('     ');
+  return [labels, prices].filter(Boolean).join('\n');
+};
 
 export function DishEditor({ dish, actions }) {
   const updateText = (field) => (event) => actions.updateDish(dish.id, { [field]: event.target.value });
@@ -109,12 +114,12 @@ function withSizeOptionGroup(dish, nextVariants) {
     required: true,
     minSelect: 1,
     maxSelect: 1,
-    options: variants.map((variant, index) => ({
-      id: `pizza_size_${index}`,
-      nameEn: formatVariantOptionName(variant.labelEn, variant.price),
-      nameGe: formatVariantOptionName(variant.labelGe, variant.price),
+    options: [{
+      id: 'pizza_size_price_table',
+      nameEn: formatSizePriceTable(variants, 'labelEn'),
+      nameGe: formatSizePriceTable(variants, 'labelGe'),
       priceDelta: 0,
-    })),
+    }],
   };
 
   return {
@@ -157,14 +162,15 @@ function SizePriceEditor({ dish, actions }) {
 }
 
 function OptionGroupEditor({ dish, actions }) {
+  const groups = (dish.optionGroups ?? []).filter((group) => group.id !== SIZE_GROUP_ID);
   return (
     <div className="option-group-editor">
       <div className="subsection-title">
         <h4>Configurable option groups</h4>
         <button type="button" onClick={() => actions.addOptionGroup(dish.id)}>+ Option group</button>
       </div>
-      {(dish.optionGroups ?? []).length === 0 ? <p className="muted-text">Add groups such as Base, Protein, and Sauce.</p> : null}
-      {(dish.optionGroups ?? []).map((group) => (
+      {groups.length === 0 ? <p className="muted-text">Add groups such as Base, Protein, and Sauce.</p> : null}
+      {groups.map((group) => (
         <div className="option-group-card" key={group.id}>
           <div className="two-column-fields">
             <label className="field-label">Group EN<input value={group.nameEn} onChange={(event) => actions.updateOptionGroup(dish.id, group.id, { nameEn: event.target.value })} /></label>
