@@ -196,7 +196,10 @@ const normalizeGridPreset = (preset) => {
 const normalizeGridMode = (mode) => (['preset', 'custom', 'autoFill'].includes(mode) ? mode : 'preset');
 const GRID_PRESET_COLUMNS = Object.freeze({ oneColumn: 1, twoColumns: 2, threeColumns: 3, fourColumns: 4, fiveColumns: 5 });
 const columnPresetFor = (columns) => ({ 1: 'oneColumn', 2: 'twoColumns', 3: 'threeColumns', 4: 'fourColumns', 5: 'fiveColumns' }[columns] ?? 'twoColumns');
-const normalizeLayoutMode = (mode) => (['classicColumns', 'smartAutoFit', 'manualDesigner', 'elasticGrid'].includes(mode) ? mode : 'classicColumns');
+const normalizeLayoutMode = (mode) => {
+  if (mode === 'elasticGrid') return 'fluidGrid';
+  return ['classicColumns', 'smartAutoFit', 'snapGrid', 'fluidGrid', 'manualDesigner'].includes(mode) ? mode : 'classicColumns';
+};
 const normalizeCardStyle = (style) => (['imageTop', 'imageLeft', 'imageRight', 'textOnly'].includes(style) ? style : 'imageTop');
 const normalizeResizeMode = (mode) => (['snapToGrid', 'freeResize'].includes(mode) ? mode : 'snapToGrid');
 const normalizeImagePosition = (position) => (['center', 'top', 'bottom', 'left', 'right', 'custom'].includes(position) ? position : 'center');
@@ -227,7 +230,14 @@ const normalizeItemPlacements = (placements = {}) => Object.fromEntries(
     const xPercent = clampNumber(placement?.xPercent, 0, 0, 100 - widthPercent);
     const yPercent = clampNumber(placement?.yPercent, 0, 0, 100 - heightPercent);
     return [dishId, {
-      mode: placement?.mode === 'free' ? 'free' : 'grid',
+      mode: ['free', 'fluid'].includes(placement?.mode) ? placement.mode : 'grid',
+      widthWeight: clampNumber(placement?.widthWeight, 1, 0.5, 4),
+      heightWeight: clampNumber(placement?.heightWeight, 1, 0.5, 4),
+      minWidthPercent: clampNumber(placement?.minWidthPercent, 12, 5, 100),
+      minHeightPercent: clampNumber(placement?.minHeightPercent, 8, 5, 100),
+      maxWidthPercent: clampNumber(placement?.maxWidthPercent, 100, 5, 100),
+      maxHeightPercent: clampNumber(placement?.maxHeightPercent, 100, 5, 100),
+      order: clampNumber(placement?.order, 0, -9999, 9999),
       colSpan: clampNumber(placement?.colSpan, 1, 1, 8),
       rowSpan: clampNumber(placement?.rowSpan, 1, 1, 12),
       xPercent,
@@ -326,7 +336,7 @@ const normalizeDesignSettings = (settings = {}) => {
     classicColumns,
     cardStyle: derivedCardStyle,
     resizeMode: normalizeResizeMode(merged.resizeMode),
-    gridMode: derivedLayoutMode === 'smartAutoFit' ? 'autoFill' : (derivedLayoutMode === 'manualDesigner' || derivedLayoutMode === 'elasticGrid') ? 'custom' : normalizedGridMode,
+    gridMode: derivedLayoutMode === 'smartAutoFit' ? 'autoFill' : (derivedLayoutMode === 'manualDesigner' || derivedLayoutMode === 'snapGrid') ? 'custom' : 'preset',
     gridPreset: derivedLayoutMode === 'classicColumns' ? columnPresetFor(classicColumns) : normalizedGridPreset,
     customGrid: normalizeCustomGrid(merged.customGrid, merged.cardGap),
     makeFirstItemHero: Boolean(merged.makeFirstItemHero),
@@ -342,7 +352,7 @@ const normalizeDesignSettings = (settings = {}) => {
     configurableDisplayMode: ['compactOptions', 'stepList'].includes(settings.configurableDisplayMode) ? settings.configurableDisplayMode : DEFAULT_PAGE_DESIGN_SETTINGS.configurableDisplayMode,
     cardBorderEnabled:
       settings.cardBorderEnabled === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderEnabled : Boolean(settings.cardBorderEnabled),
-    cardBorderWidth: clampNumber(settings.cardBorderWidth, DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderWidth, 0, 8),
+    cardBorderWidth: clampNumber(settings.cardBorderWidth, DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderWidth, 0, 12),
     cardBorderOpacity: clampNumber(settings.cardBorderOpacity, DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderOpacity, 0, 100),
     cardShadowEnabled:
       settings.cardShadowEnabled === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.cardShadowEnabled : Boolean(settings.cardShadowEnabled),
@@ -689,6 +699,13 @@ export function createProjectStore() {
           [dishId]: {
             ...(page.itemPlacements?.[dishId] ?? {}),
             mode: placement?.mode ?? page.itemPlacements?.[dishId]?.mode ?? 'grid',
+            widthWeight: placement?.widthWeight ?? page.itemPlacements?.[dishId]?.widthWeight ?? 1,
+            heightWeight: placement?.heightWeight ?? page.itemPlacements?.[dishId]?.heightWeight ?? 1,
+            minWidthPercent: placement?.minWidthPercent ?? page.itemPlacements?.[dishId]?.minWidthPercent ?? 12,
+            minHeightPercent: placement?.minHeightPercent ?? page.itemPlacements?.[dishId]?.minHeightPercent ?? 8,
+            maxWidthPercent: placement?.maxWidthPercent ?? page.itemPlacements?.[dishId]?.maxWidthPercent ?? 100,
+            maxHeightPercent: placement?.maxHeightPercent ?? page.itemPlacements?.[dishId]?.maxHeightPercent ?? 100,
+            order: placement?.order ?? page.itemPlacements?.[dishId]?.order ?? 0,
             colSpan: placement?.colSpan ?? page.itemPlacements?.[dishId]?.colSpan ?? 1,
             rowSpan: placement?.rowSpan ?? page.itemPlacements?.[dishId]?.rowSpan ?? 1,
             xPercent: placement?.xPercent ?? page.itemPlacements?.[dishId]?.xPercent ?? 0,

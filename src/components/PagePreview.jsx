@@ -44,20 +44,26 @@ export function PagePreview({ project, page, selectedPreviewDishId = '', onSelec
   const templateClass = `template-${page.layoutTemplate}`;
   const fittingClass = page.designSettings.fitAllItems ? 'fit-all-items' : `fit-${isAutoFillMode ? 'autoFill' : page.fittingMode}`;
   const gridClass = `grid-mode-${page.designSettings.gridMode} grid-${page.designSettings.gridPreset}`;
-  const customGridWarning = page.designSettings.gridMode === 'custom' ? getCustomGridWarning(selectedDishes, page, fitAllLayout) : '';
+  const customGridWarning = page.designSettings.layoutMode === 'snapGrid' ? getCustomGridWarning(selectedDishes, page, fitAllLayout) : '';
   const densityClass = `density-${page.designSettings.cardDensity}`;
   const categoryStyleClass = `category-style-${page.designSettings.categoryTitleStyle}`;
   const [manualGridWarning, setManualGridWarning] = useState('');
-  const isElasticGridMode = page.designSettings.layoutMode === 'elasticGrid';
-  const isManualGridMode = !isElasticGridMode && (page.designSettings.layoutMode === 'manualDesigner' || page.designSettings.gridMode === 'custom');
+  const isFluidGridMode = page.designSettings.layoutMode === 'fluidGrid';
+  const isSnapGridMode = page.designSettings.layoutMode === 'snapGrid' || (page.designSettings.layoutMode === 'manualDesigner' && page.designSettings.resizeMode !== 'freeResize');
+  const isManualGridMode = page.designSettings.layoutMode === 'manualDesigner';
   const isFreeResizeMode = isManualGridMode && page.designSettings.resizeMode === 'freeResize';
 
   useEffect(() => {
     setManualGridWarning('');
-  }, [page.id, page.designSettings.gridMode, page.designSettings.customGrid.rows, page.designSettings.customGrid.columns]);
+  }, [page.id, page.designSettings.layoutMode, page.designSettings.gridMode, page.designSettings.customGrid.rows, page.designSettings.customGrid.columns]);
 
   const updatePreviewPlacement = (dishId, nextPlacement, previousPlacement) => {
-    if (!isManualGridMode && !isElasticGridMode) return false;
+    if (!isManualGridMode && !isSnapGridMode && !isFluidGridMode) return false;
+    if (isFluidGridMode) {
+      setManualGridWarning('');
+      onResizePreviewDish(dishId, nextPlacement);
+      return true;
+    }
     if (isManualGridMode && page.designSettings.resizeMode === 'freeResize') {
       setManualGridWarning('');
       onResizePreviewDish(dishId, nextPlacement);
@@ -75,7 +81,7 @@ export function PagePreview({ project, page, selectedPreviewDishId = '', onSelec
       },
     };
     if (!canPackItems(selectedDishes, nextPage, page.designSettings.customGrid.rows)) {
-      setManualGridWarning(isElasticGridMode ? 'Elastic grid cannot fit every selected dish. Add rows or reduce card spans.' : 'Resize does not fit every selected dish in this manual grid. Add rows or reduce card spans.');
+      setManualGridWarning('Resize does not fit every selected dish in this snap grid. Add rows or reduce card spans.');
       if (previousPlacement) onResizePreviewDish(dishId, previousPlacement);
       return false;
     }
@@ -102,12 +108,12 @@ export function PagePreview({ project, page, selectedPreviewDishId = '', onSelec
                 {fitAllLayout?.warning ? <div className="fit-warning" role="alert">{fitAllLayout.warning}</div> : null}
                 {customGridWarning ? <div className="fit-warning" role="alert">{customGridWarning}</div> : null}
                 {manualGridWarning ? <div className="fit-warning" role="alert">{manualGridWarning}</div> : null}
-                {isElasticGridMode
-                  ? <ElasticGridPreview dishes={selectedDishes} page={page} selectedDishId={selectedPreviewDishId} onSelectDish={onSelectPreviewDish} onResizeDish={updatePreviewPlacement} />
-                  : isManualGridMode
-                  ? isFreeResizeMode
+                {isFluidGridMode
+                  ? <FluidGridPreview dishes={selectedDishes} page={page} selectedDishId={selectedPreviewDishId} onSelectDish={onSelectPreviewDish} onResizeDish={updatePreviewPlacement} onFitWarning={setManualGridWarning} />
+                  : isFreeResizeMode
                     ? <FreeResizePreview dishes={selectedDishes} page={page} selectedDishId={selectedPreviewDishId} onSelectDish={onSelectPreviewDish} onResizeDish={updatePreviewPlacement} />
-                    : <CustomGridPreview dishes={selectedDishes} page={page} fitAllLayout={fitAllLayout} selectedDishId={selectedPreviewDishId} onSelectDish={onSelectPreviewDish} onResizeDish={updatePreviewPlacement} />
+                    : isSnapGridMode
+                    ? <CustomGridPreview dishes={selectedDishes} page={page} fitAllLayout={fitAllLayout} selectedDishId={selectedPreviewDishId} onSelectDish={onSelectPreviewDish} onResizeDish={updatePreviewPlacement} />
                   : page.designSettings.layoutMode === 'classicColumns'
                     ? <ClassicColumnsPreview dishes={selectedDishes} page={page} />
                     : fitAllLayout
@@ -273,7 +279,7 @@ function gridColumns(settings) {
 }
 
 function effectiveCustomGridRows(settings, fitAllLayout, itemCount) {
-  if (settings.layoutMode === 'elasticGrid') return settings.customGrid.rows;
+  if (settings.layoutMode === 'snapGrid') return settings.customGrid.rows;
   if (settings.gridMode !== 'custom') return settings.customGrid.rows;
   const requiredRows = Math.ceil(totalSpanCellsForCount(itemCount, settings) / settings.customGrid.columns);
   if (fitAllLayout) return Math.max(settings.customGrid.rows, fitAllLayout.rows, requiredRows);
@@ -383,8 +389,124 @@ const SUPPORTED_GRID_SPANS = Object.freeze([
   { colSpan: 3, rowSpan: 3 },
 ]);
 
-function ElasticGridPreview({ dishes, page, selectedDishId, onSelectDish, onResizeDish }) {
-  return <CustomGridPreview dishes={dishes} page={page} fitAllLayout={null} selectedDishId={selectedDishId} onSelectDish={onSelectDish} onResizeDish={onResizeDish} className="elastic-grid" ariaLabel="Elastic grid dish layout" />;
+
+const FLUID_GRID_WARNING = 'Fluid grid cannot fit all selected dishes with current sizes. Reduce card size, hide descriptions, reduce image area, or use Smart auto-fit.';
+
+function fluidPlacement(placement, index) {
+  return {
+    mode: 'fluid',
+    widthWeight: clamp(placement?.mode === 'fluid' ? placement.widthWeight ?? 1 : placement?.widthWeight ?? 1, 0.5, 4),
+    heightWeight: clamp(placement?.mode === 'fluid' ? placement.heightWeight ?? 1 : placement?.heightWeight ?? 1, 0.5, 4),
+    minWidthPercent: clamp(placement?.minWidthPercent ?? 12, 5, 100),
+    minHeightPercent: clamp(placement?.minHeightPercent ?? 8, 5, 100),
+    maxWidthPercent: clamp(placement?.maxWidthPercent ?? 100, 5, 100),
+    maxHeightPercent: clamp(placement?.maxHeightPercent ?? 100, 5, 100),
+    order: placement?.order ?? index,
+    colSpan: placement?.colSpan ?? 1,
+    rowSpan: placement?.rowSpan ?? 1,
+    priority: placement?.priority ?? 0,
+  };
+}
+
+function fluidItemStyle(placement, itemCount) {
+  const targetColumns = Math.min(4, Math.max(1, Math.ceil(Math.sqrt(itemCount || 1))));
+  const targetRows = Math.max(1, Math.ceil((itemCount || 1) / targetColumns));
+  const baseWidth = 100 / targetColumns;
+  const baseHeight = 100 / targetRows;
+  const widthPercent = clamp(baseWidth * placement.widthWeight, placement.minWidthPercent, placement.maxWidthPercent);
+  const heightPercent = clamp(baseHeight * placement.heightWeight, placement.minHeightPercent, placement.maxHeightPercent);
+  return {
+    '--fluid-basis': `${widthPercent}%`,
+    '--fluid-height': `${heightPercent}%`,
+    '--fluid-grow': placement.widthWeight,
+    order: placement.order,
+  };
+}
+
+function FluidGridPreview({ dishes, page, selectedDishId, onSelectDish, onResizeDish, onFitWarning }) {
+  const gridRef = useRef(null);
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+    const checkFit = () => {
+      const hasOverflow = grid.scrollHeight > grid.clientHeight + 2 || grid.scrollWidth > grid.clientWidth + 2;
+      onFitWarning(hasOverflow ? FLUID_GRID_WARNING : '');
+    };
+    checkFit();
+    const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(checkFit) : null;
+    resizeObserver?.observe(grid);
+    return () => resizeObserver?.disconnect();
+  }, [dishes.length, page.itemPlacements, page.designSettings.cardGap, page.designSettings.cardPadding, page.designSettings.imageHeight, onFitWarning]);
+
+  if (!dishes.length) return <EmptyPage />;
+  return (
+    <div ref={gridRef} className="fluid-grid" aria-label="Fluid grid dish layout" onPointerDown={(event) => { if (event.target === event.currentTarget) onSelectDish(''); }}>
+      {dishes.map((dish, index) => {
+        const placement = fluidPlacement(page.itemPlacements?.[dish.id], index);
+        const isSelected = selectedDishId === dish.id;
+        return (
+          <div
+            className={`fluid-grid-item preview-selectable-item ${isSelected ? 'selected-preview-item' : ''}`}
+            key={dish.id}
+            style={fluidItemStyle(placement, dishes.length)}
+            onPointerDown={(event) => { event.stopPropagation(); onSelectDish(dish.id); }}
+          >
+            <DishCard dish={dish} page={page} isHero={index === 0 && page.designSettings.makeFirstItemHero} />
+            {isSelected ? <FluidResizeHandles gridRef={gridRef} dishId={dish.id} placement={placement} itemCount={dishes.length} onResize={onResizeDish} /> : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function FluidResizeHandles({ gridRef, dishId, placement, itemCount, onResize }) {
+  const dragState = useRef(null);
+  const startDrag = (handle) => (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const grid = gridRef.current;
+    if (!grid) return;
+    const rect = grid.getBoundingClientRect();
+    const targetColumns = Math.min(4, Math.max(1, Math.ceil(Math.sqrt(itemCount || 1))));
+    const targetRows = Math.max(1, Math.ceil((itemCount || 1) / targetColumns));
+    dragState.current = {
+      handle,
+      rect,
+      startX: event.clientX,
+      startY: event.clientY,
+      startPlacement: placement,
+      baseWidth: 100 / targetColumns,
+      baseHeight: 100 / targetRows,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const continueDrag = (event) => {
+    const state = dragState.current;
+    if (!state) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const dxPercent = ((event.clientX - state.startX) / Math.max(1, state.rect.width)) * 100;
+    const dyPercent = ((event.clientY - state.startY) / Math.max(1, state.rect.height)) * 100;
+    const next = { ...state.startPlacement, mode: 'fluid' };
+    if (state.handle !== 'bottom') next.widthWeight = clamp(Number((state.startPlacement.widthWeight + dxPercent / state.baseWidth).toFixed(2)), 0.5, 4);
+    if (state.handle !== 'right') next.heightWeight = clamp(Number((state.startPlacement.heightWeight + dyPercent / state.baseHeight).toFixed(2)), 0.5, 4);
+    onResize(dishId, next);
+  };
+  const stopDrag = (event) => {
+    if (!dragState.current) return;
+    event.preventDefault();
+    event.stopPropagation();
+    dragState.current = null;
+  };
+  return (
+    <div className="preview-resize-handles fluid-resize-handles" aria-hidden="true">
+      <span className="resize-handle resize-handle-visual resize-handle-top-left" />
+      {['right', 'bottom', 'bottom-right'].map((handle) => (
+        <span key={handle} className={`resize-handle resize-handle-${handle}`} onPointerDown={startDrag(handle)} onPointerMove={continueDrag} onPointerUp={stopDrag} onPointerCancel={stopDrag} />
+      ))}
+    </div>
+  );
 }
 
 function CustomGridPreview({ dishes, page, fitAllLayout, selectedDishId, onSelectDish, onResizeDish, className = 'custom-grid', ariaLabel = 'Custom dish grid' }) {
