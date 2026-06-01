@@ -9,12 +9,10 @@ export function PageSettingsPanel({ page, actions }) {
         <input value={page.name} onChange={update('name')} />
       </label>
       <div className="two-column-fields panel-two-column">
-        <SelectField label="Paper size" value={page.paperSize} onChange={update('paperSize')} options={[['A4', 'A4'], ['A3', 'A3']]} />
-        <SelectField label="Orientation" value={page.orientation} onChange={update('orientation')} options={[['portrait', 'Portrait'], ['landscape', 'Landscape']]} />
+        <SelectField label="Paper size" value={page.paperSize} onChange={update('paperSize')} options={[["A4", "A4"], ["A3", "A3"]]} />
+        <SelectField label="Orientation" value={page.orientation} onChange={update('orientation')} options={[["portrait", "Portrait"], ["landscape", "Landscape"]]} />
       </div>
-      <SelectField label="Language mode" value={page.languageMode} onChange={update('languageMode')} options={[['en', 'English'], ['ge', 'Georgian'], ['bilingual', 'Bilingual']]} />
-      <SelectField label="Layout template" value={page.layoutTemplate} onChange={update('layoutTemplate')} options={[['photoCards', 'Photo Cards'], ['classicList', 'Classic List'], ['compact', 'Compact']]} />
-      <SelectField label="Fitting mode" value={page.fittingMode} onChange={update('fittingMode')} options={[['fixed', 'Fixed'], ['autoFill', 'Auto-fill'], ['compact', 'Compact']]} />
+      <SelectField label="Language mode" value={page.languageMode} onChange={update('languageMode')} options={[["en", "English"], ["ge", "Georgian"], ["bilingual", "Bilingual"]]} />
     </section>
   );
 }
