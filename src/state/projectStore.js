@@ -258,6 +258,7 @@ const visibleDishIdsForCategories = (dishes, categoryIds) =>
 const normalizeAlignment = (alignment) => (['top', 'center', 'bottom'].includes(alignment) ? alignment : 'center');
 const normalizeImageType = (type) => (type === 'url' ? 'url' : 'none');
 const normalizeImageFit = (fit) => (['contain', 'cover', 'fill'].includes(fit) ? fit : 'contain');
+const normalizeColor = (color, fallback) => (/^#[0-9a-fA-F]{3,8}$/.test(color ?? '') ? color : fallback);
 const LEGACY_CARD_CONTENT_LAYOUTS = Object.freeze({
   textBelowImage: 'below',
   textRightOfImage: 'imageLeft',
@@ -360,8 +361,6 @@ const clampNumber = (value, fallback, min, max) => {
   if (!Number.isFinite(number)) return fallback;
   return Math.min(max, Math.max(min, number));
 };
-
-const normalizeColor = (color, fallback) => (/^#[0-9a-fA-F]{3,8}$/.test(color ?? '') ? color : fallback);
 
 const normalizeHeader = (header = {}, dividerColorFallback = DEFAULT_PAGE_HEADER.dividerColor) => ({
   ...DEFAULT_PAGE_HEADER,
