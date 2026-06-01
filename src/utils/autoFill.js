@@ -41,9 +41,12 @@ export function calculateAutoFillGrid(input = {}) {
   const scale = clamp(Math.sqrt((cardWidth * cardHeight) / (220 * 260)), 0.62, 1.45);
   const fontScale = clamp(scale, 0.72, 1.25);
   const requestedImageHeight = toFiniteNumber(input.imageHeight, 118) * scale;
-  const fillImageHeight = cardHeight * (itemCount <= 2 ? 0.42 : itemCount <= 4 ? 0.36 : 0.28);
+  const imageAreaRatio = clamp(toFiniteNumber(input.imageAreaPercent, 42), 10, 80) / 100;
+  const fillImageHeight = cardHeight * imageAreaRatio;
+  const maxImageHeight = Math.max(36, cardHeight * imageAreaRatio);
+  const minImageHeight = Math.min(36, maxImageHeight);
   const imageHeight = Math.round(
-    clamp(Math.max(requestedImageHeight, fillImageHeight), Math.min(36, cardHeight * 0.45), Math.max(36, cardHeight * 0.52)),
+    clamp(Math.min(requestedImageHeight, fillImageHeight), minImageHeight, maxImageHeight),
   );
 
   return {
