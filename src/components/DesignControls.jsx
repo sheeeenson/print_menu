@@ -1,6 +1,6 @@
 import { CardStyleControls } from './CardStyleControls.jsx';
 import { ColorControls } from './ColorControls.jsx';
-import { FONT_PRESETS, FONT_STACKS } from '../utils/typography.js';
+import { GOOGLE_FONT_OPTIONS } from '../utils/typography.js';
 
 const controls = [
   ['pageMargin', 'Page margin', 12, 80, 1],
@@ -15,24 +15,6 @@ const controls = [
   ['newPriceFontSize', 'New price', 12, 28, 1],
   ['badgeFontSize', 'Badge', 8, 18, 1],
   ['weightFontSize', 'Weight', 8, 18, 1],
-];
-
-const fontPresetOptions = [
-  ['cleanModern', 'Clean Modern'],
-  ['premiumRestaurant', 'Premium Restaurant'],
-  ['sushiPromo', 'Sushi Promo'],
-  ['minimalGeorgian', 'Minimal Georgian'],
-  ['boldDiscount', 'Bold Discount'],
-  ['classicMenu', 'Classic Menu'],
-  ['custom', 'Custom'],
-];
-
-const fontFamilyOptions = [
-  [FONT_STACKS.modernSans, 'Modern Sans'],
-  [FONT_STACKS.premiumSerif, 'Premium Serif'],
-  [FONT_STACKS.georgianClean, 'Georgian Clean'],
-  [FONT_STACKS.boldPromo, 'Bold Promo'],
-  [FONT_STACKS.classicMenu, 'Classic Menu'],
 ];
 
 const fontWeightOptions = [400, 500, 600, 700, 800, 850, 900, 950];
@@ -64,21 +46,6 @@ export function DesignControls({ page, actions }) {
 
 function TypographyControls({ page, actions }) {
   const settings = page.designSettings;
-  const updateDesign = (field, value) => actions.updateSelectedPageDesign(field, value);
-  const applyPreset = (event) => {
-    const preset = event.target.value;
-    if (preset === 'custom') {
-      updateDesign('fontPreset', 'custom');
-      return;
-    }
-    actions.updateSelectedPage({
-      designSettings: {
-        ...settings,
-        fontPreset: preset,
-        ...FONT_PRESETS[preset],
-      },
-    });
-  };
   const custom = (field, value) => {
     actions.updateSelectedPage({ designSettings: { ...settings, fontPreset: 'custom', [field]: value } });
   };
@@ -86,7 +53,6 @@ function TypographyControls({ page, actions }) {
   return (
     <div className="design-subpanel">
       <h3 className="panel-subtitle">Font system</h3>
-      <SelectControl label="Font pairing" value={settings.fontPreset} onChange={applyPreset} options={fontPresetOptions} />
       <FontFamilyControl label="Category font" field="categoryFontFamily" settings={settings} onChange={custom} />
       <FontFamilyControl label="Dish title font" field="dishTitleFontFamily" settings={settings} onChange={custom} />
       <FontFamilyControl label="Description font" field="descriptionFontFamily" settings={settings} onChange={custom} />
@@ -126,7 +92,7 @@ function SelectControl({ label, value, onChange, options }) {
 }
 
 function FontFamilyControl({ label, field, settings, onChange }) {
-  return <SelectControl label={label} value={settings[field]} onChange={(event) => onChange(field, event.target.value)} options={fontFamilyOptions} />;
+  return <SelectControl label={label} value={settings[field]} onChange={(event) => onChange(field, event.target.value)} options={GOOGLE_FONT_OPTIONS} />;
 }
 
 function WeightControl({ label, field, settings, onChange }) {
