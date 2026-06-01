@@ -6,6 +6,7 @@ import { FONT_PRESETS } from '../utils/typography.js';
 import { clearProject, loadProject, saveProject } from '../utils/storage.js';
 
 const deepClone = (value) => JSON.parse(JSON.stringify(value));
+const DEFAULT_PAGE_DIVIDER_COLOR = '#9b1c31';
 
 export const DEFAULT_PAGE_HEADER = Object.freeze({
   enabled: true,
@@ -22,6 +23,9 @@ export const DEFAULT_PAGE_HEADER = Object.freeze({
   rightImageSize: 56,
   fontSize: 14,
   alignment: 'center',
+  showDivider: true,
+  dividerColor: DEFAULT_PAGE_DIVIDER_COLOR,
+  dividerWidth: 1,
 });
 
 export const DEFAULT_PAGE_FOOTER = Object.freeze({
@@ -35,6 +39,9 @@ export const DEFAULT_PAGE_FOOTER = Object.freeze({
   rightTextGe: 'შეუკვეთე ახლა',
   fontSize: 12,
   alignment: 'center',
+  showDivider: true,
+  dividerColor: DEFAULT_PAGE_DIVIDER_COLOR,
+  dividerWidth: 1,
 });
 
 export const DEFAULT_FIT_STRATEGY = Object.freeze({
@@ -178,6 +185,7 @@ const visibleDishIdsForCategories = (dishes, categoryIds) =>
 const normalizeAlignment = (alignment) => (['top', 'center', 'bottom'].includes(alignment) ? alignment : 'center');
 const normalizeImageType = (type) => (type === 'url' ? 'url' : 'none');
 const normalizeImageFit = (fit) => (['contain', 'cover', 'fill'].includes(fit) ? fit : 'contain');
+const normalizeColor = (color, fallback) => (/^#[0-9a-fA-F]{3,8}$/.test(color ?? '') ? color : fallback);
 const LEGACY_CARD_CONTENT_LAYOUTS = Object.freeze({
   textBelowImage: 'below',
   textRightOfImage: 'imageLeft',
@@ -281,7 +289,7 @@ const clampNumber = (value, fallback, min, max) => {
   return Math.min(max, Math.max(min, number));
 };
 
-const normalizeHeader = (header = {}) => ({
+const normalizeHeader = (header = {}, dividerColorFallback = DEFAULT_PAGE_HEADER.dividerColor) => ({
   ...DEFAULT_PAGE_HEADER,
   ...header,
   enabled: header.enabled === undefined ? DEFAULT_PAGE_HEADER.enabled : Boolean(header.enabled),
@@ -292,15 +300,21 @@ const normalizeHeader = (header = {}) => ({
   rightImageSize: Number(header.rightImageSize ?? DEFAULT_PAGE_HEADER.rightImageSize),
   fontSize: Number(header.fontSize ?? DEFAULT_PAGE_HEADER.fontSize),
   alignment: normalizeAlignment(header.alignment),
+  showDivider: header.showDivider === undefined ? DEFAULT_PAGE_HEADER.showDivider : Boolean(header.showDivider),
+  dividerColor: normalizeColor(header.dividerColor, dividerColorFallback),
+  dividerWidth: clampNumber(header.dividerWidth, DEFAULT_PAGE_HEADER.dividerWidth, 0, 12),
 });
 
-const normalizeFooter = (footer = {}) => ({
+const normalizeFooter = (footer = {}, dividerColorFallback = DEFAULT_PAGE_FOOTER.dividerColor) => ({
   ...DEFAULT_PAGE_FOOTER,
   ...footer,
   enabled: footer.enabled === undefined ? DEFAULT_PAGE_FOOTER.enabled : Boolean(footer.enabled),
   height: Number(footer.height ?? DEFAULT_PAGE_FOOTER.height),
   fontSize: Number(footer.fontSize ?? DEFAULT_PAGE_FOOTER.fontSize),
   alignment: normalizeAlignment(footer.alignment),
+  showDivider: footer.showDivider === undefined ? DEFAULT_PAGE_FOOTER.showDivider : Boolean(footer.showDivider),
+  dividerColor: normalizeColor(footer.dividerColor, dividerColorFallback),
+  dividerWidth: clampNumber(footer.dividerWidth, DEFAULT_PAGE_FOOTER.dividerWidth, 0, 12),
 });
 
 const normalizeDesignSettings = (settings = {}) => {
@@ -407,6 +421,9 @@ const normalizePage = (page, project, index) => {
     ? page.selectedDishIds.filter((dishId) => visibleDishIds.includes(dishId))
     : visibleDishIds;
 
+  const designSettings = normalizeDesignSettings({ ...(page.designSettings ?? {}), fittingMode: page.fittingMode });
+  const dividerColorFallback = normalizeColor(designSettings.accentColor, DEFAULT_PAGE_DIVIDER_COLOR);
+
   return {
     id: page.id ?? createId('page'),
     name: page.name || `Page ${index + 1}`,
@@ -417,9 +434,9 @@ const normalizePage = (page, project, index) => {
     selectedDishIds,
     layoutTemplate: ['photoCards', 'classicList', 'compact'].includes(page.layoutTemplate) ? page.layoutTemplate : 'photoCards',
     fittingMode: ['fixed', 'autoFill', 'compact'].includes(page.fittingMode) ? page.fittingMode : 'fixed',
-    header: normalizeHeader(page.header),
-    footer: normalizeFooter(page.footer),
-    designSettings: normalizeDesignSettings({ ...(page.designSettings ?? {}), fittingMode: page.fittingMode }),
+    header: normalizeHeader(page.header, dividerColorFallback),
+    footer: normalizeFooter(page.footer, dividerColorFallback),
+    designSettings,
     itemPlacements: normalizeItemPlacements(page.itemPlacements),
   };
 };
