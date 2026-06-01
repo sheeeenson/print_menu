@@ -70,7 +70,7 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
       designSettings: {
         ...settings,
         layoutMode,
-        gridMode: layoutMode === 'smartAutoFit' ? 'autoFill' : layoutMode === 'manualDesigner' ? 'custom' : 'preset',
+        gridMode: layoutMode === 'smartAutoFit' ? 'autoFill' : (layoutMode === 'manualDesigner' || layoutMode === 'elasticGrid') ? 'custom' : 'preset',
         gridPreset: layoutMode === 'classicColumns' ? columnPresetFor(settings.classicColumns) : settings.gridPreset,
       },
     });
@@ -106,6 +106,7 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
           <option value="classicColumns">Classic columns</option>
           <option value="smartAutoFit">Smart auto-fit</option>
           <option value="manualDesigner">Manual designer</option>
+          <option value="elasticGrid">Elastic grid</option>
         </select>
       </label>
       {settings.layoutMode === 'classicColumns' ? (
@@ -130,6 +131,17 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
             <option value="freeResize">Free resize</option>
           </select>
         </label>
+      ) : null}
+      {settings.layoutMode === 'elasticGrid' ? (
+        <div className="elastic-grid-controls">
+          <h3>Elastic Grid</h3>
+          <div className="two-column-fields">
+            <label className="field-label">Columns<input type="number" min="1" max="6" value={settings.customGrid.columns} onChange={(event) => actions.updateSelectedPageCustomGrid('columns', Number(event.target.value))} /></label>
+            <label className="field-label">Rows<input type="number" min="1" max="12" value={settings.customGrid.rows} onChange={(event) => actions.updateSelectedPageCustomGrid('rows', Number(event.target.value))} /></label>
+          </div>
+          <label className="slider-label"><span>Gap<strong>{settings.customGrid.gap}px</strong></span><input type="range" min="0" max="64" value={settings.customGrid.gap} onChange={(event) => actions.updateSelectedPageCustomGrid('gap', Number(event.target.value))} /></label>
+          <label className="toggle-label"><input type="checkbox" checked={settings.customGrid.densePacking} onChange={(event) => actions.updateSelectedPageCustomGrid('densePacking', event.target.checked)} /> Dense packing</label>
+        </div>
       ) : null}
 
       <h3>Image display</h3>
@@ -165,10 +177,26 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
         Show descriptions
       </label>
       <p className="muted-text">Prices always stay pinned to the bottom of every card.</p>
+      <label className="field-label">Configurable dish display
+        <select value={settings.configurableDisplayMode} onChange={update('configurableDisplayMode')}>
+          <option value="compactOptions">Compact options</option>
+          <option value="stepList">Step list</option>
+        </select>
+      </label>
 
-      {settings.layoutMode === 'manualDesigner' ? (
+      {(settings.layoutMode === 'manualDesigner' || settings.layoutMode === 'elasticGrid') ? (
         <SelectedCardControls page={page} actions={actions} selectedDish={selectedDish} placement={selectedPlacement} />
       ) : null}
+
+      <details className="inline-advanced-controls" open>
+        <summary>Badge style</summary>
+        <label className="color-label">Badge background<span><input type="color" value={settings.badgeStyle.backgroundColor} onChange={(event) => actions.updateSelectedPageDesign('badgeStyle', { ...settings.badgeStyle, backgroundColor: event.target.value })} /><input value={settings.badgeStyle.backgroundColor} onChange={(event) => actions.updateSelectedPageDesign('badgeStyle', { ...settings.badgeStyle, backgroundColor: event.target.value })} /></span></label>
+        <label className="color-label">Badge text<span><input type="color" value={settings.badgeStyle.textColor} onChange={(event) => actions.updateSelectedPageDesign('badgeStyle', { ...settings.badgeStyle, textColor: event.target.value })} /><input value={settings.badgeStyle.textColor} onChange={(event) => actions.updateSelectedPageDesign('badgeStyle', { ...settings.badgeStyle, textColor: event.target.value })} /></span></label>
+        <label className="color-label">Badge border<span><input type="color" value={settings.badgeStyle.borderColor === 'transparent' ? '#000000' : settings.badgeStyle.borderColor} onChange={(event) => actions.updateSelectedPageDesign('badgeStyle', { ...settings.badgeStyle, borderColor: event.target.value })} /><input value={settings.badgeStyle.borderColor} onChange={(event) => actions.updateSelectedPageDesign('badgeStyle', { ...settings.badgeStyle, borderColor: event.target.value })} /></span></label>
+        <label className="slider-label"><span>Badge border width<strong>{settings.badgeStyle.borderWidth}px</strong></span><input type="range" min="0" max="8" value={settings.badgeStyle.borderWidth} onChange={(event) => actions.updateSelectedPageDesign('badgeStyle', { ...settings.badgeStyle, borderWidth: Number(event.target.value) })} /></label>
+        <label className="slider-label"><span>Badge opacity<strong>{settings.badgeStyle.opacity}%</strong></span><input type="range" min="0" max="100" value={settings.badgeStyle.opacity} onChange={(event) => actions.updateSelectedPageDesign('badgeStyle', { ...settings.badgeStyle, opacity: Number(event.target.value) })} /></label>
+        <label className="field-label">Badge shape<select value={settings.badgeStyle.shape} onChange={(event) => actions.updateSelectedPageDesign('badgeStyle', { ...settings.badgeStyle, shape: event.target.value })}><option value="pill">Pill</option><option value="rounded">Rounded</option><option value="square">Square</option><option value="circle">Circle</option><option value="ribbon">Ribbon</option></select></label>
+      </details>
 
       <details className="inline-advanced-controls">
         <summary>Card border</summary>
@@ -188,7 +216,8 @@ function columnPresetFor(columns) {
 const MANUAL_GRID_SPANS = Object.freeze(['1x1', '2x1', '1x2', '2x2', '3x2', '3x3']);
 
 function SelectedCardControls({ page, actions, selectedDish, placement }) {
-  const isFreeResize = page.designSettings.resizeMode === 'freeResize';
+  const isElastic = page.designSettings.layoutMode === 'elasticGrid';
+  const isFreeResize = !isElastic && page.designSettings.resizeMode === 'freeResize';
   const current = {
     mode: isFreeResize ? 'free' : 'grid',
     colSpan: placement?.colSpan ?? 1,
@@ -223,7 +252,7 @@ function SelectedCardControls({ page, actions, selectedDish, placement }) {
       <div>
         <p className="eyebrow">Selected card</p>
         <strong>{selectedDish?.nameEn || 'Click a preview card'}</strong>
-        <small>{selectedDish ? (isFreeResize ? `${current.widthPercent}% × ${current.heightPercent}%` : `${current.colSpan} columns × ${current.rowSpan} rows`) : 'Manual designer cards can be selected in the preview.'}</small>
+        <small>{selectedDish ? (isFreeResize ? `${current.widthPercent}% × ${current.heightPercent}%` : `${current.colSpan} columns × ${current.rowSpan} rows`) : 'Select a preview card to edit its size.'}</small>
       </div>
       {isFreeResize ? (
         <div className="selected-free-controls">
@@ -240,8 +269,8 @@ function SelectedCardControls({ page, actions, selectedDish, placement }) {
         </div>
       )}
       <div className="print-action-row">
-        <button className="secondary-action compact" type="button" onClick={() => selectedDish && actions.resetSelectedPageItemPlacement(selectedDish.id)} disabled={!selectedDish}>Reset selected card placement</button>
-        <button className="secondary-action compact" type="button" onClick={actions.resetSelectedPageItemPlacements}>Reset all card placements</button>
+        <button className="secondary-action compact" type="button" onClick={() => selectedDish && actions.resetSelectedPageItemPlacement(selectedDish.id)} disabled={!selectedDish}>Reset selected card</button>
+        <button className="secondary-action compact" type="button" onClick={actions.resetSelectedPageItemPlacements}>Reset all card sizes</button>
       </div>
     </div>
   );

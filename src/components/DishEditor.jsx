@@ -4,6 +4,7 @@ import { formatOptionalNumber, parseOptionalNumber } from '../utils/pricing.js';
 export function DishEditor({ dish, actions }) {
   const updateText = (field) => (event) => actions.updateDish(dish.id, { [field]: event.target.value });
   const updatePrice = (field) => (event) => actions.updateDish(dish.id, { [field]: parseOptionalNumber(event.target.value) }, field);
+  const updateDishType = (event) => actions.updateDish(dish.id, { dishType: event.target.value, optionGroups: dish.optionGroups ?? [] });
 
   return (
     <article className={`editor-card dish-editor ${dish.visible ? '' : 'hidden-dish'}`}>
@@ -19,6 +20,13 @@ export function DishEditor({ dish, actions }) {
         </div>
       </div>
 
+      <label className="field-label">Dish type
+        <select value={dish.dishType ?? 'simple'} onChange={updateDishType}>
+          <option value="simple">Simple dish</option>
+          <option value="configurable">Configurable dish</option>
+          <option value="combo">Combo</option>
+        </select>
+      </label>
       <div className="two-column-fields">
         <TextInput dish={dish} field="nameEn" label="English name" onChange={updateText('nameEn')} />
         <TextInput dish={dish} field="nameGe" label="Georgian name" onChange={updateText('nameGe')} />
@@ -39,6 +47,7 @@ export function DishEditor({ dish, actions }) {
           <img src={dish.imageUrl} alt={`${dish.nameEn} preview`} />
         </div>
       ) : null}
+      {dish.dishType === 'configurable' ? <OptionGroupEditor dish={dish} actions={actions} /> : null}
       <BadgeEditor dish={dish} actions={actions} />
     </article>
   );
@@ -75,6 +84,45 @@ function NumberInput({ dish, field, label, step, onChange }) {
         onChange={onChange}
       />
     </label>
+  );
+}
+
+
+function OptionGroupEditor({ dish, actions }) {
+  return (
+    <div className="option-group-editor">
+      <div className="subsection-title">
+        <h4>Configurable option groups</h4>
+        <button type="button" onClick={() => actions.addOptionGroup(dish.id)}>+ Option group</button>
+      </div>
+      {(dish.optionGroups ?? []).length === 0 ? <p className="muted-text">Add groups such as Base, Protein, and Sauce.</p> : null}
+      {(dish.optionGroups ?? []).map((group) => (
+        <div className="option-group-card" key={group.id}>
+          <div className="two-column-fields">
+            <label className="field-label">Group EN<input value={group.nameEn} onChange={(event) => actions.updateOptionGroup(dish.id, group.id, { nameEn: event.target.value })} /></label>
+            <label className="field-label">Group GE<input value={group.nameGe} onChange={(event) => actions.updateOptionGroup(dish.id, group.id, { nameGe: event.target.value })} /></label>
+          </div>
+          <div className="four-column-fields">
+            <label className="toggle-label"><input type="checkbox" checked={group.required} onChange={(event) => actions.updateOptionGroup(dish.id, group.id, { required: event.target.checked })} /> Required</label>
+            <label className="field-label">Min select<input type="number" min="0" max="12" value={group.minSelect} onChange={(event) => actions.updateOptionGroup(dish.id, group.id, { minSelect: Number(event.target.value) })} /></label>
+            <label className="field-label">Max select<input type="number" min="0" max="12" value={group.maxSelect} onChange={(event) => actions.updateOptionGroup(dish.id, group.id, { maxSelect: Number(event.target.value) })} /></label>
+            <button className="danger" type="button" onClick={() => actions.deleteOptionGroup(dish.id, group.id)}>Delete group</button>
+          </div>
+          <div className="subsection-title compact-subsection">
+            <h5>Options</h5>
+            <button type="button" onClick={() => actions.addOption(dish.id, group.id)}>+ Option</button>
+          </div>
+          {(group.options ?? []).map((option) => (
+            <div className="option-row" key={option.id}>
+              <input aria-label="Option English name" value={option.nameEn} onChange={(event) => actions.updateOption(dish.id, group.id, option.id, { nameEn: event.target.value })} />
+              <input aria-label="Option Georgian name" value={option.nameGe} onChange={(event) => actions.updateOption(dish.id, group.id, option.id, { nameGe: event.target.value })} />
+              <input aria-label="Option price delta" type="number" step="0.01" value={formatOptionalNumber(option.priceDelta)} onChange={(event) => actions.updateOption(dish.id, group.id, option.id, { priceDelta: parseOptionalNumber(event.target.value) ?? 0 })} />
+              <button type="button" onClick={() => actions.deleteOption(dish.id, group.id, option.id)}>Delete option</button>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
   );
 }
 
