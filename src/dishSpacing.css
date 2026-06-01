@@ -45,3 +45,12 @@
   margin-top: 0;
   margin-bottom: 0;
 }
+
+.preview-dish-card .configurable-options p {
+  white-space: pre-line;
+}
+
+.preview-dish-card .configurable-options strong {
+  display: inline-block;
+  margin-bottom: 2px;
+}
