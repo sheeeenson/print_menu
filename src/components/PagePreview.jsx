@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { PageFooterPreview } from './PageFooterPreview.jsx';
 import { PageHeaderPreview } from './PageHeaderPreview.jsx';
 import { calculateAutoFillGrid } from '../utils/autoFill.js';
@@ -5,7 +6,7 @@ import { calculateFitAllLayout, paperDimensions } from '../utils/fitAll.js';
 
 const money = (value) => (typeof value === 'number' ? `${value.toFixed(value % 1 === 0 ? 0 : 2)} ₾` : '');
 
-export function PagePreview({ project, page }) {
+export function PagePreview({ project, page, selectedPreviewDishId = '', onSelectPreviewDish = () => {}, onResizePreviewDish = () => {} }) {
   const selectedCategoryIds = new Set(page.selectedCategoryIds);
   const categories = project.categories.filter((category) => selectedCategoryIds.has(category.id));
   const selectedDishes = selectedVisibleDishes(project, page);
@@ -46,6 +47,35 @@ export function PagePreview({ project, page }) {
   const customGridWarning = page.designSettings.gridMode === 'custom' ? getCustomGridWarning(selectedDishes, page, fitAllLayout) : '';
   const densityClass = `density-${page.designSettings.cardDensity}`;
   const categoryStyleClass = `category-style-${page.designSettings.categoryTitleStyle}`;
+  const [manualGridWarning, setManualGridWarning] = useState('');
+  const isManualGridMode = page.designSettings.gridMode === 'custom';
+
+  useEffect(() => {
+    setManualGridWarning('');
+  }, [page.id, page.designSettings.gridMode, page.designSettings.customGrid.rows, page.designSettings.customGrid.columns]);
+
+  const updatePreviewPlacement = (dishId, nextPlacement, previousPlacement) => {
+    if (!isManualGridMode) return false;
+    const nextPage = {
+      ...page,
+      itemPlacements: {
+        ...(page.itemPlacements ?? {}),
+        [dishId]: {
+          colSpan: nextPlacement.colSpan,
+          rowSpan: nextPlacement.rowSpan,
+          priority: page.itemPlacements?.[dishId]?.priority ?? 0,
+        },
+      },
+    };
+    if (!canPackItems(selectedDishes, nextPage, page.designSettings.customGrid.rows)) {
+      setManualGridWarning('Resize does not fit every selected dish in this manual grid. Add rows or reduce card spans.');
+      if (previousPlacement) onResizePreviewDish(dishId, previousPlacement);
+      return false;
+    }
+    setManualGridWarning('');
+    onResizePreviewDish(dishId, nextPlacement);
+    return true;
+  };
 
   return (
     <section className="preview-stage" aria-label="Live page preview">
@@ -58,14 +88,15 @@ export function PagePreview({ project, page }) {
       </div>
       <div className="paper-scroll">
         <div className="preview-page-wrapper print-root">
-          <article className={`paper-page print-page ${page.paperSize.toLowerCase()} ${page.orientation} paper-${page.paperSize.toLowerCase()} paper-${page.orientation} ${templateClass} ${fittingClass} ${gridClass} ${densityClass} ${categoryStyleClass}`} style={style}>
+          <article onPointerDown={(event) => { if (event.target === event.currentTarget) onSelectPreviewDish(''); }} className={`paper-page print-page ${page.paperSize.toLowerCase()} ${page.orientation} paper-${page.paperSize.toLowerCase()} paper-${page.orientation} ${templateClass} ${fittingClass} ${gridClass} ${densityClass} ${categoryStyleClass}`} style={style}>
             <div className="print-page-inner">
               <PageHeaderPreview page={page} renderLocalizedText={renderLocalizedText} />
-              <main className="page-content">
+              <main className="page-content" onPointerDown={(event) => { if (event.target === event.currentTarget) onSelectPreviewDish(''); }}>
                 {fitAllLayout?.warning ? <div className="fit-warning" role="alert">{fitAllLayout.warning}</div> : null}
                 {customGridWarning ? <div className="fit-warning" role="alert">{customGridWarning}</div> : null}
+                {manualGridWarning ? <div className="fit-warning" role="alert">{manualGridWarning}</div> : null}
                 {page.designSettings.gridMode === 'custom'
-                  ? <CustomGridPreview dishes={selectedDishes} page={page} fitAllLayout={fitAllLayout} />
+                  ? <CustomGridPreview dishes={selectedDishes} page={page} fitAllLayout={fitAllLayout} selectedDishId={selectedPreviewDishId} onSelectDish={onSelectPreviewDish} onResizeDish={updatePreviewPlacement} />
                   : fitAllLayout
                     ? <FitAllPreview dishes={selectedDishes} page={page} fitAllLayout={fitAllLayout} />
                     : isAutoFillMode
@@ -265,9 +296,8 @@ function canPackItems(dishes, page, rowLimit) {
 
   return dishes.every((dish, index) => {
     const placement = page.itemPlacements?.[dish.id];
-    const fallbackSpan = itemSpanForIndex(index, settings);
-    const colSpan = Math.min(columns, placement?.colSpan ?? fallbackSpan.colSpan);
-    const rowSpan = Math.max(1, placement?.rowSpan ?? fallbackSpan.rowSpan);
+    const colSpan = Math.min(columns, placement?.colSpan ?? 1);
+    const rowSpan = Math.max(1, placement?.rowSpan ?? 1);
     for (let row = 0; row <= rowLimit - rowSpan; row += 1) {
       for (let column = 0; column <= columns - colSpan; column += 1) {
         let open = true;
@@ -297,23 +327,142 @@ function getCustomGridWarning(dishes, page, fitAllLayout) {
     : 'Some items do not fit into the current custom grid. Increase rows, reduce item size, enable Auto rows, or use Auto-fill.';
 }
 
-function CustomGridPreview({ dishes, page, fitAllLayout }) {
+const SUPPORTED_GRID_SPANS = Object.freeze([
+  { colSpan: 1, rowSpan: 1 },
+  { colSpan: 2, rowSpan: 1 },
+  { colSpan: 1, rowSpan: 2 },
+  { colSpan: 2, rowSpan: 2 },
+  { colSpan: 3, rowSpan: 2 },
+  { colSpan: 3, rowSpan: 3 },
+]);
+
+function CustomGridPreview({ dishes, page, fitAllLayout, selectedDishId, onSelectDish, onResizeDish }) {
+  const gridRef = useRef(null);
   if (!dishes.length) return <EmptyPage />;
   return (
-    <div className="custom-grid" aria-label="Custom dish grid">
+    <div ref={gridRef} className="custom-grid" aria-label="Custom dish grid" onPointerDown={(event) => { if (event.target === event.currentTarget) onSelectDish(''); }}>
       {dishes.map((dish, index) => {
         const placement = page.itemPlacements?.[dish.id];
-        const fallbackSpan = itemSpanForIndex(index, page.designSettings);
-        const colSpan = Math.min(page.designSettings.customGrid.columns, placement?.colSpan ?? fallbackSpan.colSpan);
-        const rowSpan = placement?.rowSpan ?? fallbackSpan.rowSpan;
+        const colSpan = Math.min(page.designSettings.customGrid.columns, placement?.colSpan ?? 1);
+        const rowSpan = Math.min(page.designSettings.customGrid.rows, placement?.rowSpan ?? 1);
+        const isSelected = selectedDishId === dish.id;
         return (
-          <div className="custom-grid-item" key={dish.id} style={{ '--col-span': colSpan, '--row-span': rowSpan }}>
+          <div
+            className={`custom-grid-item preview-selectable-item ${isSelected ? 'selected-preview-item' : ''}`}
+            key={dish.id}
+            style={{ '--col-span': colSpan, '--row-span': rowSpan }}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+              onSelectDish(dish.id);
+            }}
+          >
             <DishCard dish={dish} page={page} hideDescription={fitAllLayout?.hideDescriptions} isHero={index === 0 && page.designSettings.makeFirstItemHero} />
+            {isSelected ? (
+              <ResizeHandles
+                gridRef={gridRef}
+                dishId={dish.id}
+                page={page}
+                currentPlacement={{ colSpan, rowSpan, priority: placement?.priority ?? 0 }}
+                onResize={onResizeDish}
+              />
+            ) : null}
           </div>
         );
       })}
     </div>
   );
+}
+
+function ResizeHandles({ gridRef, dishId, page, currentPlacement, onResize }) {
+  const dragState = useRef(null);
+
+  const startDrag = (handle) => (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const grid = gridRef.current;
+    if (!grid) return;
+    const styles = window.getComputedStyle(grid);
+    const gap = Number.parseFloat(styles.columnGap || styles.gap || '0') || 0;
+    const rect = grid.getBoundingClientRect();
+    const columns = page.designSettings.customGrid.columns;
+    const rows = page.designSettings.customGrid.rows;
+    const cellWidth = (rect.width - gap * Math.max(0, columns - 1)) / columns;
+    const cellHeight = (rect.height - gap * Math.max(0, rows - 1)) / rows;
+    dragState.current = {
+      handle,
+      startX: event.clientX,
+      startY: event.clientY,
+      startColSpan: currentPlacement.colSpan,
+      startRowSpan: currentPlacement.rowSpan,
+      cellWidth: Math.max(1, cellWidth + gap),
+      cellHeight: Math.max(1, cellHeight + gap),
+      lastColSpan: currentPlacement.colSpan,
+      lastRowSpan: currentPlacement.rowSpan,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const continueDrag = (event) => {
+    const state = dragState.current;
+    if (!state) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const deltaColumns = state.handle === 'bottom' ? 0 : Math.round((event.clientX - state.startX) / state.cellWidth);
+    const deltaRows = state.handle === 'right' ? 0 : Math.round((event.clientY - state.startY) / state.cellHeight);
+    const requested = {
+      colSpan: clamp(state.startColSpan + deltaColumns, 1, page.designSettings.customGrid.columns),
+      rowSpan: clamp(state.startRowSpan + deltaRows, 1, page.designSettings.customGrid.rows),
+    };
+    const nextSpan = nearestSupportedSpan(requested, page.designSettings.customGrid.columns, page.designSettings.customGrid.rows, state.handle);
+    if (nextSpan.colSpan === state.lastColSpan && nextSpan.rowSpan === state.lastRowSpan) return;
+    const accepted = onResize(dishId, { ...currentPlacement, ...nextSpan }, { ...currentPlacement, colSpan: state.lastColSpan, rowSpan: state.lastRowSpan });
+    if (accepted) {
+      state.lastColSpan = nextSpan.colSpan;
+      state.lastRowSpan = nextSpan.rowSpan;
+    }
+  };
+
+  const stopDrag = (event) => {
+    if (!dragState.current) return;
+    event.preventDefault();
+    event.stopPropagation();
+    dragState.current = null;
+  };
+
+  return (
+    <div className="preview-resize-handles" aria-hidden="true">
+      <span className="resize-handle resize-handle-visual resize-handle-top-left" />
+      {['right', 'bottom', 'bottom-right'].map((handle) => (
+        <span
+          key={handle}
+          className={`resize-handle resize-handle-${handle}`}
+          onPointerDown={startDrag(handle)}
+          onPointerMove={continueDrag}
+          onPointerUp={stopDrag}
+          onPointerCancel={stopDrag}
+        />
+      ))}
+    </div>
+  );
+}
+
+function nearestSupportedSpan(requested, maxColumns, maxRows, handle) {
+  const allowed = SUPPORTED_GRID_SPANS.filter((span) => span.colSpan <= maxColumns && span.rowSpan <= maxRows);
+  const compatible = allowed.filter((span) => {
+    if (handle === 'right') return span.rowSpan === requested.rowSpan;
+    if (handle === 'bottom') return span.colSpan === requested.colSpan;
+    return true;
+  });
+  const candidates = compatible.length ? compatible : allowed;
+  return candidates.reduce((best, span) => {
+    const score = Math.abs(span.colSpan - requested.colSpan) + Math.abs(span.rowSpan - requested.rowSpan);
+    const bestScore = Math.abs(best.colSpan - requested.colSpan) + Math.abs(best.rowSpan - requested.rowSpan);
+    return score < bestScore ? span : best;
+  }, candidates[0] ?? { colSpan: 1, rowSpan: 1 });
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
 }
 
 function AutoFillPreview({ dishes, page }) {

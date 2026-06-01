@@ -10,8 +10,12 @@ import { calculateFitAllLayout, paperDimensions } from '../utils/fitAll.js';
 
 export function LayoutPrintSection({ project, actions }) {
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [selectedPreviewDishId, setSelectedPreviewDishId] = useState('');
   const selectedPage = project.pages.find((page) => page.id === project.selectedPageId) ?? project.pages[0];
   const fitWarning = selectedPage ? getFitWarning(project, selectedPage) : '';
+  const selectedPreviewDish = selectedPage && selectedPreviewDishId
+    ? project.dishes.find((dish) => dish.id === selectedPreviewDishId && selectedPage.selectedDishIds?.includes(dish.id))
+    : null;
   const printPage = () => window.print();
   const confirmSaveAsPdf = () => {
     setIsPdfModalOpen(false);
@@ -29,6 +33,7 @@ export function LayoutPrintSection({ project, actions }) {
             actions={actions}
             onPrint={printPage}
             onSaveAsPdf={() => setIsPdfModalOpen(true)}
+            selectedDish={selectedPreviewDish}
           />
         ) : null}
         <PageList project={project} actions={actions} />
@@ -38,14 +43,14 @@ export function LayoutPrintSection({ project, actions }) {
         {selectedPage ? <FooterSettingsPanel page={selectedPage} actions={actions} /> : null}
         {selectedPage ? <DesignControls page={selectedPage} actions={actions} /> : null}
       </aside>
-      {selectedPage ? <PagePreview project={project} page={selectedPage} /> : <div className="empty-state">Add a page to preview your menu.</div>}
+      {selectedPage ? <PagePreview project={project} page={selectedPage} selectedPreviewDishId={selectedPreviewDishId} onSelectPreviewDish={setSelectedPreviewDishId} onResizePreviewDish={actions.updateSelectedPageItemPlacement} /> : <div className="empty-state">Add a page to preview your menu.</div>}
       {isPdfModalOpen ? <SavePdfModal onCancel={() => setIsPdfModalOpen(false)} onConfirm={confirmSaveAsPdf} /> : null}
     </section>
   );
 }
 
 
-function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf }) {
+function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish }) {
   const settings = page.designSettings;
   const update = (field) => (event) => {
     const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
@@ -63,6 +68,9 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf }) {
         <button className="secondary-action compact" type="button" onClick={onSaveAsPdf}>Save as PDF</button>
         <button className="secondary-action compact" type="button" onClick={actions.resetDemoData}>Reset demo data</button>
       </div>
+      {page.designSettings.gridMode === 'custom' ? (
+        <SelectedCardControls page={page} actions={actions} selectedDish={selectedDish} />
+      ) : null}
       <label className="toggle-label">
         <input type="checkbox" checked={settings.showImages} onChange={update('showImages')} />
         Show images
@@ -112,6 +120,61 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf }) {
           onChange={updateNumber('cardBorderOpacity')}
         />
       </label>
+    </div>
+  );
+}
+
+const MANUAL_GRID_SPANS = Object.freeze(['1x1', '2x1', '1x2', '2x2', '3x2', '3x3']);
+
+function SelectedCardControls({ page, actions, selectedDish }) {
+  const placement = selectedDish ? page.itemPlacements?.[selectedDish.id] : null;
+  const colSpan = placement?.colSpan ?? 1;
+  const rowSpan = placement?.rowSpan ?? 1;
+  const maxColumns = page.designSettings.customGrid.columns;
+  const maxRows = page.designSettings.customGrid.rows;
+  const spanOptions = MANUAL_GRID_SPANS.map((span) => span.split('x').map(Number))
+    .filter(([columns, rows]) => columns <= maxColumns && rows <= maxRows);
+  const colSpanOptions = [...new Set(spanOptions.filter(([, rows]) => rows === rowSpan).map(([columns]) => columns))];
+  const rowSpanOptions = [...new Set(spanOptions.filter(([columns]) => columns === colSpan).map(([, rows]) => rows))];
+  const updatePlacement = (nextColSpan, nextRowSpan) => {
+    if (!selectedDish) return;
+    actions.updateSelectedPageItemPlacement(selectedDish.id, {
+      colSpan: nextColSpan,
+      rowSpan: nextRowSpan,
+      priority: placement?.priority ?? 0,
+    });
+  };
+
+  return (
+    <div className="selected-card-controls" aria-live="polite">
+      <div>
+        <p className="eyebrow">Selected card</p>
+        <strong>{selectedDish?.nameEn || 'Click a preview card'}</strong>
+        <small>{selectedDish ? `${colSpan} columns × ${rowSpan} rows` : 'Manual Grid cards can be resized in the preview.'}</small>
+      </div>
+      <div className="selected-card-span-controls">
+        <label className="field-label">Col span
+          <select value={colSpan} onChange={(event) => updatePlacement(Number(event.target.value), rowSpan)} disabled={!selectedDish}>
+            {(colSpanOptions.length ? colSpanOptions : [1]).map((value) => <option key={value} value={value}>{value}</option>)}
+          </select>
+        </label>
+        <label className="field-label">Row span
+          <select value={rowSpan} onChange={(event) => updatePlacement(colSpan, Number(event.target.value))} disabled={!selectedDish}>
+            {(rowSpanOptions.length ? rowSpanOptions : [1]).map((value) => <option key={value} value={value}>{value}</option>)}
+          </select>
+        </label>
+      </div>
+      <div className="print-action-row">
+        <button
+          className="secondary-action compact"
+          type="button"
+          onClick={() => selectedDish && actions.resetSelectedPageItemPlacement(selectedDish.id)}
+          disabled={!selectedDish}
+        >
+          Reset selected card size
+        </button>
+        <button className="secondary-action compact" type="button" onClick={actions.resetSelectedPageItemPlacements}>Reset all card sizes</button>
+      </div>
     </div>
   );
 }

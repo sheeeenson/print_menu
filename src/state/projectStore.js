@@ -562,6 +562,27 @@ export function createProjectStore() {
         },
       }));
     },
+    updateSelectedPageItemPlacement(dishId, placement) {
+      updateSelectedPage((page) => ({
+        itemPlacements: {
+          ...(page.itemPlacements ?? {}),
+          [dishId]: {
+            colSpan: placement?.colSpan ?? 1,
+            rowSpan: placement?.rowSpan ?? 1,
+            priority: placement?.priority ?? page.itemPlacements?.[dishId]?.priority ?? 0,
+          },
+        },
+      }));
+    },
+    resetSelectedPageItemPlacement(dishId) {
+      updateSelectedPage((page) => {
+        const { [dishId]: _removed, ...itemPlacements } = page.itemPlacements ?? {};
+        return { itemPlacements };
+      });
+    },
+    resetSelectedPageItemPlacements() {
+      updateSelectedPage({ itemPlacements: {} });
+    },
     saveSelectedPageCustomGridPreset(name) {
       updateSelectedPage((page) => {
         const trimmedName = name.trim() || `Custom grid ${(page.designSettings.customGridPresets?.length ?? 0) + 1}`;
