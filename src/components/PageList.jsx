@@ -24,9 +24,8 @@ export function PageList({ project, actions }) {
               aria-label="Page name"
               value={page.name}
               onClick={(event) => event.stopPropagation()}
-              onChange={(event) => actions.updateSelectedPage && page.id === project.selectedPageId
-                ? actions.updateSelectedPage({ name: event.target.value })
-                : actions.selectPage(page.id) || actions.updateSelectedPage?.({ name: event.target.value })}
+              onFocus={() => actions.selectPage(page.id)}
+              onChange={(event) => actions.updatePageName(page.id, event.target.value)}
             />
             <small>{page.paperSize} · {page.orientation}</small>
           </div>
