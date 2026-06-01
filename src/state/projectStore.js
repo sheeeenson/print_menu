@@ -59,6 +59,10 @@ export const DEFAULT_CUSTOM_GRID = Object.freeze({
 export const DEFAULT_PAGE_DESIGN_SETTINGS = Object.freeze({
   pageMargin: 34,
   columns: 'auto',
+  layoutMode: 'classicColumns',
+  classicColumns: 2,
+  cardStyle: 'imageTop',
+  resizeMode: 'snapToGrid',
   gridMode: 'preset',
   gridPreset: 'twoColumns',
   cardDensity: 'balanced',
@@ -98,7 +102,13 @@ export const DEFAULT_PAGE_DESIGN_SETTINGS = Object.freeze({
   cardBorderWidth: 1,
   cardBorderOpacity: 100,
   cardShadowEnabled: false,
-  imageFit: 'cover',
+  imageFit: 'contain',
+  imageFitMode: 'contain',
+  imagePosition: 'center',
+  imageZoom: 100,
+  imagePanX: 0,
+  imagePanY: 0,
+  imageAreaPercent: 42,
   titleLineClamp: 2,
   descriptionLineClamp: 3,
 });
@@ -149,7 +159,7 @@ const visibleDishIdsForCategories = (dishes, categoryIds) =>
 
 const normalizeAlignment = (alignment) => (['top', 'center', 'bottom'].includes(alignment) ? alignment : 'center');
 const normalizeImageType = (type) => (type === 'url' ? 'url' : 'none');
-const normalizeImageFit = (fit) => (fit === 'contain' ? 'contain' : 'cover');
+const normalizeImageFit = (fit) => (['contain', 'cover', 'fill'].includes(fit) ? fit : 'contain');
 const LEGACY_CARD_CONTENT_LAYOUTS = Object.freeze({
   textBelowImage: 'below',
   textRightOfImage: 'imageLeft',
@@ -166,6 +176,12 @@ const normalizeGridPreset = (preset) => {
   return GRID_PRESETS.includes(normalized) ? normalized : 'twoColumns';
 };
 const normalizeGridMode = (mode) => (['preset', 'custom', 'autoFill'].includes(mode) ? mode : 'preset');
+const GRID_PRESET_COLUMNS = Object.freeze({ oneColumn: 1, twoColumns: 2, threeColumns: 3, fourColumns: 4, fiveColumns: 5 });
+const columnPresetFor = (columns) => ({ 1: 'oneColumn', 2: 'twoColumns', 3: 'threeColumns', 4: 'fourColumns', 5: 'fiveColumns' }[columns] ?? 'twoColumns');
+const normalizeLayoutMode = (mode) => (['classicColumns', 'smartAutoFit', 'manualDesigner'].includes(mode) ? mode : 'classicColumns');
+const normalizeCardStyle = (style) => (['imageTop', 'imageLeft', 'imageRight', 'textOnly'].includes(style) ? style : 'imageTop');
+const normalizeResizeMode = (mode) => (['snapToGrid', 'freeResize'].includes(mode) ? mode : 'snapToGrid');
+const normalizeImagePosition = (position) => (['center', 'top', 'bottom', 'left', 'right', 'custom'].includes(position) ? position : 'center');
 const normalizeSpanOption = (value, fallback, allowed) => (allowed.includes(value) ? value : fallback);
 const normalizeCustomGrid = (customGrid = {}, fallbackGap = DEFAULT_PAGE_DESIGN_SETTINGS.cardGap) => ({
   rows: clampNumber(customGrid.rows, DEFAULT_CUSTOM_GRID.rows, 1, 12),
@@ -187,11 +203,23 @@ const normalizeGridPresetList = (presets = [], fallbackGap = DEFAULT_PAGE_DESIGN
     })).slice(0, 24)
   : [];
 const normalizeItemPlacements = (placements = {}) => Object.fromEntries(
-  Object.entries(placements ?? {}).map(([dishId, placement]) => [dishId, {
-    colSpan: clampNumber(placement?.colSpan, 1, 1, 8),
-    rowSpan: clampNumber(placement?.rowSpan, 1, 1, 12),
-    priority: clampNumber(placement?.priority, 0, -999, 999),
-  }]),
+  Object.entries(placements ?? {}).map(([dishId, placement]) => {
+    const widthPercent = clampNumber(placement?.widthPercent, 30, 10, 100);
+    const heightPercent = clampNumber(placement?.heightPercent, 22, 8, 100);
+    const xPercent = clampNumber(placement?.xPercent, 0, 0, 100 - widthPercent);
+    const yPercent = clampNumber(placement?.yPercent, 0, 0, 100 - heightPercent);
+    return [dishId, {
+      mode: placement?.mode === 'free' ? 'free' : 'grid',
+      colSpan: clampNumber(placement?.colSpan, 1, 1, 8),
+      rowSpan: clampNumber(placement?.rowSpan, 1, 1, 12),
+      xPercent,
+      yPercent,
+      widthPercent,
+      heightPercent,
+      zIndex: clampNumber(placement?.zIndex, 1, 1, 999),
+      priority: clampNumber(placement?.priority, 0, -999, 999),
+    }];
+  }),
 );
 const normalizeBadgePosition = (position) =>
   ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(position) ? position : 'topLeft';
@@ -229,6 +257,21 @@ const normalizeDesignSettings = (settings = {}) => {
     ...settings,
     fitStrategy: { ...DEFAULT_FIT_STRATEGY, ...(settings.fitStrategy ?? {}) },
   };
+  const normalizedGridMode = normalizeGridMode(merged.gridMode);
+  const normalizedGridPreset = normalizeGridPreset(merged.gridPreset);
+  const derivedClassicColumns = GRID_PRESET_COLUMNS[normalizedGridPreset] ?? clampNumber(merged.classicColumns, DEFAULT_PAGE_DESIGN_SETTINGS.classicColumns, 1, 5);
+  const derivedLayoutMode = settings.layoutMode
+    ? normalizeLayoutMode(settings.layoutMode)
+    : (normalizedGridMode === 'autoFill' || settings.fittingMode === 'autoFill')
+      ? 'smartAutoFit'
+      : normalizedGridMode === 'custom'
+        ? 'manualDesigner'
+        : 'classicColumns';
+  const classicColumns = clampNumber(merged.classicColumns ?? derivedClassicColumns, derivedClassicColumns, 1, 5);
+  const derivedCardStyle = settings.showImages === false
+    ? 'textOnly'
+    : normalizeCardStyle(settings.cardStyle ?? ({ below: 'imageTop', imageLeft: 'imageLeft', imageRight: 'imageRight' }[normalizeCardContentLayout(settings.cardContentLayout)]));
+  const imageFitMode = normalizeImageFit(settings.imageFitMode ?? settings.imageFit);
 
   return {
     ...merged,
@@ -237,8 +280,12 @@ const normalizeDesignSettings = (settings = {}) => {
     showImages: settings.showImages === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.showImages : Boolean(settings.showImages),
     fitAllItems: settings.fitAllItems === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.fitAllItems : Boolean(settings.fitAllItems),
     fontPreset: Object.keys(FONT_PRESETS).includes(merged.fontPreset) || merged.fontPreset === 'custom' ? merged.fontPreset : 'custom',
-    gridMode: normalizeGridMode(merged.gridMode),
-    gridPreset: normalizeGridPreset(merged.gridPreset),
+    layoutMode: derivedLayoutMode,
+    classicColumns,
+    cardStyle: derivedCardStyle,
+    resizeMode: normalizeResizeMode(merged.resizeMode),
+    gridMode: derivedLayoutMode === 'smartAutoFit' ? 'autoFill' : derivedLayoutMode === 'manualDesigner' ? 'custom' : normalizedGridMode,
+    gridPreset: derivedLayoutMode === 'classicColumns' ? columnPresetFor(classicColumns) : normalizedGridPreset,
     customGrid: normalizeCustomGrid(merged.customGrid, merged.cardGap),
     makeFirstItemHero: Boolean(merged.makeFirstItemHero),
     heroItemSpan: normalizeSpanOption(merged.heroItemSpan, '2x2', ['2x1', '2x2', '3x2']),
@@ -247,7 +294,7 @@ const normalizeDesignSettings = (settings = {}) => {
     cardDensity: ['airy', 'balanced', 'compact'].includes(merged.cardDensity) ? merged.cardDensity : 'balanced',
     categoryTitleStyle: ['plain', 'underline', 'accentBar', 'pill', 'centered'].includes(merged.categoryTitleStyle) ? merged.categoryTitleStyle : 'plain',
     imageRatio: ['square', 'fourThree', 'sixteenNine', 'wide', 'custom'].includes(merged.imageRatio) ? merged.imageRatio : 'custom',
-    cardContentLayout: normalizeCardContentLayout(settings.cardContentLayout),
+    cardContentLayout: { imageTop: 'below', imageLeft: 'imageLeft', imageRight: 'imageRight', textOnly: normalizeCardContentLayout(settings.cardContentLayout) }[derivedCardStyle] ?? normalizeCardContentLayout(settings.cardContentLayout),
     badgePosition: normalizeBadgePosition(settings.badgePosition),
     cardBorderEnabled:
       settings.cardBorderEnabled === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderEnabled : Boolean(settings.cardBorderEnabled),
@@ -255,7 +302,13 @@ const normalizeDesignSettings = (settings = {}) => {
     cardBorderOpacity: clampNumber(settings.cardBorderOpacity, DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderOpacity, 0, 100),
     cardShadowEnabled:
       settings.cardShadowEnabled === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.cardShadowEnabled : Boolean(settings.cardShadowEnabled),
-    imageFit: normalizeImageFit(settings.imageFit),
+    imageFit: imageFitMode,
+    imageFitMode,
+    imagePosition: normalizeImagePosition(settings.imagePosition),
+    imageZoom: clampNumber(settings.imageZoom, DEFAULT_PAGE_DESIGN_SETTINGS.imageZoom, 50, 200),
+    imagePanX: clampNumber(settings.imagePanX, DEFAULT_PAGE_DESIGN_SETTINGS.imagePanX, -50, 50),
+    imagePanY: clampNumber(settings.imagePanY, DEFAULT_PAGE_DESIGN_SETTINGS.imagePanY, -50, 50),
+    imageAreaPercent: clampNumber(settings.imageAreaPercent, DEFAULT_PAGE_DESIGN_SETTINGS.imageAreaPercent, 10, 80),
     titleLineClamp: Number(settings.titleLineClamp ?? DEFAULT_PAGE_DESIGN_SETTINGS.titleLineClamp),
     descriptionLineClamp: Number(settings.descriptionLineClamp ?? DEFAULT_PAGE_DESIGN_SETTINGS.descriptionLineClamp),
     fitStrategy: {
@@ -312,7 +365,7 @@ const normalizePage = (page, project, index) => {
     fittingMode: ['fixed', 'autoFill', 'compact'].includes(page.fittingMode) ? page.fittingMode : 'fixed',
     header: normalizeHeader(page.header),
     footer: normalizeFooter(page.footer),
-    designSettings: normalizeDesignSettings(page.designSettings),
+    designSettings: normalizeDesignSettings({ ...(page.designSettings ?? {}), fittingMode: page.fittingMode }),
     itemPlacements: normalizeItemPlacements(page.itemPlacements),
   };
 };
@@ -567,8 +620,15 @@ export function createProjectStore() {
         itemPlacements: {
           ...(page.itemPlacements ?? {}),
           [dishId]: {
-            colSpan: placement?.colSpan ?? 1,
-            rowSpan: placement?.rowSpan ?? 1,
+            ...(page.itemPlacements?.[dishId] ?? {}),
+            mode: placement?.mode ?? page.itemPlacements?.[dishId]?.mode ?? 'grid',
+            colSpan: placement?.colSpan ?? page.itemPlacements?.[dishId]?.colSpan ?? 1,
+            rowSpan: placement?.rowSpan ?? page.itemPlacements?.[dishId]?.rowSpan ?? 1,
+            xPercent: placement?.xPercent ?? page.itemPlacements?.[dishId]?.xPercent ?? 0,
+            yPercent: placement?.yPercent ?? page.itemPlacements?.[dishId]?.yPercent ?? 0,
+            widthPercent: placement?.widthPercent ?? page.itemPlacements?.[dishId]?.widthPercent ?? 30,
+            heightPercent: placement?.heightPercent ?? page.itemPlacements?.[dishId]?.heightPercent ?? 22,
+            zIndex: placement?.zIndex ?? page.itemPlacements?.[dishId]?.zIndex ?? 1,
             priority: placement?.priority ?? page.itemPlacements?.[dishId]?.priority ?? 0,
           },
         },
