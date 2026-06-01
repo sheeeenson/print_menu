@@ -48,7 +48,8 @@ export function PagePreview({ project, page, selectedPreviewDishId = '', onSelec
   const densityClass = `density-${page.designSettings.cardDensity}`;
   const categoryStyleClass = `category-style-${page.designSettings.categoryTitleStyle}`;
   const [manualGridWarning, setManualGridWarning] = useState('');
-  const isManualGridMode = page.designSettings.layoutMode === 'manualDesigner' || page.designSettings.gridMode === 'custom';
+  const isElasticGridMode = page.designSettings.layoutMode === 'elasticGrid';
+  const isManualGridMode = !isElasticGridMode && (page.designSettings.layoutMode === 'manualDesigner' || page.designSettings.gridMode === 'custom');
   const isFreeResizeMode = isManualGridMode && page.designSettings.resizeMode === 'freeResize';
 
   useEffect(() => {
@@ -56,8 +57,8 @@ export function PagePreview({ project, page, selectedPreviewDishId = '', onSelec
   }, [page.id, page.designSettings.gridMode, page.designSettings.customGrid.rows, page.designSettings.customGrid.columns]);
 
   const updatePreviewPlacement = (dishId, nextPlacement, previousPlacement) => {
-    if (!isManualGridMode) return false;
-    if (page.designSettings.resizeMode === 'freeResize') {
+    if (!isManualGridMode && !isElasticGridMode) return false;
+    if (isManualGridMode && page.designSettings.resizeMode === 'freeResize') {
       setManualGridWarning('');
       onResizePreviewDish(dishId, nextPlacement);
       return true;
@@ -74,7 +75,7 @@ export function PagePreview({ project, page, selectedPreviewDishId = '', onSelec
       },
     };
     if (!canPackItems(selectedDishes, nextPage, page.designSettings.customGrid.rows)) {
-      setManualGridWarning('Resize does not fit every selected dish in this manual grid. Add rows or reduce card spans.');
+      setManualGridWarning(isElasticGridMode ? 'Elastic grid cannot fit every selected dish. Add rows or reduce card spans.' : 'Resize does not fit every selected dish in this manual grid. Add rows or reduce card spans.');
       if (previousPlacement) onResizePreviewDish(dishId, previousPlacement);
       return false;
     }
@@ -101,7 +102,9 @@ export function PagePreview({ project, page, selectedPreviewDishId = '', onSelec
                 {fitAllLayout?.warning ? <div className="fit-warning" role="alert">{fitAllLayout.warning}</div> : null}
                 {customGridWarning ? <div className="fit-warning" role="alert">{customGridWarning}</div> : null}
                 {manualGridWarning ? <div className="fit-warning" role="alert">{manualGridWarning}</div> : null}
-                {isManualGridMode
+                {isElasticGridMode
+                  ? <ElasticGridPreview dishes={selectedDishes} page={page} selectedDishId={selectedPreviewDishId} onSelectDish={onSelectPreviewDish} onResizeDish={updatePreviewPlacement} />
+                  : isManualGridMode
                   ? isFreeResizeMode
                     ? <FreeResizePreview dishes={selectedDishes} page={page} selectedDishId={selectedPreviewDishId} onSelectDish={onSelectPreviewDish} onResizeDish={updatePreviewPlacement} />
                     : <CustomGridPreview dishes={selectedDishes} page={page} fitAllLayout={fitAllLayout} selectedDishId={selectedPreviewDishId} onSelectDish={onSelectPreviewDish} onResizeDish={updatePreviewPlacement} />
@@ -134,6 +137,9 @@ function previewStyle(page, autoFillLayout, fitAllLayout, itemCount = 0) {
     accentColor: safeCssColor(settings.accentColor, '#9b1c31'),
     priceColor: safeCssColor(settings.priceColor, '#9b1c31'),
     cardBorderColor: safeCssColor(settings.cardBorderColor, '#eadfd4'),
+    badgeBackgroundColor: safeCssColor(settings.badgeStyle?.backgroundColor, settings.accentColor),
+    badgeTextColor: safeCssColor(settings.badgeStyle?.textColor, '#ffffff'),
+    badgeBorderColor: settings.badgeStyle?.borderColor === 'transparent' ? 'transparent' : safeCssColor(settings.badgeStyle?.borderColor, 'transparent'),
   };
   const autoFillStyle = autoFillLayout
     ? {
@@ -212,6 +218,12 @@ function previewStyle(page, autoFillLayout, fitAllLayout, itemCount = 0) {
     '--card-border-color': settings.cardBorderEnabled ? hexToRgba(colors.cardBorderColor, settings.cardBorderOpacity / 100) : 'transparent',
     '--card-border-width': settings.cardBorderEnabled ? `${settings.cardBorderWidth}px` : '0px',
     '--card-shadow': settings.cardShadowEnabled ? '0 14px 30px rgba(35,31,32,0.14)' : 'none',
+    '--badge-background': colors.badgeBackgroundColor,
+    '--badge-text': colors.badgeTextColor,
+    '--badge-border-color': colors.badgeBorderColor,
+    '--badge-border-width': `${settings.badgeStyle?.borderWidth ?? 0}px`,
+    '--badge-opacity': (settings.badgeStyle?.opacity ?? 100) / 100,
+    '--badge-radius': badgeRadius(settings.badgeStyle?.shape),
     '--image-fit': settings.imageFitMode ?? settings.imageFit,
     '--image-position': imageObjectPosition(settings),
     '--image-zoom': (settings.imageZoom ?? 100) / 100,
@@ -225,6 +237,13 @@ function previewStyle(page, autoFillLayout, fitAllLayout, itemCount = 0) {
 }
 
 
+
+function badgeRadius(shape) {
+  if (shape === 'square' || shape === 'ribbon') return '0px';
+  if (shape === 'rounded') return '8px';
+  if (shape === 'circle') return '999px';
+  return '999px';
+}
 
 function imageObjectPosition(settings) {
   if (settings.imagePosition === 'top') return 'center top';
@@ -254,6 +273,7 @@ function gridColumns(settings) {
 }
 
 function effectiveCustomGridRows(settings, fitAllLayout, itemCount) {
+  if (settings.layoutMode === 'elasticGrid') return settings.customGrid.rows;
   if (settings.gridMode !== 'custom') return settings.customGrid.rows;
   const requiredRows = Math.ceil(totalSpanCellsForCount(itemCount, settings) / settings.customGrid.columns);
   if (fitAllLayout) return Math.max(settings.customGrid.rows, fitAllLayout.rows, requiredRows);
@@ -363,15 +383,20 @@ const SUPPORTED_GRID_SPANS = Object.freeze([
   { colSpan: 3, rowSpan: 3 },
 ]);
 
-function CustomGridPreview({ dishes, page, fitAllLayout, selectedDishId, onSelectDish, onResizeDish }) {
+function ElasticGridPreview({ dishes, page, selectedDishId, onSelectDish, onResizeDish }) {
+  return <CustomGridPreview dishes={dishes} page={page} fitAllLayout={null} selectedDishId={selectedDishId} onSelectDish={onSelectDish} onResizeDish={onResizeDish} className="elastic-grid" ariaLabel="Elastic grid dish layout" />;
+}
+
+function CustomGridPreview({ dishes, page, fitAllLayout, selectedDishId, onSelectDish, onResizeDish, className = 'custom-grid', ariaLabel = 'Custom dish grid' }) {
   const gridRef = useRef(null);
   if (!dishes.length) return <EmptyPage />;
   return (
-    <div ref={gridRef} className="custom-grid" aria-label="Custom dish grid" onPointerDown={(event) => { if (event.target === event.currentTarget) onSelectDish(''); }}>
+    <div ref={gridRef} className={className} aria-label={ariaLabel} onPointerDown={(event) => { if (event.target === event.currentTarget) onSelectDish(''); }}>
       {dishes.map((dish, index) => {
         const placement = page.itemPlacements?.[dish.id];
-        const colSpan = Math.min(page.designSettings.customGrid.columns, placement?.colSpan ?? 1);
-        const rowSpan = Math.min(page.designSettings.customGrid.rows, placement?.rowSpan ?? 1);
+        const defaultSpan = itemSpanForIndex(index, page.designSettings);
+        const colSpan = Math.min(page.designSettings.customGrid.columns, placement?.colSpan ?? defaultSpan.colSpan);
+        const rowSpan = Math.min(page.designSettings.customGrid.rows, placement?.rowSpan ?? defaultSpan.rowSpan);
         const isSelected = selectedDishId === dish.id;
         return (
           <div
@@ -658,7 +683,7 @@ function DishCard({ dish, page, hideDescription = false, isHero = false }) {
           {dish.imageUrl ? <img src={dish.imageUrl} alt="" loading="lazy" /> : <div className="preview-image-placeholder">Image</div>}
           {hasBadges ? (
             <div className={`preview-badges image-badges ${badgePositionClass}`}>
-              <Badges dish={dish} />
+              <Badges dish={dish} page={page} />
             </div>
           ) : null}
         </div>
@@ -668,18 +693,19 @@ function DishCard({ dish, page, hideDescription = false, isHero = false }) {
           <h3 className="dish-title">{renderLocalizedText(dish, 'name', page.languageMode, 'Untitled dish')}</h3>
           {!showImages && hasBadges ? (
             <div className="preview-badges title-badges">
-              <Badges dish={dish} />
+              <Badges dish={dish} page={page} />
             </div>
           ) : null}
         </div>
         {settings.showDescriptions && !hideDescription ? (
           <p className="preview-description dish-description">{renderLocalizedText(dish, 'description', page.languageMode, '')}</p>
         ) : null}
+        {dish.dishType === 'configurable' ? <ConfigurableOptions dish={dish} page={page} /> : null}
         <div className="preview-meta-row">
           <span className="preview-weight">{dish.weight || ''}</span>
           <span className="preview-prices">
             {dish.oldPrice ? <span className="preview-old-price">{money(dish.oldPrice)}</span> : null}
-            {dish.newPrice ? <strong className="preview-new-price">{money(dish.newPrice)}</strong> : null}
+            {dish.newPrice ? <strong className="preview-new-price">{dish.dishType === 'configurable' ? `From ${money(dish.newPrice)}` : money(dish.newPrice)}</strong> : null}
           </span>
         </div>
       </div>
@@ -687,7 +713,17 @@ function DishCard({ dish, page, hideDescription = false, isHero = false }) {
   );
 }
 
-function Badges({ dish }) {
+function ConfigurableOptions({ dish, page }) {
+  const groups = dish.optionGroups ?? [];
+  if (!groups.length) return null;
+  const optionText = (option) => `${renderPlainLocalizedText(option, 'name', page.languageMode, 'Option')}${option.priceDelta ? ` +${money(option.priceDelta).replace(' ₾', '')}` : ''}`;
+  if (page.designSettings.configurableDisplayMode === 'stepList') {
+    return <ol className="configurable-options step-list">{groups.map((group, index) => <li key={group.id}><strong>{index + 1}. Choose {renderPlainLocalizedText(group, 'name', page.languageMode, 'option')}</strong><span>{(group.options ?? []).map(optionText).join(' / ')}</span></li>)}</ol>;
+  }
+  return <div className="configurable-options compact-options">{groups.map((group) => <p key={group.id}><strong>{renderPlainLocalizedText(group, 'name', page.languageMode, 'Options')}:</strong> {(group.options ?? []).map(optionText).join(' / ')}</p>)}</div>;
+}
+
+function Badges({ dish, page }) {
   const badges = [...(dish.badges ?? [])];
   if (dish.discountPercent) {
     badges.unshift({ id: `${dish.id}_discount`, type: 'Promo', customText: `-${dish.discountPercent}%`, emoji: '' });
@@ -695,8 +731,26 @@ function Badges({ dish }) {
 
   return badges.map((badge) => {
     const label = badge.type === 'Custom' ? badge.customText : badge.customText || badge.type;
-    return <span className="preview-badge" key={badge.id}>{[badge.emoji, label].filter(Boolean).join(' ')}</span>;
+    const preset = badgePreset(badge.type, Boolean(dish.discountPercent && badge.id === `${dish.id}_discount`));
+    return <span className={`preview-badge badge-shape-${page.designSettings.badgeStyle?.shape ?? 'pill'}`} style={preset} key={badge.id}>{[badge.emoji, label].filter(Boolean).join(' ')}</span>;
   });
+}
+
+function badgePreset(type, isDiscount) {
+  if (isDiscount || type === 'Promo') return { '--badge-preset-background': '#dc2626', '--badge-preset-text': '#ffffff' };
+  if (type === 'New' || type === 'Vegan') return { '--badge-preset-background': '#16a34a', '--badge-preset-text': '#ffffff' };
+  if (type === 'Spicy') return { '--badge-preset-background': '#ea580c', '--badge-preset-text': '#ffffff' };
+  if (type === 'Hit') return { '--badge-preset-background': '#111827', '--badge-preset-text': '#ffffff' };
+  if (type === 'Top') return { '--badge-preset-background': '#b7791f', '--badge-preset-text': '#ffffff' };
+  return {};
+}
+
+function renderPlainLocalizedText(item, field, languageMode, fallback) {
+  const english = item[`${field}En`] || '';
+  const georgian = item[`${field}Ge`] || '';
+  if (languageMode === 'ge') return georgian || english || fallback;
+  if (languageMode === 'bilingual' && georgian) return `${english || fallback} / ${georgian}`;
+  return english || georgian || fallback;
 }
 
 export function renderLocalizedText(item, field, languageMode, fallback) {

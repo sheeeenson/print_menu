@@ -56,6 +56,15 @@ export const DEFAULT_CUSTOM_GRID = Object.freeze({
   densePacking: true,
 });
 
+export const DEFAULT_BADGE_STYLE = Object.freeze({
+  backgroundColor: 'accentColor',
+  textColor: '#ffffff',
+  borderColor: 'transparent',
+  borderWidth: 0,
+  opacity: 100,
+  shape: 'pill',
+});
+
 export const DEFAULT_PAGE_DESIGN_SETTINGS = Object.freeze({
   pageMargin: 34,
   columns: 'auto',
@@ -97,6 +106,8 @@ export const DEFAULT_PAGE_DESIGN_SETTINGS = Object.freeze({
   showImages: true,
   cardContentLayout: 'below',
   badgePosition: 'topLeft',
+  badgeStyle: { ...DEFAULT_BADGE_STYLE },
+  configurableDisplayMode: 'compactOptions',
   cardBorderEnabled: true,
   cardBorderColor: '#eadfd4',
   cardBorderWidth: 1,
@@ -135,6 +146,8 @@ const blankDish = (categoryId) => ({
   imageUrl: '',
   badges: [],
   visible: true,
+  dishType: 'simple',
+  optionGroups: [],
 });
 
 const duplicateDish = (dish, categoryId = dish.categoryId) => ({
@@ -143,7 +156,12 @@ const duplicateDish = (dish, categoryId = dish.categoryId) => ({
   categoryId,
   nameEn: `${dish.nameEn} copy`,
   nameGe: dish.nameGe ? `${dish.nameGe} ასლი` : '',
-  badges: dish.badges.map((badge) => ({ ...badge, id: createId('badge') })),
+  badges: (dish.badges ?? []).map((badge) => ({ ...badge, id: createId('badge') })),
+  optionGroups: (dish.optionGroups ?? []).map((group) => ({
+    ...group,
+    id: createId('group'),
+    options: (group.options ?? []).map((option) => ({ ...option, id: createId('option') })),
+  })),
 });
 
 const fallbackCategoryId = (categories, preferredId) => {
@@ -178,14 +196,14 @@ const normalizeGridPreset = (preset) => {
 const normalizeGridMode = (mode) => (['preset', 'custom', 'autoFill'].includes(mode) ? mode : 'preset');
 const GRID_PRESET_COLUMNS = Object.freeze({ oneColumn: 1, twoColumns: 2, threeColumns: 3, fourColumns: 4, fiveColumns: 5 });
 const columnPresetFor = (columns) => ({ 1: 'oneColumn', 2: 'twoColumns', 3: 'threeColumns', 4: 'fourColumns', 5: 'fiveColumns' }[columns] ?? 'twoColumns');
-const normalizeLayoutMode = (mode) => (['classicColumns', 'smartAutoFit', 'manualDesigner'].includes(mode) ? mode : 'classicColumns');
+const normalizeLayoutMode = (mode) => (['classicColumns', 'smartAutoFit', 'manualDesigner', 'elasticGrid'].includes(mode) ? mode : 'classicColumns');
 const normalizeCardStyle = (style) => (['imageTop', 'imageLeft', 'imageRight', 'textOnly'].includes(style) ? style : 'imageTop');
 const normalizeResizeMode = (mode) => (['snapToGrid', 'freeResize'].includes(mode) ? mode : 'snapToGrid');
 const normalizeImagePosition = (position) => (['center', 'top', 'bottom', 'left', 'right', 'custom'].includes(position) ? position : 'center');
 const normalizeSpanOption = (value, fallback, allowed) => (allowed.includes(value) ? value : fallback);
 const normalizeCustomGrid = (customGrid = {}, fallbackGap = DEFAULT_PAGE_DESIGN_SETTINGS.cardGap) => ({
   rows: clampNumber(customGrid.rows, DEFAULT_CUSTOM_GRID.rows, 1, 12),
-  columns: clampNumber(customGrid.columns, DEFAULT_CUSTOM_GRID.columns, 1, 8),
+  columns: clampNumber(customGrid.columns, DEFAULT_CUSTOM_GRID.columns, 1, 6),
   gap: clampNumber(customGrid.gap, fallbackGap, 0, 64),
   autoRows: customGrid.autoRows === undefined ? DEFAULT_CUSTOM_GRID.autoRows : Boolean(customGrid.autoRows),
   densePacking: customGrid.densePacking === undefined ? DEFAULT_CUSTOM_GRID.densePacking : Boolean(customGrid.densePacking),
@@ -223,6 +241,30 @@ const normalizeItemPlacements = (placements = {}) => Object.fromEntries(
 );
 const normalizeBadgePosition = (position) =>
   ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(position) ? position : 'topLeft';
+const normalizeBadgeShape = (shape) => ['pill', 'rounded', 'square', 'circle', 'ribbon'].includes(shape) ? shape : DEFAULT_BADGE_STYLE.shape;
+const normalizeBadgeStyle = (style = {}, accentColor = DEFAULT_PAGE_DESIGN_SETTINGS.accentColor) => ({
+  backgroundColor: style.backgroundColor === 'accentColor' ? accentColor : (/^#[0-9a-fA-F]{3,8}$/.test(style.backgroundColor ?? '') ? style.backgroundColor : accentColor),
+  textColor: /^#[0-9a-fA-F]{3,8}$/.test(style.textColor ?? '') ? style.textColor : DEFAULT_BADGE_STYLE.textColor,
+  borderColor: style.borderColor === 'transparent' || /^#[0-9a-fA-F]{3,8}$/.test(style.borderColor ?? '') ? style.borderColor : DEFAULT_BADGE_STYLE.borderColor,
+  borderWidth: clampNumber(style.borderWidth, DEFAULT_BADGE_STYLE.borderWidth, 0, 8),
+  opacity: clampNumber(style.opacity, DEFAULT_BADGE_STYLE.opacity, 0, 100),
+  shape: normalizeBadgeShape(style.shape),
+});
+const normalizeDishType = (type) => ['simple', 'configurable', 'combo'].includes(type) ? type : 'simple';
+const normalizeOptionGroups = (groups = []) => Array.isArray(groups) ? groups.map((group) => ({
+  id: group.id || createId('group'),
+  nameEn: group.nameEn ?? 'Option group',
+  nameGe: group.nameGe ?? '',
+  required: Boolean(group.required),
+  minSelect: clampNumber(group.minSelect, 0, 0, 12),
+  maxSelect: clampNumber(group.maxSelect, 1, 0, 12),
+  options: Array.isArray(group.options) ? group.options.map((option) => ({
+    id: option.id || createId('option'),
+    nameEn: option.nameEn ?? 'Option',
+    nameGe: option.nameGe ?? '',
+    priceDelta: clampNumber(option.priceDelta, 0, -999, 999),
+  })) : [],
+})) : [];
 const clampNumber = (value, fallback, min, max) => {
   const number = Number(value ?? fallback);
   if (!Number.isFinite(number)) return fallback;
@@ -284,7 +326,7 @@ const normalizeDesignSettings = (settings = {}) => {
     classicColumns,
     cardStyle: derivedCardStyle,
     resizeMode: normalizeResizeMode(merged.resizeMode),
-    gridMode: derivedLayoutMode === 'smartAutoFit' ? 'autoFill' : derivedLayoutMode === 'manualDesigner' ? 'custom' : normalizedGridMode,
+    gridMode: derivedLayoutMode === 'smartAutoFit' ? 'autoFill' : (derivedLayoutMode === 'manualDesigner' || derivedLayoutMode === 'elasticGrid') ? 'custom' : normalizedGridMode,
     gridPreset: derivedLayoutMode === 'classicColumns' ? columnPresetFor(classicColumns) : normalizedGridPreset,
     customGrid: normalizeCustomGrid(merged.customGrid, merged.cardGap),
     makeFirstItemHero: Boolean(merged.makeFirstItemHero),
@@ -296,6 +338,8 @@ const normalizeDesignSettings = (settings = {}) => {
     imageRatio: ['square', 'fourThree', 'sixteenNine', 'wide', 'custom'].includes(merged.imageRatio) ? merged.imageRatio : 'custom',
     cardContentLayout: { imageTop: 'below', imageLeft: 'imageLeft', imageRight: 'imageRight', textOnly: normalizeCardContentLayout(settings.cardContentLayout) }[derivedCardStyle] ?? normalizeCardContentLayout(settings.cardContentLayout),
     badgePosition: normalizeBadgePosition(settings.badgePosition),
+    badgeStyle: normalizeBadgeStyle(settings.badgeStyle ?? merged.badgeStyle, merged.accentColor),
+    configurableDisplayMode: ['compactOptions', 'stepList'].includes(settings.configurableDisplayMode) ? settings.configurableDisplayMode : DEFAULT_PAGE_DESIGN_SETTINGS.configurableDisplayMode,
     cardBorderEnabled:
       settings.cardBorderEnabled === undefined ? DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderEnabled : Boolean(settings.cardBorderEnabled),
     cardBorderWidth: clampNumber(settings.cardBorderWidth, DEFAULT_PAGE_DESIGN_SETTINGS.cardBorderWidth, 0, 8),
@@ -374,7 +418,12 @@ const normalizeProject = (project) => {
   const nextProject = {
     ...project,
     categories: project.categories ?? [],
-    dishes: project.dishes ?? [],
+    dishes: (project.dishes ?? []).map((dish) => ({
+      ...dish,
+      dishType: normalizeDishType(dish.dishType),
+      optionGroups: normalizeOptionGroups(dish.optionGroups),
+      badges: dish.badges ?? [],
+    })),
     pages: project.pages ?? [],
   };
   let pages = nextProject.pages.map((page, index) => normalizePage(page, nextProject, index));
@@ -565,6 +614,24 @@ export function createProjectStore() {
           dish.id === dishId ? { ...dish, badges: dish.badges.filter((badge) => badge.id !== badgeId) } : dish,
         ),
       }));
+    },
+    addOptionGroup(dishId) {
+      update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, optionGroups: [...(dish.optionGroups ?? []), { id: createId('group'), nameEn: 'Option group', nameGe: '', required: false, minSelect: 0, maxSelect: 1, options: [] }] } : dish) }));
+    },
+    updateOptionGroup(dishId, groupId, changes) {
+      update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, optionGroups: (dish.optionGroups ?? []).map((group) => group.id === groupId ? { ...group, ...changes } : group) } : dish) }));
+    },
+    deleteOptionGroup(dishId, groupId) {
+      update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, optionGroups: (dish.optionGroups ?? []).filter((group) => group.id !== groupId) } : dish) }));
+    },
+    addOption(dishId, groupId) {
+      update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, optionGroups: (dish.optionGroups ?? []).map((group) => group.id === groupId ? { ...group, options: [...(group.options ?? []), { id: createId('option'), nameEn: 'Option', nameGe: '', priceDelta: 0 }] } : group) } : dish) }));
+    },
+    updateOption(dishId, groupId, optionId, changes) {
+      update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, optionGroups: (dish.optionGroups ?? []).map((group) => group.id === groupId ? { ...group, options: (group.options ?? []).map((option) => option.id === optionId ? { ...option, ...changes } : option) } : group) } : dish) }));
+    },
+    deleteOption(dishId, groupId, optionId) {
+      update((state) => ({ ...state, dishes: state.dishes.map((dish) => dish.id === dishId ? { ...dish, optionGroups: (dish.optionGroups ?? []).map((group) => group.id === groupId ? { ...group, options: (group.options ?? []).filter((option) => option.id !== optionId) } : group) } : dish) }));
     },
     selectPage(pageId) {
       update((state) => ({ ...state, selectedPageId: pageId }));
