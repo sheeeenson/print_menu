@@ -9,7 +9,8 @@ const controls = [
   ['cardPadding', 'Card padding', 6, 32, 1],
   ['cardRadius', 'Card radius', 0, 32, 1],
   ['imageHeight', 'Image height', 60, 220, 1],
-  ['imageTitleGap', 'Image to title gap', 0, 40, 1],
+  ['imageToTitleGap', 'Image to title gap', 0, 40, 1, 1],
+  ['imageTitleGap', 'Title/content gap', 0, 40, 1, 3],
   ['categoryTitleFontSize', 'Category title', 18, 44, 1],
   ['dishTitleFontSize', 'Dish title', 12, 28, 1],
   ['descriptionFontSize', 'Description', 9, 18, 1],
@@ -23,9 +24,11 @@ const fontWeightOptions = [400, 500, 600, 700, 800, 850, 900, 950];
 
 export function DesignControls({ page, actions }) {
   useEffect(() => {
-    const gap = Number(page.designSettings.imageTitleGap ?? 1);
-    document.documentElement.style.setProperty('--image-title-gap', `${gap}px`);
-  }, [page.designSettings.imageTitleGap]);
+    const imageToTitleGap = Number(page.designSettings.imageToTitleGap ?? 1);
+    const titleContentGap = Number(page.designSettings.imageTitleGap ?? 3);
+    document.documentElement.style.setProperty('--image-to-title-gap', `${imageToTitleGap}px`);
+    document.documentElement.style.setProperty('--image-title-gap', `${titleContentGap}px`);
+  }, [page.designSettings.imageToTitleGap, page.designSettings.imageTitleGap]);
 
   return (
     <details className="panel-section collapsible-panel" open>
@@ -42,8 +45,8 @@ export function DesignControls({ page, actions }) {
         <h3 className="panel-subtitle">Spacing & typography</h3>
         <p className="muted-text">Layout-specific grid controls live in the main Layout panel above. This section only changes visual spacing, type sizes, and card styling.</p>
         <div className="design-control-list">
-          {controls.map(([field, label, min, max, step]) => (
-            <DesignSlider key={field} page={page} field={field} label={label} min={min} max={max} step={step} actions={actions} />
+          {controls.map(([field, label, min, max, step, fallback]) => (
+            <DesignSlider key={field} page={page} field={field} label={label} min={min} max={max} step={step} fallback={fallback} actions={actions} />
           ))}
         </div>
       </div>
@@ -116,8 +119,8 @@ function LetterSpacingControl({ label, field, settings, onChange }) {
   );
 }
 
-function DesignSlider({ page, field, label, min, max, step, actions }) {
-  const value = page.designSettings[field];
+function DesignSlider({ page, field, label, min, max, step, fallback = 0, actions }) {
+  const value = page.designSettings[field] ?? fallback;
   return (
     <label className="slider-label">
       <span>{label}<strong>{value}px</strong></span>
