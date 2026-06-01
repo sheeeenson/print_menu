@@ -46,8 +46,15 @@
   margin-bottom: 0;
 }
 
+.preview-dish-card .configurable-options p,
+.preview-dish-card .configurable-options li,
+.preview-dish-card .configurable-options span {
+  white-space: pre-wrap !important;
+}
+
 .preview-dish-card .configurable-options p {
-  white-space: pre-line;
+  display: grid;
+  gap: 2px;
 }
 
 .preview-dish-card .configurable-options strong {
