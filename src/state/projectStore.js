@@ -45,7 +45,6 @@ export const DEFAULT_PAGE_FOOTER = Object.freeze({
   dividerWidth: 1,
 });
 
-
 export const DEFAULT_CREATIVE_CONTENT = Object.freeze({
   label: 'Set',
   title: 'Tokyo Sushi Set',
