@@ -6,7 +6,6 @@ export function PageList({ project, actions }) {
           <p className="eyebrow">Pages</p>
           <h2 id="page-list-title">Menu pages</h2>
         </div>
-        <button className="primary-action compact" type="button" onClick={actions.addPage}>+ Add</button>
       </div>
       <div className="page-list">
         {project.pages.map((page) => (
@@ -20,6 +19,9 @@ export function PageList({ project, actions }) {
             <small>{page.paperSize} · {page.orientation}</small>
           </button>
         ))}
+      </div>
+      <div className="action-row page-actions page-create-actions">
+        <button className="primary-action compact" type="button" onClick={actions.addPage}>+ Add new page</button>
       </div>
       <div className="action-row page-actions">
         <button type="button" onClick={actions.duplicateSelectedPage}>Duplicate</button>
