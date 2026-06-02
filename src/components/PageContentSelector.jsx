@@ -86,7 +86,7 @@ export function PageContentSelector({ project, page, actions }) {
     <section className="panel-section" aria-labelledby="page-content-title">
       <p className="eyebrow">Content</p>
       <h2 id="page-content-title">Content on this page</h2>
-      <p className="muted-text page-content-help">Single click selects a category. Double click opens dishes. Drag ⋮⋮ to reorder categories or dishes.</p>
+      <p className="muted-text page-content-help">Click a category row to open dishes. Use the checkbox to include or remove the category. Drag ⋮⋮ to reorder.</p>
       <div className="category-checkbox-list page-content-order-list">
         {orderedCategories.map((category) => {
           const isSelected = selectedCategorySet.has(category.id);
@@ -102,12 +102,7 @@ export function PageContentSelector({ project, page, actions }) {
               <button
                 className="category-content-header"
                 type="button"
-                onClick={() => toggleCategory(category.id, !isSelected)}
-                onDoubleClick={(event) => {
-                  event.preventDefault();
-                  if (!isSelected) toggleCategory(category.id, true);
-                  toggleOpen(category.id);
-                }}
+                onClick={() => isSelected && toggleOpen(category.id)}
                 aria-expanded={isSelected && isOpen}
               >
                 <span
@@ -117,20 +112,23 @@ export function PageContentSelector({ project, page, actions }) {
                   tabIndex="0"
                   draggable={isSelected}
                   onClick={(event) => event.stopPropagation()}
-                  onDoubleClick={(event) => event.stopPropagation()}
                   onDragStart={(event) => {
                     event.stopPropagation();
                     event.dataTransfer.effectAllowed = 'move';
                     event.dataTransfer.setData('text/category-id', category.id);
                   }}
                 >⋮⋮</span>
-                <span className="category-checkbox visual-category-check" aria-hidden="true">
-                  <input type="checkbox" checked={isSelected} readOnly tabIndex="-1" />
+                <label className="category-checkbox visual-category-check" onClick={(event) => event.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={(event) => toggleCategory(category.id, event.target.checked)}
+                  />
                   <span>
                     <strong>{category.nameEn || 'Untitled category'}</strong>
                     <small>{category.nameGe || 'No Georgian title'}</small>
                   </span>
-                </span>
+                </label>
                 <span className="accordion-indicator" aria-hidden="true">{isSelected && isOpen ? '−' : '+'}</span>
               </button>
               {isSelected && isOpen && dishes.length ? (
