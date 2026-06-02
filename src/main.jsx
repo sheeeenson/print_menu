@@ -4,6 +4,7 @@ import { App } from './App.jsx';
 import './googleFonts.css';
 import './styles.css';
 import './dishSpacing.css';
+import './pageContentControls.css';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>
