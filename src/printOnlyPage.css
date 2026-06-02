@@ -1,4 +1,8 @@
-/* Last print override: print only the menu paper and remove every app wrapper from print layout. */
+/* Last print override: print only the isolated print clone, never the app layout columns. */
+
+.print-only-clone {
+  display: none;
+}
 
 @media print {
   * {
@@ -9,8 +13,8 @@
   html,
   body,
   #root {
-    width: 0 !important;
-    height: 0 !important;
+    width: auto !important;
+    height: auto !important;
     min-width: 0 !important;
     min-height: 0 !important;
     margin: 0 !important;
@@ -23,6 +27,7 @@
     visibility: hidden !important;
   }
 
+  .layout-print-section,
   .main-navigation,
   .layout-admin-panel,
   .advanced-admin-panel,
@@ -45,34 +50,35 @@
 
   .app-shell,
   .workspace,
-  .layout-print-section,
-  .preview-stage,
-  .paper-scroll,
-  .preview-page-wrapper,
-  .print-root {
-    display: contents !important;
+  .print-only-clone,
+  .print-only-clone .preview-stage,
+  .print-only-clone .paper-scroll,
+  .print-only-clone .preview-page-wrapper,
+  .print-only-clone .print-root {
+    display: block !important;
     position: static !important;
-    width: 0 !important;
-    height: 0 !important;
+    width: auto !important;
+    height: auto !important;
     min-width: 0 !important;
     min-height: 0 !important;
-    max-width: 0 !important;
-    max-height: 0 !important;
+    max-width: none !important;
+    max-height: none !important;
     margin: 0 !important;
     padding: 0 !important;
     border: 0 !important;
-    background: transparent !important;
+    background: #ffffff !important;
     box-shadow: none !important;
     overflow: visible !important;
-  }
-
-  .paper-page.print-page,
-  .paper-page.print-page * {
     visibility: visible !important;
   }
 
-  .paper-page.print-page {
-    position: fixed !important;
+  .print-only-clone .paper-page.print-page,
+  .print-only-clone .paper-page.print-page * {
+    visibility: visible !important;
+  }
+
+  .print-only-clone .paper-page.print-page {
+    position: absolute !important;
     top: 0 !important;
     left: 0 !important;
     display: block !important;
@@ -92,16 +98,16 @@
     break-after: avoid !important;
   }
 
-  .paper-a4.paper-portrait { --paper-width-px: 595px; --paper-height-px: 842px; }
-  .paper-a4.paper-landscape { --paper-width-px: 842px; --paper-height-px: 595px; }
-  .paper-a3.paper-portrait { --paper-width-px: 842px; --paper-height-px: 1191px; }
-  .paper-a3.paper-landscape { --paper-width-px: 1191px; --paper-height-px: 842px; }
+  .print-only-clone .paper-a4.paper-portrait { --paper-width-px: 595px; --paper-height-px: 842px; }
+  .print-only-clone .paper-a4.paper-landscape { --paper-width-px: 842px; --paper-height-px: 595px; }
+  .print-only-clone .paper-a3.paper-portrait { --paper-width-px: 842px; --paper-height-px: 1191px; }
+  .print-only-clone .paper-a3.paper-landscape { --paper-width-px: 1191px; --paper-height-px: 842px; }
 
-  .print-page-inner {
+  .print-only-clone .print-page-inner {
     height: 100% !important;
   }
 
-  .page-content {
+  .print-only-clone .page-content {
     flex: 1 1 auto !important;
     min-height: 0 !important;
   }
