@@ -12,7 +12,7 @@ export function LayoutPrintSection({ project, actions }) {
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [selectedPreviewDishId, setSelectedPreviewDishId] = useState('');
   const selectedPage = project.pages.find((page) => page.id === project.selectedPageId) ?? project.pages[0];
-  const previewProject = selectedPage ? projectWithPageDishOrder(project, selectedPage) : project;
+  const previewProject = selectedPage ? projectWithPageOrder(project, selectedPage) : project;
   const fitWarning = selectedPage ? getFitWarning(previewProject, selectedPage) : '';
   const selectedPreviewDish = selectedPage && selectedPreviewDishId
     ? project.dishes.find((dish) => dish.id === selectedPreviewDishId && selectedPage.selectedDishIds?.includes(dish.id))
@@ -148,37 +148,49 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
         </div>
       ) : null}
 
-      <h3>Image display</h3>
-      <label className="toggle-label">
-        <input type="checkbox" checked={settings.showImages} onChange={update('showImages')} />
-        Show images
-      </label>
-      <label className="field-label">Image position
-        <select value={settings.imagePosition} onChange={update('imagePosition')} disabled={!settings.showImages || settings.cardStyle === 'textOnly'}>
-          <option value="center">Center</option>
-          <option value="top">Top</option>
-          <option value="bottom">Bottom</option>
-          <option value="left">Left</option>
-          <option value="right">Right</option>
-          <option value="custom">Custom</option>
-        </select>
-      </label>
-      <label className="slider-label"><span>Image zoom<strong>{settings.imageZoom}%</strong></span><input type="range" min="50" max="200" value={settings.imageZoom} onChange={updateNumber('imageZoom')} disabled={!settings.showImages || settings.cardStyle === 'textOnly'} /></label>
-      <label className="slider-label"><span>Image area<strong>{settings.imageAreaPercent}%</strong></span><input type="range" min="10" max="80" value={settings.imageAreaPercent} onChange={updateNumber('imageAreaPercent')} disabled={!settings.showImages || settings.cardStyle === 'textOnly'} /></label>
+      <section className="settings-block image-settings-block">
+        <h3>Image display</h3>
+        <label className="toggle-label">
+          <input type="checkbox" checked={settings.showImages} onChange={update('showImages')} />
+          Show images
+        </label>
+        <label className="field-label">Image position
+          <select value={settings.imagePosition} onChange={update('imagePosition')} disabled={!settings.showImages || settings.cardStyle === 'textOnly'}>
+            <option value="center">Center</option>
+            <option value="top">Top</option>
+            <option value="bottom">Bottom</option>
+            <option value="left">Left</option>
+            <option value="right">Right</option>
+            <option value="custom">Custom</option>
+          </select>
+        </label>
+        <label className="slider-label"><span>Image zoom<strong>{settings.imageZoom}%</strong></span><input type="range" min="50" max="200" value={settings.imageZoom} onChange={updateNumber('imageZoom')} disabled={!settings.showImages || settings.cardStyle === 'textOnly'} /></label>
+        <label className="slider-label"><span>Image area<strong>{settings.imageAreaPercent}%</strong></span><input type="range" min="10" max="80" value={settings.imageAreaPercent} onChange={updateNumber('imageAreaPercent')} disabled={!settings.showImages || settings.cardStyle === 'textOnly'} /></label>
+      </section>
 
-      <h3>Content</h3>
-      <label className="toggle-label">
-        <input type="checkbox" checked={settings.showDescriptions} onChange={update('showDescriptions')} />
-        Show descriptions
-      </label>
-      <p className="muted-text">Prices always stay pinned to the bottom of every card.</p>
+      <section className="settings-block content-settings-block">
+        <h3>Content</h3>
+        <label className="toggle-label">
+          <input type="checkbox" checked={settings.showDescriptions} onChange={update('showDescriptions')} />
+          Show descriptions
+        </label>
+        <p className="muted-text">Prices always stay pinned to the bottom of every card.</p>
+      </section>
 
       {(['manualDesigner', 'snapGrid', 'fluidGrid'].includes(settings.layoutMode)) ? (
         <SelectedCardControls page={page} actions={actions} selectedDish={selectedDish} placement={selectedPlacement} />
       ) : null}
 
-      <details className="inline-advanced-controls" open>
+      <details className="inline-advanced-controls settings-block badge-settings-block" open>
         <summary>Badge style</summary>
+        <label className="field-label">Badge position
+          <select value={settings.badgePosition} onChange={update('badgePosition')}>
+            <option value="topLeft">Top left</option>
+            <option value="topRight">Top right</option>
+            <option value="bottomLeft">Bottom left</option>
+            <option value="bottomRight">Bottom right</option>
+          </select>
+        </label>
         <label className="color-label">Badge background<span><input type="color" value={settings.badgeStyle.backgroundColor} onChange={(event) => actions.updateSelectedPageDesign('badgeStyle', { ...settings.badgeStyle, backgroundColor: event.target.value })} /><input value={settings.badgeStyle.backgroundColor} onChange={(event) => actions.updateSelectedPageDesign('badgeStyle', { ...settings.badgeStyle, backgroundColor: event.target.value })} /></span></label>
         <label className="color-label">Badge text<span><input type="color" value={settings.badgeStyle.textColor} onChange={(event) => actions.updateSelectedPageDesign('badgeStyle', { ...settings.badgeStyle, textColor: event.target.value })} /><input value={settings.badgeStyle.textColor} onChange={(event) => actions.updateSelectedPageDesign('badgeStyle', { ...settings.badgeStyle, textColor: event.target.value })} /></span></label>
         <label className="color-label">Badge border<span><input type="color" value={settings.badgeStyle.borderColor === 'transparent' ? '#000000' : settings.badgeStyle.borderColor} onChange={(event) => actions.updateSelectedPageDesign('badgeStyle', { ...settings.badgeStyle, borderColor: event.target.value })} /><input value={settings.badgeStyle.borderColor} onChange={(event) => actions.updateSelectedPageDesign('badgeStyle', { ...settings.badgeStyle, borderColor: event.target.value })} /></span></label>
@@ -187,7 +199,7 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
         <label className="field-label">Badge shape<select value={settings.badgeStyle.shape} onChange={(event) => actions.updateSelectedPageDesign('badgeStyle', { ...settings.badgeStyle, shape: event.target.value })}><option value="pill">Pill</option><option value="rounded">Rounded</option><option value="square">Square</option><option value="circle">Circle</option><option value="ribbon">Ribbon</option></select></label>
       </details>
 
-      <details className="inline-advanced-controls">
+      <details className="inline-advanced-controls settings-block">
         <summary>Card border</summary>
         <label className="toggle-label"><input type="checkbox" checked={settings.cardBorderEnabled} onChange={update('cardBorderEnabled')} /> Border enabled</label>
         <label className="color-label">Card border color<span><input type="color" value={settings.cardBorderColor} onChange={update('cardBorderColor')} disabled={!settings.cardBorderEnabled} /><input value={settings.cardBorderColor} onChange={update('cardBorderColor')} disabled={!settings.cardBorderEnabled} /></span></label>
@@ -310,13 +322,15 @@ function SavePdfModal({ onCancel, onConfirm }) {
   );
 }
 
-function projectWithPageDishOrder(project, page) {
+function projectWithPageOrder(project, page) {
+  const selectedCategoryIds = page.selectedCategoryIds ?? [];
   const selectedDishIds = page.selectedDishIds ?? [];
-  if (!selectedDishIds.length) return project;
-  const order = new Map(selectedDishIds.map((dishId, index) => [dishId, index]));
+  const categoryOrder = new Map(selectedCategoryIds.map((categoryId, index) => [categoryId, index]));
+  const dishOrder = new Map(selectedDishIds.map((dishId, index) => [dishId, index]));
   return {
     ...project,
-    dishes: [...project.dishes].sort((a, b) => (order.get(a.id) ?? 99999) - (order.get(b.id) ?? 99999)),
+    categories: [...project.categories].sort((a, b) => (categoryOrder.get(a.id) ?? 99999) - (categoryOrder.get(b.id) ?? 99999)),
+    dishes: [...project.dishes].sort((a, b) => (dishOrder.get(a.id) ?? 99999) - (dishOrder.get(b.id) ?? 99999)),
   };
 }
 
