@@ -9,8 +9,7 @@ function cleanText(value) {
 function stripLabelPrefix(value) {
   const text = cleanText(value);
   const sizeMatch = text.match(SIZE_PATTERN);
-  if (sizeMatch) return sizeMatch[0].trim();
-  return text.replace(/^.*?:\s*/, '').trim();
+  return sizeMatch ? sizeMatch[0].trim() : '';
 }
 
 function isStruck(value) {
@@ -33,13 +32,16 @@ function parsePizzaBlocks(text) {
 
   const items = blocks.map((lines) => {
     const size = stripLabelPrefix(lines[0]);
+    if (!size) return null;
     const priceLines = lines.slice(1).filter((line) => PRICE_PATTERN.test(line));
+    if (!priceLines.length) return null;
     const oldPrice = priceLines.find(isStruck) ?? (priceLines.length > 1 ? priceLines[0] : '');
     const salePrice = priceLines.length > 1 ? priceLines[priceLines.length - 1] : priceLines.find((line) => !isStruck(line)) ?? '';
+    if (!oldPrice && !salePrice) return null;
     return { size, oldPrice: normalizePrice(oldPrice), salePrice: normalizePrice(salePrice) };
-  }).filter((item) => item.size && (item.oldPrice || item.salePrice));
+  }).filter(Boolean);
 
-  return items.length >= 2 ? items.slice(0, 4) : [];
+  return items.length >= 2 ? items.slice(0, 3) : [];
 }
 
 function createCell(className, value) {
