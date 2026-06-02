@@ -1,0 +1,72 @@
+/* Final image rendering overrides: keep screen preview and print visually identical. */
+
+.preview-image-box {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  background: var(--card-background, #ffffff);
+}
+
+.preview-dish-card.card-layout-below .preview-image-box,
+.fit-autoFill .preview-dish-card.card-layout-below .preview-image-box,
+.layout-mode-classicColumns .preview-dish-card.card-layout-below .preview-image-box {
+  height: var(--image-height) !important;
+  min-height: 24px !important;
+  max-height: none !important;
+}
+
+.preview-dish-card.card-layout-imageLeft .preview-image-box,
+.preview-dish-card.card-layout-imageRight .preview-image-box {
+  min-height: 100% !important;
+  height: 100% !important;
+}
+
+.preview-image-box img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  transform: scale(var(--image-zoom, 1)) !important;
+  transform-origin: center center !important;
+}
+
+.preview-image-placeholder {
+  width: 100% !important;
+  height: 100% !important;
+  display: grid !important;
+  place-items: center !important;
+}
+
+@media print {
+  .preview-image-box {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+    background: var(--card-background, #ffffff) !important;
+  }
+
+  .preview-dish-card.card-layout-below .preview-image-box,
+  .fit-autoFill .preview-dish-card.card-layout-below .preview-image-box,
+  .layout-mode-classicColumns .preview-dish-card.card-layout-below .preview-image-box {
+    height: var(--image-height) !important;
+    min-height: 24px !important;
+    max-height: none !important;
+  }
+
+  .preview-image-box img {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    object-fit: contain !important;
+    object-position: center center !important;
+    transform: scale(var(--image-zoom, 1)) !important;
+    transform-origin: center center !important;
+  }
+}
