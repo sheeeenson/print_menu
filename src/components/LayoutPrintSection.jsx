@@ -34,6 +34,7 @@ export function LayoutPrintSection({ project, actions }) {
       >
         {isAdminCollapsed ? 'Show settings' : 'Hide settings'}
       </button>
+      {isAdminCollapsed ? <CollapsedPageSwitcher project={project} actions={actions} /> : null}
       <aside className="layout-admin-panel layout-sidebar" aria-hidden={isAdminCollapsed}>
         {fitWarning ? <div className="panel-fit-warning" role="alert">{fitWarning}</div> : null}
 
@@ -62,6 +63,26 @@ export function LayoutPrintSection({ project, actions }) {
       {selectedPage ? <PagePreview project={previewProject} page={selectedPage} selectedPreviewDishId={selectedPreviewDishId} onSelectPreviewDish={setSelectedPreviewDishId} onResizePreviewDish={actions.updateSelectedPageItemPlacement} /> : <div className="empty-state">Add a page to preview your menu.</div>}
       {isPdfModalOpen ? <SavePdfModal onCancel={() => setIsPdfModalOpen(false)} onConfirm={confirmSaveAsPdf} /> : null}
     </section>
+  );
+}
+
+function CollapsedPageSwitcher({ project, actions }) {
+  return (
+    <div className="collapsed-page-switcher" aria-label="Page switcher">
+      <div className="collapsed-page-strip">
+        {project.pages.map((page, index) => (
+          <button
+            key={page.id}
+            className={`collapsed-page-pill ${page.id === project.selectedPageId ? 'selected' : ''}`}
+            type="button"
+            onClick={() => actions.selectPage(page.id)}
+          >
+            <span>{page.name || `Page ${index + 1}`}</span>
+            <small>{page.paperSize} · {page.orientation}</small>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
