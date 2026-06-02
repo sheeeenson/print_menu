@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { CardStyleControls } from './CardStyleControls.jsx';
 import { ColorControls } from './ColorControls.jsx';
 import { GOOGLE_FONT_OPTIONS } from '../utils/typography.js';
 
@@ -40,10 +39,9 @@ export function DesignControls({ page, actions }) {
       </summary>
       <ColorControls page={page} actions={actions} />
       <TypographyControls page={page} actions={actions} />
-      <CardStyleControls page={page} actions={actions} />
       <div className="design-subpanel">
         <h3 className="panel-subtitle">Spacing & typography</h3>
-        <p className="muted-text">Layout-specific grid controls live in the main Layout panel above. This section only changes visual spacing, type sizes, and card styling.</p>
+        <p className="muted-text">Layout-specific grid controls live in the main Layout panel above. This section only changes visual spacing and type sizes.</p>
         <div className="design-control-list">
           {controls.map(([field, label, min, max, step, fallback]) => (
             <DesignSlider key={field} page={page} field={field} label={label} min={min} max={max} step={step} fallback={fallback} actions={actions} />
