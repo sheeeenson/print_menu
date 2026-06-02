@@ -6,6 +6,7 @@ export function MainNavigation({ snapshot, actions }) {
   const { project, saveStatus } = snapshot;
   const importInputRef = useRef(null);
   const saveStatusClass = saveStatus === 'Unsaved' || saveStatus === 'Saving' ? 'unsaved' : saveStatus.startsWith('Could not import') ? 'error' : 'saved';
+  const isLayout = project.selectedSection === APP_SECTIONS.LAYOUT_PRINT;
 
   const handleImportClick = () => {
     importInputRef.current?.click();
@@ -34,6 +35,10 @@ export function MainNavigation({ snapshot, actions }) {
     }
   };
 
+  const handleSaveAsPdf = () => {
+    window.print();
+  };
+
   return (
     <nav className="main-navigation top-nav" aria-label="Main navigation">
       <div className="brand-block">
@@ -54,13 +59,19 @@ export function MainNavigation({ snapshot, actions }) {
           Content
         </button>
         <button
-          className={project.selectedSection === APP_SECTIONS.LAYOUT_PRINT ? 'active' : ''}
+          className={isLayout ? 'active' : ''}
           type="button"
           onClick={() => actions.setSection(APP_SECTIONS.LAYOUT_PRINT)}
         >
-          Layout &amp; Print
+          Layout
         </button>
       </div>
+      {isLayout ? (
+        <div className="print-top-actions" aria-label="Print actions">
+          <button className="primary-action compact" type="button" onClick={() => window.print()}>Print</button>
+          <button className="secondary-action compact" type="button" onClick={handleSaveAsPdf}>Save as PDF</button>
+        </div>
+      ) : null}
       <div className="project-actions" aria-label="Project actions">
         <button type="button" onClick={actions.saveProjectManually}>Save project</button>
         <button type="button" onClick={() => downloadProjectJson(project)}>Export project</button>
