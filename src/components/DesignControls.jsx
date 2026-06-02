@@ -8,8 +8,8 @@ const controls = [
   ['cardPadding', 'Card padding', 6, 32, 1],
   ['cardRadius', 'Card radius', 0, 32, 1],
   ['imageHeight', 'Image height', 60, 220, 1],
-  ['imageToTitleGap', 'Image to title gap', 0, 40, 1, 1],
-  ['imageTitleGap', 'Title/content gap', 0, 40, 1, 3],
+  ['imageToTitleGap', 'Image to title gap', 0, 40, 0.5, 1.5],
+  ['imageTitleGap', 'Title/content gap', 0, 40, 0.5, 1.5],
   ['categoryTitleFontSize', 'Category title', 18, 44, 1],
   ['dishTitleFontSize', 'Dish title', 12, 28, 1],
   ['descriptionFontSize', 'Description', 9, 18, 1],
@@ -23,8 +23,8 @@ const fontWeightOptions = [400, 500, 600, 700, 800, 850, 900, 950];
 
 export function DesignControls({ page, actions }) {
   useEffect(() => {
-    const imageToTitleGap = Number(page.designSettings.imageToTitleGap ?? 1);
-    const titleContentGap = Number(page.designSettings.imageTitleGap ?? 3);
+    const imageToTitleGap = Number(page.designSettings.imageToTitleGap ?? 1.5);
+    const titleContentGap = Number(page.designSettings.imageTitleGap ?? 1.5);
     document.documentElement.style.setProperty('--image-to-title-gap', `${imageToTitleGap}px`);
     document.documentElement.style.setProperty('--image-title-gap', `${titleContentGap}px`);
   }, [page.designSettings.imageToTitleGap, page.designSettings.imageTitleGap]);
