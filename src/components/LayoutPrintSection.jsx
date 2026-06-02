@@ -12,7 +12,8 @@ export function LayoutPrintSection({ project, actions }) {
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [selectedPreviewDishId, setSelectedPreviewDishId] = useState('');
   const selectedPage = project.pages.find((page) => page.id === project.selectedPageId) ?? project.pages[0];
-  const fitWarning = selectedPage ? getFitWarning(project, selectedPage) : '';
+  const previewProject = selectedPage ? projectWithPageDishOrder(project, selectedPage) : project;
+  const fitWarning = selectedPage ? getFitWarning(previewProject, selectedPage) : '';
   const selectedPreviewDish = selectedPage && selectedPreviewDishId
     ? project.dishes.find((dish) => dish.id === selectedPreviewDishId && selectedPage.selectedDishIds?.includes(dish.id))
     : null;
@@ -49,12 +50,11 @@ export function LayoutPrintSection({ project, actions }) {
           </details>
         ) : null}
       </aside>
-      {selectedPage ? <PagePreview project={project} page={selectedPage} selectedPreviewDishId={selectedPreviewDishId} onSelectPreviewDish={setSelectedPreviewDishId} onResizePreviewDish={actions.updateSelectedPageItemPlacement} /> : <div className="empty-state">Add a page to preview your menu.</div>}
+      {selectedPage ? <PagePreview project={previewProject} page={selectedPage} selectedPreviewDishId={selectedPreviewDishId} onSelectPreviewDish={setSelectedPreviewDishId} onResizePreviewDish={actions.updateSelectedPageItemPlacement} /> : <div className="empty-state">Add a page to preview your menu.</div>}
       {isPdfModalOpen ? <SavePdfModal onCancel={() => setIsPdfModalOpen(false)} onConfirm={confirmSaveAsPdf} /> : null}
     </section>
   );
 }
-
 
 function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish }) {
   const settings = page.designSettings;
@@ -202,7 +202,7 @@ function columnPresetFor(columns) {
   return { 1: 'oneColumn', 2: 'twoColumns', 3: 'threeColumns', 4: 'fourColumns', 5: 'fiveColumns' }[columns] ?? 'twoColumns';
 }
 
-const MANUAL_GRID_SPANS = Object.freeze(['1x1', '2x1', '1x2', '2x2', '3x2', '3x3']);
+const MANUAL_GRID_SPANS = Object.freeze(['1x1', '2x1', '1x2', '2x2', '3x3']);
 
 function SelectedCardControls({ page, actions, selectedDish, placement }) {
   const isFluid = page.designSettings.layoutMode === 'fluidGrid';
@@ -276,7 +276,6 @@ function SelectedCardControls({ page, actions, selectedDish, placement }) {
   );
 }
 
-
 function FluidSelectedCardControls({ current, selectedDish, updatePlacement, actions }) {
   const updateWeight = (field) => (event) => updatePlacement({ [field]: Number(event.target.value), mode: 'fluid' });
   const resetAllFluidSizes = () => actions.resetSelectedPageItemPlacements();
@@ -311,6 +310,15 @@ function SavePdfModal({ onCancel, onConfirm }) {
   );
 }
 
+function projectWithPageDishOrder(project, page) {
+  const selectedDishIds = page.selectedDishIds ?? [];
+  if (!selectedDishIds.length) return project;
+  const order = new Map(selectedDishIds.map((dishId, index) => [dishId, index]));
+  return {
+    ...project,
+    dishes: [...project.dishes].sort((a, b) => (order.get(a.id) ?? 99999) - (order.get(b.id) ?? 99999)),
+  };
+}
 
 function getFitWarning(project, page) {
   if (!page.designSettings.fitAllItems) return '';
