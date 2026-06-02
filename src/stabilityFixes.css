@@ -41,6 +41,27 @@
   margin-top: 0;
 }
 
+/* Pizza size tables should show only size, old price and current price, without Choose Size labels. */
+.configurable-options strong {
+  display: none !important;
+}
+
+.configurable-options.step-list {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.configurable-options.step-list li {
+  display: block;
+}
+
+.configurable-options.step-list span,
+.configurable-options.compact-options p {
+  display: block;
+  white-space: pre-wrap;
+}
+
 /* Hide controls that are not part of the simplified working flow. */
 .layout-print-controls select option[value="snapGrid"],
 .layout-print-controls select option[value="fluidGrid"] {
