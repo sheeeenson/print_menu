@@ -9,6 +9,7 @@ import './badgePosition.css';
 import './modernApp.css';
 import './stabilityFixes.css';
 import './imageRenderFixes.css';
+import './printOnlyPage.css';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>
