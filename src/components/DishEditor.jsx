@@ -62,13 +62,15 @@ export function DishEditor({ dish, actions }) {
         <TextareaInput dish={dish} field="descriptionEn" label="English description" onChange={updateText('descriptionEn')} />
         <TextareaInput dish={dish} field="descriptionGe" label="Georgian description" onChange={updateText('descriptionGe')} />
       </div>
-      <div className={hasSizePrices ? 'two-column-fields' : 'four-column-fields'}>
-        <TextInput dish={dish} field="weight" label="Weight" placeholder="250 g" onChange={updateText('weight')} />
-        {hasSizePrices ? null : <NumberInput dish={dish} field="oldPrice" label="Old price" step="0.01" onChange={updatePrice('oldPrice')} />}
-        {hasSizePrices ? null : <NumberInput dish={dish} field="newPrice" label="New price" step="0.01" onChange={updatePrice('newPrice')} />}
-        <NumberInput dish={dish} field="discountPercent" label="Discount %" step="1" onChange={updatePrice('discountPercent')} />
-      </div>
-      {hasSizePrices ? <p className="muted-text">Base dish price is disabled for size-priced pizzas. Use only the prices below.</p> : null}
+      {hasSizePrices ? null : (
+        <div className="four-column-fields">
+          <TextInput dish={dish} field="weight" label="Weight" placeholder="250 g" onChange={updateText('weight')} />
+          <NumberInput dish={dish} field="oldPrice" label="Old price" step="0.01" onChange={updatePrice('oldPrice')} />
+          <NumberInput dish={dish} field="newPrice" label="New price" step="0.01" onChange={updatePrice('newPrice')} />
+          <NumberInput dish={dish} field="discountPercent" label="Discount %" step="1" onChange={updatePrice('discountPercent')} />
+        </div>
+      )}
+      {hasSizePrices ? <p className="muted-text">Weight, discount, and base dish price are disabled for size-priced pizzas. Use only the prices below.</p> : null}
       <SizePriceEditor dish={dish} actions={actions} />
       <TextInput dish={dish} field="imageUrl" label="Image URL" placeholder="https://..." onChange={updateText('imageUrl')} />
       {dish.imageUrl ? (
@@ -119,7 +121,7 @@ function NumberInput({ dish, field, label, step, onChange }) {
 
 function withSizeOptionGroup(dish, nextVariants) {
   const variants = nextVariants.slice(0, 3).map(normalizeVariant);
-  if (!variants.length) return { priceVariants: [], optionGroups: [], oldPrice: null, newPrice: null };
+  if (!variants.length) return { priceVariants: [], optionGroups: [], oldPrice: null, newPrice: null, weight: '', discountPercent: null };
 
   const sizeGroup = {
     id: SIZE_GROUP_ID,
@@ -142,6 +144,8 @@ function withSizeOptionGroup(dish, nextVariants) {
     optionGroups: [sizeGroup],
     oldPrice: null,
     newPrice: null,
+    weight: '',
+    discountPercent: null,
   };
 }
 
