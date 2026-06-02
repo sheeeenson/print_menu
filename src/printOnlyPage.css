@@ -1,4 +1,4 @@
-/* Last print override: print only the menu paper and preserve the exact screen preview canvas. */
+/* Last print override: print only the menu paper and remove every app wrapper from print layout. */
 
 @media print {
   * {
@@ -9,8 +9,10 @@
   html,
   body,
   #root {
-    width: auto !important;
-    height: auto !important;
+    width: 0 !important;
+    height: 0 !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
     background: #ffffff !important;
@@ -19,11 +21,6 @@
 
   body * {
     visibility: hidden !important;
-  }
-
-  .paper-page.print-page,
-  .paper-page.print-page * {
-    visibility: visible !important;
   }
 
   .main-navigation,
@@ -35,6 +32,15 @@
   .modal-backdrop,
   .empty-state {
     display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: 0 !important;
+    max-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
   }
 
   .app-shell,
@@ -44,28 +50,29 @@
   .paper-scroll,
   .preview-page-wrapper,
   .print-root {
-    display: block !important;
+    display: contents !important;
     position: static !important;
-    width: auto !important;
-    height: auto !important;
+    width: 0 !important;
+    height: 0 !important;
     min-width: 0 !important;
     min-height: 0 !important;
-    max-width: none !important;
-    max-height: none !important;
+    max-width: 0 !important;
+    max-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
     border: 0 !important;
-    background: #ffffff !important;
+    background: transparent !important;
     box-shadow: none !important;
     overflow: visible !important;
   }
 
-  .layout-print-section {
-    grid-template-columns: none !important;
+  .paper-page.print-page,
+  .paper-page.print-page * {
+    visibility: visible !important;
   }
 
   .paper-page.print-page {
-    position: absolute !important;
+    position: fixed !important;
     top: 0 !important;
     left: 0 !important;
     display: block !important;
@@ -81,6 +88,8 @@
     box-shadow: none !important;
     border-radius: 0 !important;
     overflow: hidden !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
 
   .paper-a4.paper-portrait { --paper-width-px: 595px; --paper-height-px: 842px; }
