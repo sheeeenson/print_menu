@@ -75,7 +75,7 @@
   margin-bottom: 12px;
 }
 
-/* Preview paper sizes: use fixed ratio and true A3/A4 canvas dimensions. */
+/* Preview paper sizes use CSS 96dpi pixels so screen preview matches print geometry. */
 .paper-page {
   width: var(--paper-width-px) !important;
   height: var(--paper-height-px) !important;
@@ -83,10 +83,10 @@
   max-width: none;
 }
 
-.paper-a4.paper-portrait { --paper-width-px: 595px; --paper-height-px: 842px; }
-.paper-a4.paper-landscape { --paper-width-px: 842px; --paper-height-px: 595px; }
-.paper-a3.paper-portrait { --paper-width-px: 842px; --paper-height-px: 1191px; }
-.paper-a3.paper-landscape { --paper-width-px: 1191px; --paper-height-px: 842px; transform: none !important; margin-bottom: 0 !important; }
+.paper-a4.paper-portrait { --paper-width-px: 794px; --paper-height-px: 1123px; }
+.paper-a4.paper-landscape { --paper-width-px: 1123px; --paper-height-px: 794px; }
+.paper-a3.paper-portrait { --paper-width-px: 1123px; --paper-height-px: 1587px; }
+.paper-a3.paper-landscape { --paper-width-px: 1587px; --paper-height-px: 1123px; transform: none !important; margin-bottom: 0 !important; }
 
 /* Classic columns must always obey the selected column count. */
 .layout-mode-classicColumns .classic-columns-grid {
@@ -200,19 +200,6 @@
   margin-top: auto;
 }
 
-/* Titles/descriptions must remain visible in screen preview, not only in print. */
-.preview-dish-card .dish-title,
-.preview-dish-card .preview-description {
-  display: block !important;
-  -webkit-line-clamp: unset !important;
-  -webkit-box-orient: unset !important;
-  overflow: visible !important;
-  white-space: normal !important;
-  max-height: none !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-
 .preview-dish-card {
   overflow: hidden;
   max-height: 100%;
@@ -275,77 +262,6 @@
   border: 1px solid var(--app-border, #e5e7eb);
   border-radius: 999px;
   background: #f3f4f6;
-}
-
-/* Print only the menu page, preserving the same canvas ratio as preview so content fills the page. */
-@media print {
-  html,
-  body,
-  #root,
-  .app-shell,
-  .workspace,
-  .layout-print-section,
-  .preview-stage,
-  .paper-scroll,
-  .preview-page-wrapper {
-    width: auto !important;
-    height: auto !important;
-    min-width: 0 !important;
-    min-height: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: #ffffff !important;
-    overflow: visible !important;
-    box-shadow: none !important;
-  }
-
-  .main-navigation,
-  .layout-admin-panel,
-  .advanced-admin-panel,
-  .admin-panel-toggle,
-  .collapsed-page-switcher,
-  .preview-toolbar,
-  .empty-state,
-  .modal-backdrop {
-    display: none !important;
-  }
-
-  .preview-stage,
-  .paper-scroll,
-  .preview-page-wrapper,
-  .print-root {
-    display: block !important;
-  }
-
-  .paper-page.print-page {
-    display: block !important;
-    margin: 0 !important;
-    padding: var(--page-margin) !important;
-    transform: none !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
-    overflow: hidden !important;
-    break-after: page;
-    page-break-after: always;
-  }
-
-  .paper-a4.paper-portrait { width: 210mm !important; height: 297mm !important; }
-  .paper-a4.paper-landscape { width: 297mm !important; height: 210mm !important; }
-  .paper-a3.paper-portrait { width: 297mm !important; height: 420mm !important; }
-  .paper-a3.paper-landscape { width: 420mm !important; height: 297mm !important; }
-
-  .print-page-inner {
-    height: 100% !important;
-  }
-
-  .page-content {
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-  }
-
-  @page {
-    margin: 0;
-  }
 }
 
 @media (max-width: 1180px) {
