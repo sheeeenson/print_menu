@@ -221,82 +221,62 @@ function previewStyle(page, autoFillLayout, fitAllLayout, itemCount = 0) {
     '--preview-muted-color': colors.mutedTextColor,
     '--preview-accent-color': colors.accentColor,
     '--preview-price-color': colors.priceColor,
-    '--card-border-color': settings.cardBorderEnabled ? hexToRgba(colors.cardBorderColor, settings.cardBorderOpacity / 100) : 'transparent',
-    '--card-border-width': settings.cardBorderEnabled ? `${settings.cardBorderWidth}px` : '0px',
-    '--card-shadow': settings.cardShadowEnabled ? '0 14px 30px rgba(35,31,32,0.14)' : 'none',
+    '--card-border-color': colors.cardBorderColor,
     '--badge-background': colors.badgeBackgroundColor,
     '--badge-text': colors.badgeTextColor,
     '--badge-border-color': colors.badgeBorderColor,
     '--badge-border-width': `${settings.badgeStyle?.borderWidth ?? 0}px`,
-    '--badge-opacity': (settings.badgeStyle?.opacity ?? 100) / 100,
+    '--badge-opacity': `${(settings.badgeStyle?.opacity ?? 100) / 100}`,
     '--badge-radius': badgeRadius(settings.badgeStyle?.shape),
-    '--image-fit': settings.imageFitMode ?? settings.imageFit,
-    '--image-position': imageObjectPosition(settings),
-    '--image-zoom': (settings.imageZoom ?? 100) / 100,
-    '--image-area-percent': `${settings.imageAreaPercent ?? 42}%`,
-    '--classic-columns': settings.classicColumns ?? 2,
-    '--title-line-clamp': settings.titleLineClamp,
-    '--description-line-clamp': settings.descriptionLineClamp,
-    ...fitAllStyle,
+    '--card-border-width': settings.cardBorderEnabled ? `${settings.cardBorderWidth}px` : '0px',
+    '--card-border-opacity': `${(settings.cardBorderOpacity ?? 100) / 100}`,
+    '--image-zoom': settings.showImages ? settings.imageZoom / 100 : 1,
+    '--side-image-width': `${settings.imageAreaPercent}%`,
     ...autoFillStyle,
+    ...fitAllStyle,
   };
 }
 
-
-
 function badgeRadius(shape) {
-  if (shape === 'square' || shape === 'ribbon') return '0px';
-  if (shape === 'rounded') return '8px';
+  if (shape === 'square') return '0px';
   if (shape === 'circle') return '999px';
+  if (shape === 'rounded') return '8px';
+  if (shape === 'ribbon') return '4px';
   return '999px';
-}
-
-function imageObjectPosition(settings) {
-  if (settings.imagePosition === 'top') return 'center top';
-  if (settings.imagePosition === 'bottom') return 'center bottom';
-  if (settings.imagePosition === 'left') return 'left center';
-  if (settings.imagePosition === 'right') return 'right center';
-  if (settings.imagePosition === 'custom') {
-    return `${50 + (settings.imagePanX ?? 0)}% ${50 + (settings.imagePanY ?? 0)}%`;
-  }
-  return 'center center';
-}
-
-function cssLength(value) {
-  return typeof value === 'number' ? `${value}px` : value;
 }
 
 function gridColumns(settings) {
   if (settings.layoutMode === 'classicColumns') return settings.classicColumns ?? 2;
   if (settings.gridPreset === 'oneColumn') return 1;
   if (settings.gridPreset === 'twoColumns') return 2;
-  if (settings.gridPreset === 'threeColumns' || settings.gridPreset === 'catalogGrid' || settings.gridPreset === 'magazineGrid' || settings.gridPreset === 'bentoGrid') return 3;
+  if (settings.gridPreset === 'threeColumns') return 3;
   if (settings.gridPreset === 'fourColumns') return 4;
   if (settings.gridPreset === 'fiveColumns') return 5;
-  if (settings.gridPreset === 'textColumns') return 2;
-  if (settings.columns !== 'auto') return settings.columns;
-  return 'auto';
+  return 2;
 }
 
 function effectiveCustomGridRows(settings, fitAllLayout, itemCount) {
-  if (settings.layoutMode === 'snapGrid') return settings.customGrid.rows;
-  if (settings.gridMode !== 'custom') return settings.customGrid.rows;
-  const requiredRows = Math.ceil(totalSpanCellsForCount(itemCount, settings) / settings.customGrid.columns);
-  if (fitAllLayout) return Math.max(settings.customGrid.rows, fitAllLayout.rows, requiredRows);
-  return settings.customGrid.autoRows ? Math.max(settings.customGrid.rows, requiredRows) : settings.customGrid.rows;
+  if (fitAllLayout) return Math.max(1, fitAllLayout.rows);
+  if (settings.customGrid.autoRows) return Math.max(settings.customGrid.rows, Math.ceil(itemCount / Math.max(1, settings.customGrid.columns)));
+  return settings.customGrid.rows;
 }
 
 function densityValues(density) {
-  if (density === 'airy') return { gapMultiplier: 1.25, paddingMultiplier: 1.18, fontScale: 1.04 };
-  if (density === 'compact') return { gapMultiplier: 0.7, paddingMultiplier: 0.78, fontScale: 0.92 };
-  return { gapMultiplier: 1, paddingMultiplier: 1, fontScale: 1 };
+  if (density === 'compact') return { paddingMultiplier: 0.72, gapMultiplier: 0.72, fontScale: 0.92 };
+  if (density === 'spacious') return { paddingMultiplier: 1.22, gapMultiplier: 1.18, fontScale: 1.05 };
+  return { paddingMultiplier: 1, gapMultiplier: 1, fontScale: 1 };
+}
+
+function cssLength(value) {
+  return typeof value === 'number' ? `${value}px` : value;
 }
 
 function imageHeightForStyle(settings) {
-  if (settings.imageRatio === 'square') return 'var(--card-width, 180px)';
-  if (settings.imageRatio === 'fourThree') return 'calc(var(--card-width, 180px) * 0.75)';
-  if (settings.imageRatio === 'sixteenNine') return 'calc(var(--card-width, 180px) * 0.5625)';
-  if (settings.imageRatio === 'wide') return 'calc(var(--card-width, 180px) * 0.42)';
+  if (!settings.showImages) return 0;
+  if (settings.imageRatio === 'square') return 'min(var(--image-height, 118px), 100%)';
+  if (settings.imageRatio === 'fourThree') return 'min(var(--image-height, 118px), 75%)';
+  if (settings.imageRatio === 'sixteenNine') return 'min(var(--image-height, 118px), 56%)';
+  if (settings.imageRatio === 'wide') return 'min(var(--image-height, 118px), 42%)';
   return settings.imageHeight;
 }
 
@@ -575,35 +555,33 @@ function FreeResizePreview({ dishes, page, selectedDishId, onSelectDish, onResiz
 function freePlacement(placement, index, count) {
   const columns = Math.min(3, Math.max(1, Math.ceil(Math.sqrt(count || 1))));
   const rows = Math.max(1, Math.ceil((count || 1) / columns));
-  const width = Math.min(100 / columns - 2, placement?.widthPercent ?? 30);
-  const height = Math.min(100 / rows - 2, placement?.heightPercent ?? 22);
+  const width = 100 / columns;
+  const height = 100 / rows;
   const col = index % columns;
   const row = Math.floor(index / columns);
-  const fallbackX = col * (100 / columns);
-  const fallbackY = row * (100 / rows);
-  return clampFreePlacement({
-    mode: 'free',
-    colSpan: placement?.colSpan ?? 1,
-    rowSpan: placement?.rowSpan ?? 1,
-    xPercent: placement?.mode === 'free' ? placement?.xPercent ?? 0 : fallbackX,
-    yPercent: placement?.mode === 'free' ? placement?.yPercent ?? 0 : fallbackY,
-    widthPercent: placement?.mode === 'free' ? placement?.widthPercent ?? 30 : width,
-    heightPercent: placement?.mode === 'free' ? placement?.heightPercent ?? 22 : height,
-    zIndex: placement?.zIndex ?? 1,
-    priority: placement?.priority ?? 0,
-  });
+  const base = placement?.mode === 'free'
+    ? placement
+    : {
+        mode: 'free',
+        xPercent: col * width,
+        yPercent: row * height,
+        widthPercent: width,
+        heightPercent: height,
+        zIndex: index + 1,
+      };
+  return clampFreePlacement(base);
 }
 
 function clampFreePlacement(placement) {
-  const widthPercent = clamp(placement.widthPercent, 10, 100);
-  const heightPercent = clamp(placement.heightPercent, 8, 100);
+  const width = clamp(placement.widthPercent ?? 30, 4, 100);
+  const height = clamp(placement.heightPercent ?? 22, 4, 100);
   return {
-    ...placement,
     mode: 'free',
-    widthPercent,
-    heightPercent,
-    xPercent: clamp(placement.xPercent, 0, 100 - widthPercent),
-    yPercent: clamp(placement.yPercent, 0, 100 - heightPercent),
+    widthPercent: width,
+    heightPercent: height,
+    xPercent: clamp(placement.xPercent ?? 0, 0, 100 - width),
+    yPercent: clamp(placement.yPercent ?? 0, 0, 100 - height),
+    zIndex: Math.max(1, placement.zIndex ?? 1),
   };
 }
 
@@ -615,7 +593,13 @@ function FreeResizeHandles({ areaRef, dishId, placement, onResize }) {
     const area = areaRef.current;
     if (!area) return;
     const rect = area.getBoundingClientRect();
-    dragState.current = { handle, rect, startX: event.clientX, startY: event.clientY, start: placement };
+    dragState.current = {
+      handle,
+      rect,
+      startX: event.clientX,
+      startY: event.clientY,
+      start: placement,
+    };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
   const continueDrag = (event) => {
@@ -690,7 +674,6 @@ function ResizeHandles({ gridRef, dishId, page, currentPlacement, onResize }) {
     };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
-
   const continueDrag = (event) => {
     const state = dragState.current;
     if (!state) return;
@@ -710,14 +693,12 @@ function ResizeHandles({ gridRef, dishId, page, currentPlacement, onResize }) {
       state.lastRowSpan = nextSpan.rowSpan;
     }
   };
-
   const stopDrag = (event) => {
     if (!dragState.current) return;
     event.preventDefault();
     event.stopPropagation();
     dragState.current = null;
   };
-
   return (
     <div className="preview-resize-handles" aria-hidden="true">
       <span className="resize-handle resize-handle-visual resize-handle-top-left" />
@@ -742,6 +723,7 @@ function nearestSupportedSpan(requested, maxColumns, maxRows, handle) {
     if (handle === 'bottom') return span.colSpan === requested.colSpan;
     return true;
   });
+
   const candidates = compatible.length ? compatible : allowed;
   return candidates.reduce((best, span) => {
     const score = Math.abs(span.colSpan - requested.colSpan) + Math.abs(span.rowSpan - requested.rowSpan);
@@ -799,7 +781,7 @@ function DishCard({ dish, page, hideDescription = false, isHero = false }) {
   const badgePositionClass = `badge-position-${settings.badgePosition}`;
 
   return (
-    <article className={`preview-dish-card ${layoutClass} card-style-${cardStyle} ${showImages ? 'has-images' : 'no-images'} ${isHero ? 'hero-dish-card' : ''}`}>
+    <article className={`preview-dish-card ${layoutClass} card-style-${cardStyle} ${showImages ? 'has-images' : 'no-images'} ${isHero ? 'hero-dish-card' : ''} ${dish.blurImage ? 'image-blurred' : ''}`}>
       {showImages ? (
         <div className="preview-image-box">
           {dish.imageUrl ? <img src={dish.imageUrl} alt="" loading="lazy" /> : <div className="preview-image-placeholder">Image</div>}
