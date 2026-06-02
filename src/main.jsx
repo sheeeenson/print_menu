@@ -6,6 +6,7 @@ import './styles.css';
 import './dishSpacing.css';
 import './pageContentControls.css';
 import './badgePosition.css';
+import './modernApp.css';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>
