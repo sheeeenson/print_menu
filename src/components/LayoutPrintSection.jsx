@@ -11,6 +11,7 @@ import { calculateFitAllLayout, paperDimensions } from '../utils/fitAll.js';
 export function LayoutPrintSection({ project, actions }) {
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [selectedPreviewDishId, setSelectedPreviewDishId] = useState('');
+  const [isAdminCollapsed, setIsAdminCollapsed] = useState(false);
   const selectedPage = project.pages.find((page) => page.id === project.selectedPageId) ?? project.pages[0];
   const previewProject = selectedPage ? projectWithPageOrder(project, selectedPage) : project;
   const fitWarning = selectedPage ? getFitWarning(previewProject, selectedPage) : '';
@@ -24,8 +25,16 @@ export function LayoutPrintSection({ project, actions }) {
   };
 
   return (
-    <section className="layout-print-section" aria-label="Layout and print workspace">
-      <aside className="layout-admin-panel layout-sidebar">
+    <section className={`layout-print-section ${isAdminCollapsed ? 'admin-collapsed' : ''}`} aria-label="Layout and print workspace">
+      <button
+        className="admin-panel-toggle"
+        type="button"
+        onClick={() => setIsAdminCollapsed((value) => !value)}
+        aria-expanded={!isAdminCollapsed}
+      >
+        {isAdminCollapsed ? 'Show settings' : 'Hide settings'}
+      </button>
+      <aside className="layout-admin-panel layout-sidebar" aria-hidden={isAdminCollapsed}>
         {fitWarning ? <div className="panel-fit-warning" role="alert">{fitWarning}</div> : null}
 
         {selectedPage ? (
