@@ -9,7 +9,7 @@
 
 .preview-dish-card.card-layout-below,
 .preview-dish-card.has-images.card-layout-below {
-  grid-template-rows: var(--image-height) minmax(0, auto) !important;
+  grid-template-rows: var(--image-height) minmax(0, 1fr) !important;
   gap: var(--image-to-title-gap, 1.5px) !important;
 }
 
@@ -90,13 +90,24 @@
   align-items: flex-start !important;
   justify-content: space-between !important;
   gap: var(--image-title-gap, 1.5px) !important;
+  min-height: calc(var(--dish-title-size) * var(--font-scale, 1) * 2.25) !important;
+}
+
+.preview-dish-card .dish-title {
+  display: -webkit-box !important;
+  min-height: calc(var(--dish-title-size) * var(--font-scale, 1) * 2.25) !important;
+  max-height: calc(var(--dish-title-size) * var(--font-scale, 1) * 2.25) !important;
+  line-height: 1.12 !important;
+  overflow: hidden !important;
+  white-space: normal !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
 }
 
 .preview-meta-row {
   margin-top: auto !important;
 }
 
-.preview-dish-card .dish-title,
 .preview-dish-card .preview-description,
 .preview-dish-card .configurable-options {
   display: block !important;
@@ -155,16 +166,16 @@
 .fit-autoFill .preview-dish-grid {
   align-content: start !important;
   align-items: stretch !important;
-  grid-auto-rows: var(--uniform-card-height, 210px) !important;
-  row-gap: clamp(4px, var(--card-gap), 12px) !important;
+  grid-auto-rows: var(--uniform-card-height, 230px) !important;
+  row-gap: var(--card-gap) !important;
   column-gap: var(--card-gap) !important;
 }
 
 .layout-mode-classicColumns .preview-dish-card,
 .fit-autoFill .preview-dish-card {
-  height: var(--uniform-card-height, 210px) !important;
-  min-height: var(--uniform-card-height, 210px) !important;
-  max-height: var(--uniform-card-height, 210px) !important;
+  height: var(--uniform-card-height, 230px) !important;
+  min-height: var(--uniform-card-height, 230px) !important;
+  max-height: var(--uniform-card-height, 230px) !important;
 }
 
 .layout-mode-manualDesigner .preview-dish-card {
@@ -174,79 +185,19 @@
 }
 
 @media print {
-  .preview-dish-card {
-    display: grid !important;
-    align-items: start !important;
+  .preview-title-row {
+    min-height: calc(var(--dish-title-size) * var(--font-scale, 1) * 2.25) !important;
+  }
+
+  .preview-dish-card .dish-title {
+    display: -webkit-box !important;
+    min-height: calc(var(--dish-title-size) * var(--font-scale, 1) * 2.25) !important;
+    max-height: calc(var(--dish-title-size) * var(--font-scale, 1) * 2.25) !important;
+    line-height: 1.12 !important;
     overflow: hidden !important;
-  }
-
-  .preview-dish-card.card-layout-below,
-  .preview-dish-card.has-images.card-layout-below {
-    grid-template-rows: var(--image-height) minmax(0, auto) !important;
-    gap: var(--image-to-title-gap, 1.5px) !important;
-  }
-
-  .preview-image-box {
-    display: block !important;
-    position: relative !important;
-    overflow: hidden !important;
-    background: var(--card-background, #ffffff) !important;
-    width: 100% !important;
-  }
-
-  .preview-dish-card.card-layout-below .preview-image-box,
-  .fit-autoFill .preview-dish-card.card-layout-below .preview-image-box,
-  .layout-mode-classicColumns .preview-dish-card.card-layout-below .preview-image-box {
-    height: var(--image-height) !important;
-    min-height: 24px !important;
-    max-height: none !important;
-  }
-
-  .preview-image-box img {
-    display: block !important;
-    position: absolute !important;
-    top: 50% !important;
-    left: 50% !important;
-    width: 100% !important;
-    height: 100% !important;
-    min-width: 100% !important;
-    min-height: 100% !important;
-    max-width: none !important;
-    max-height: none !important;
-    object-fit: cover !important;
-    object-position: center center !important;
-    transform: translate(-50%, -50%) scale(var(--image-zoom, 1)) !important;
-    transform-origin: center center !important;
-  }
-
-  .preview-card-content {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: var(--image-title-gap, 1.5px) !important;
-    overflow: hidden !important;
-  }
-
-  .preview-title-row,
-  .preview-description,
-  .configurable-options,
-  .preview-meta-row {
-    position: relative !important;
-    flex: 0 0 auto !important;
-    margin: 0 !important;
-    overflow: visible !important;
-  }
-
-  .preview-badge,
-  .preview-badge[class*="badge-shape-"] {
-    background: var(--badge-background) !important;
-    color: var(--badge-text) !important;
-    border: var(--badge-border-width) solid var(--badge-border-color) !important;
-    border-radius: var(--badge-radius) !important;
-    opacity: var(--badge-opacity) !important;
-  }
-
-  .preview-dish-card:has(.configurable-options) .preview-prices {
-    display: none !important;
+    white-space: normal !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
   }
 
   .layout-mode-classicColumns .classic-columns-grid,
@@ -254,15 +205,15 @@
   .fit-autoFill .preview-dish-grid {
     align-content: start !important;
     align-items: stretch !important;
-    grid-auto-rows: var(--uniform-card-height, 210px) !important;
-    row-gap: clamp(4px, var(--card-gap), 12px) !important;
+    grid-auto-rows: var(--uniform-card-height, 230px) !important;
+    row-gap: var(--card-gap) !important;
     column-gap: var(--card-gap) !important;
   }
 
   .layout-mode-classicColumns .preview-dish-card,
   .fit-autoFill .preview-dish-card {
-    height: var(--uniform-card-height, 210px) !important;
-    min-height: var(--uniform-card-height, 210px) !important;
-    max-height: var(--uniform-card-height, 210px) !important;
+    height: var(--uniform-card-height, 230px) !important;
+    min-height: var(--uniform-card-height, 230px) !important;
+    max-height: var(--uniform-card-height, 230px) !important;
   }
 }
