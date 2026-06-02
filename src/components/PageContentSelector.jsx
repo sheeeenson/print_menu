@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 export function PageContentSelector({ project, page, actions }) {
-  const [openCategoryIds, setOpenCategoryIds] = useState(() => new Set(page.selectedCategoryIds ?? []));
+  const [openCategoryIds, setOpenCategoryIds] = useState(() => new Set());
   const selectedCategoryIds = page.selectedCategoryIds ?? [];
   const selectedCategorySet = new Set(selectedCategoryIds);
   const selectedDishIds = page.selectedDishIds ?? [];
@@ -22,7 +22,6 @@ export function PageContentSelector({ project, page, actions }) {
     const nextIds = checked
       ? [...selectedCategoryIds, categoryId]
       : selectedCategoryIds.filter((id) => id !== categoryId);
-    if (checked) setOpenCategoryIds((current) => new Set([...current, categoryId]));
     actions.setPageCategories(nextIds);
   };
 
@@ -65,7 +64,7 @@ export function PageContentSelector({ project, page, actions }) {
     <section className="panel-section" aria-labelledby="page-content-title">
       <p className="eyebrow">Content</p>
       <h2 id="page-content-title">Content on this page</h2>
-      <p className="muted-text page-content-help">Click a category to show dishes. Drag selected categories or dishes to reorder them in the preview.</p>
+      <p className="muted-text page-content-help">Single click selects a category. Double click opens dishes. Drag ⋮⋮ to reorder categories or dishes.</p>
       <div className="category-checkbox-list page-content-order-list">
         {orderedCategories.map((category) => {
           const isSelected = selectedCategorySet.has(category.id);
@@ -73,31 +72,43 @@ export function PageContentSelector({ project, page, actions }) {
           const dishes = isSelected ? orderedCategoryDishes(category.id) : [];
           return (
             <div
-              className={`category-content-card ${isSelected ? 'selected-content-category' : ''}`}
+              className={`category-content-card ${isSelected ? 'selected-content-category' : ''} ${isOpen ? 'open-content-category' : ''}`}
               key={category.id}
-              draggable={isSelected}
-              onDragStart={(event) => event.dataTransfer.setData('text/category-id', category.id)}
               onDragOver={(event) => event.preventDefault()}
               onDrop={(event) => dropCategory(event, category.id)}
             >
               <button
                 className="category-content-header"
                 type="button"
-                onClick={() => isSelected && toggleOpen(category.id)}
+                onClick={() => toggleCategory(category.id, !isSelected)}
+                onDoubleClick={(event) => {
+                  event.preventDefault();
+                  if (!isSelected) toggleCategory(category.id, true);
+                  toggleOpen(category.id);
+                }}
                 aria-expanded={isSelected && isOpen}
               >
-                <span className="drag-handle" aria-hidden="true" onClick={(event) => event.stopPropagation()}>⋮⋮</span>
-                <label className="category-checkbox" onClick={(event) => event.stopPropagation()}>
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={(event) => toggleCategory(category.id, event.target.checked)}
-                  />
+                <span
+                  className="drag-handle"
+                  aria-label="Drag category"
+                  role="button"
+                  tabIndex="0"
+                  draggable={isSelected}
+                  onClick={(event) => event.stopPropagation()}
+                  onDoubleClick={(event) => event.stopPropagation()}
+                  onDragStart={(event) => {
+                    event.stopPropagation();
+                    event.dataTransfer.effectAllowed = 'move';
+                    event.dataTransfer.setData('text/category-id', category.id);
+                  }}
+                >⋮⋮</span>
+                <span className="category-checkbox visual-category-check" aria-hidden="true">
+                  <input type="checkbox" checked={isSelected} readOnly tabIndex="-1" />
                   <span>
                     <strong>{category.nameEn || 'Untitled category'}</strong>
                     <small>{category.nameGe || 'No Georgian title'}</small>
                   </span>
-                </label>
+                </span>
                 <span className="accordion-indicator" aria-hidden="true">{isSelected && isOpen ? '−' : '+'}</span>
               </button>
               {isSelected && isOpen && dishes.length ? (
@@ -106,12 +117,21 @@ export function PageContentSelector({ project, page, actions }) {
                     <div
                       className="page-dish-order-row"
                       key={dish.id}
-                      draggable
-                      onDragStart={(event) => event.dataTransfer.setData('text/dish-id', dish.id)}
                       onDragOver={(event) => event.preventDefault()}
                       onDrop={(event) => dropDish(event, dish.id)}
                     >
-                      <span className="drag-handle" aria-hidden="true">⋮⋮</span>
+                      <span
+                        className="drag-handle"
+                        aria-label="Drag dish"
+                        role="button"
+                        tabIndex="0"
+                        draggable
+                        onDragStart={(event) => {
+                          event.stopPropagation();
+                          event.dataTransfer.effectAllowed = 'move';
+                          event.dataTransfer.setData('text/dish-id', dish.id);
+                        }}
+                      >⋮⋮</span>
                       <span className="dish-order-copy">
                         <strong>{dish.nameEn || 'Untitled dish'}</strong>
                         <small>{dish.nameGe || dish.weight || 'Selected dish'}</small>
