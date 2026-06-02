@@ -1,10 +1,70 @@
+.page-content-help {
+  margin: -6px 0 12px;
+  font-size: 0.8rem;
+}
+
+.page-content-order-list {
+  gap: 10px;
+}
+
 .category-content-card {
   display: grid;
+  gap: 8px;
+  border: 1px solid #eadfd4;
+  border-radius: 16px;
+  background: #fffdfa;
+  padding: 8px;
+}
+
+.category-content-card[draggable="true"] {
+  cursor: grab;
+}
+
+.category-content-card[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.category-content-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
   gap: 8px;
 }
 
 .category-content-card .category-checkbox {
   margin-bottom: 0;
+  border: 0;
+  background: transparent;
+  padding: 6px 4px;
+}
+
+.drag-handle {
+  color: #b7aa9b;
+  cursor: grab;
+  font-weight: 950;
+  letter-spacing: -0.18em;
+  user-select: none;
+}
+
+.accordion-toggle {
+  border: 1px solid #ded1c1;
+  border-radius: 999px;
+  background: #fff;
+  color: #574d45;
+  padding: 7px 10px;
+  font-size: 0.74rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.accordion-toggle:hover:not(:disabled) {
+  border-color: #9b1c31;
+  color: #9b1c31;
+}
+
+.accordion-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
 }
 
 .page-dish-order-list {
@@ -15,16 +75,21 @@
 
 .page-dish-order-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 8px;
   border: 1px solid #eadfd4;
   border-radius: 12px;
-  background: #fffdfa;
-  padding: 8px 8px 8px 10px;
+  background: #fff;
+  padding: 8px 10px;
+  cursor: grab;
 }
 
-.page-dish-order-row span {
+.page-dish-order-row:active {
+  cursor: grabbing;
+}
+
+.dish-order-copy {
   display: grid;
   gap: 2px;
   min-width: 0;
@@ -46,33 +111,6 @@
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.page-dish-order-actions {
-  display: flex;
-  gap: 4px;
-}
-
-.page-dish-order-actions button {
-  width: 30px;
-  height: 30px;
-  border: 1px solid #ded1c1;
-  border-radius: 999px;
-  background: #fff;
-  color: #574d45;
-  padding: 0;
-  font-weight: 900;
-  line-height: 1;
-}
-
-.page-dish-order-actions button:hover:not(:disabled) {
-  border-color: #9b1c31;
-  color: #9b1c31;
-}
-
-.page-dish-order-actions button:disabled {
-  cursor: not-allowed;
-  opacity: 0.35;
 }
 
 .page-dish-empty {
