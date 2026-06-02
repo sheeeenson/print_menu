@@ -12,6 +12,7 @@ import './imageRenderFixes.css';
 import './printOnlyPage.css';
 import './pizzaSizeLayoutFix.js';
 import './pizzaBaselineFix.css';
+import './blurImageFix.css';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>
