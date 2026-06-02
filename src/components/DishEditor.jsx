@@ -28,6 +28,7 @@ const formatSizePriceBlock = (variants, labelField) => variants
   .join('\n\n');
 
 export function DishEditor({ dish, actions }) {
+  const hasSizePrices = (dish.priceVariants ?? []).length > 0;
   const updateText = (field) => (event) => actions.updateDish(dish.id, { [field]: event.target.value });
   const updatePrice = (field) => (event) => actions.updateDish(dish.id, { [field]: parseOptionalNumber(event.target.value) }, field);
   const updateDishType = (event) => actions.updateDish(dish.id, { dishType: event.target.value, optionGroups: dish.optionGroups ?? [] });
@@ -74,7 +75,8 @@ export function DishEditor({ dish, actions }) {
           <img src={dish.imageUrl} alt={`${dish.nameEn} preview`} />
         </div>
       ) : null}
-      {dish.dishType === 'configurable' ? <OptionGroupEditor dish={dish} actions={actions} /> : null}
+      {dish.dishType === 'configurable' && !hasSizePrices ? <OptionGroupEditor dish={dish} actions={actions} /> : null}
+      {hasSizePrices ? <p className="muted-text">Pizza size prices are shown without extra configurable modifiers.</p> : null}
       <BadgeEditor dish={dish} actions={actions} />
     </article>
   );
@@ -116,8 +118,7 @@ function NumberInput({ dish, field, label, step, onChange }) {
 
 function withSizeOptionGroup(dish, nextVariants) {
   const variants = nextVariants.slice(0, 3).map(normalizeVariant);
-  const regularGroups = (dish.optionGroups ?? []).filter((group) => group.id !== SIZE_GROUP_ID);
-  if (!variants.length) return { priceVariants: [], optionGroups: regularGroups };
+  if (!variants.length) return { priceVariants: [], optionGroups: [] };
 
   const sizeGroup = {
     id: SIZE_GROUP_ID,
@@ -137,7 +138,7 @@ function withSizeOptionGroup(dish, nextVariants) {
   return {
     dishType: 'configurable',
     priceVariants: variants,
-    optionGroups: [sizeGroup, ...regularGroups],
+    optionGroups: [sizeGroup],
     oldPrice: variants.find((variant) => typeof variant.oldPrice === 'number')?.oldPrice ?? dish.oldPrice,
     newPrice: variants.find((variant) => typeof variant.newPrice === 'number')?.newPrice ?? dish.newPrice,
   };
