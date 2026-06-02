@@ -10,7 +10,7 @@ const DEFAULT_SIZE_VARIANTS = Object.freeze([
 const SIZE_GROUP_ID = 'pizza_size_prices';
 const variantNewPrice = (variant) => (typeof variant.newPrice === 'number' ? variant.newPrice : variant.price);
 const formatPriceCell = (price) => (typeof price === 'number' ? `${formatOptionalNumber(price)} ₾` : '');
-const strikeText = (value) => String(value).split('').map((char) => `${char}\u0336`).join('');
+const strikeText = (value) => String(value).split('').map((char) => `${char}̶`).join('');
 const normalizeVariant = (variant) => ({
   labelEn: variant.labelEn ?? '',
   labelGe: variant.labelGe ?? '',
@@ -34,7 +34,7 @@ export function DishEditor({ dish, actions }) {
   const updateDishType = (event) => actions.updateDish(dish.id, { dishType: event.target.value, optionGroups: dish.optionGroups ?? [] });
 
   return (
-    <article className={`editor-card dish-editor ${dish.visible ? '' : 'hidden-dish'}`}>
+    <article className={`editor-card dish-editor ${dish.visible ? '' : 'hidden-dish'} ${hasSizePrices ? 'has-size-prices' : ''}`}>
       <div className="editor-card-title">
         <div>
           <h3>{dish.nameEn || 'Untitled dish'}</h3>
@@ -62,12 +62,13 @@ export function DishEditor({ dish, actions }) {
         <TextareaInput dish={dish} field="descriptionEn" label="English description" onChange={updateText('descriptionEn')} />
         <TextareaInput dish={dish} field="descriptionGe" label="Georgian description" onChange={updateText('descriptionGe')} />
       </div>
-      <div className="four-column-fields">
+      <div className={hasSizePrices ? 'two-column-fields' : 'four-column-fields'}>
         <TextInput dish={dish} field="weight" label="Weight" placeholder="250 g" onChange={updateText('weight')} />
-        <NumberInput dish={dish} field="oldPrice" label="Old price" step="0.01" onChange={updatePrice('oldPrice')} />
-        <NumberInput dish={dish} field="newPrice" label="New price" step="0.01" onChange={updatePrice('newPrice')} />
+        {hasSizePrices ? null : <NumberInput dish={dish} field="oldPrice" label="Old price" step="0.01" onChange={updatePrice('oldPrice')} />}
+        {hasSizePrices ? null : <NumberInput dish={dish} field="newPrice" label="New price" step="0.01" onChange={updatePrice('newPrice')} />}
         <NumberInput dish={dish} field="discountPercent" label="Discount %" step="1" onChange={updatePrice('discountPercent')} />
       </div>
+      {hasSizePrices ? <p className="muted-text">Base dish price is disabled for size-priced pizzas. Use only the prices below.</p> : null}
       <SizePriceEditor dish={dish} actions={actions} />
       <TextInput dish={dish} field="imageUrl" label="Image URL" placeholder="https://..." onChange={updateText('imageUrl')} />
       {dish.imageUrl ? (
@@ -118,7 +119,7 @@ function NumberInput({ dish, field, label, step, onChange }) {
 
 function withSizeOptionGroup(dish, nextVariants) {
   const variants = nextVariants.slice(0, 3).map(normalizeVariant);
-  if (!variants.length) return { priceVariants: [], optionGroups: [] };
+  if (!variants.length) return { priceVariants: [], optionGroups: [], oldPrice: null, newPrice: null };
 
   const sizeGroup = {
     id: SIZE_GROUP_ID,
@@ -139,8 +140,8 @@ function withSizeOptionGroup(dish, nextVariants) {
     dishType: 'configurable',
     priceVariants: variants,
     optionGroups: [sizeGroup],
-    oldPrice: variants.find((variant) => typeof variant.oldPrice === 'number')?.oldPrice ?? dish.oldPrice,
-    newPrice: variants.find((variant) => typeof variant.newPrice === 'number')?.newPrice ?? dish.newPrice,
+    oldPrice: null,
+    newPrice: null,
   };
 }
 
