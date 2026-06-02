@@ -1,4 +1,4 @@
-/* Last print override: print only the menu paper, never the app layout or settings columns. */
+/* Last print override: print only the menu paper and preserve the exact screen preview canvas. */
 
 @media print {
   * {
@@ -9,7 +9,7 @@
   html,
   body,
   #root {
-    width: 100% !important;
+    width: auto !important;
     height: auto !important;
     margin: 0 !important;
     padding: 0 !important;
@@ -70,16 +70,23 @@
     left: 0 !important;
     display: block !important;
     margin: 0 !important;
+    padding: var(--page-margin) !important;
+    width: var(--paper-width-px) !important;
+    height: var(--paper-height-px) !important;
+    min-width: var(--paper-width-px) !important;
+    min-height: var(--paper-height-px) !important;
+    max-width: var(--paper-width-px) !important;
+    max-height: var(--paper-height-px) !important;
     transform: none !important;
     box-shadow: none !important;
     border-radius: 0 !important;
     overflow: hidden !important;
   }
 
-  .paper-a4.paper-portrait { width: 210mm !important; height: 297mm !important; }
-  .paper-a4.paper-landscape { width: 297mm !important; height: 210mm !important; }
-  .paper-a3.paper-portrait { width: 297mm !important; height: 420mm !important; }
-  .paper-a3.paper-landscape { width: 420mm !important; height: 297mm !important; }
+  .paper-a4.paper-portrait { --paper-width-px: 595px; --paper-height-px: 842px; }
+  .paper-a4.paper-landscape { --paper-width-px: 842px; --paper-height-px: 595px; }
+  .paper-a3.paper-portrait { --paper-width-px: 842px; --paper-height-px: 1191px; }
+  .paper-a3.paper-landscape { --paper-width-px: 1191px; --paper-height-px: 842px; }
 
   .print-page-inner {
     height: 100% !important;
@@ -91,6 +98,7 @@
   }
 
   @page {
+    size: auto;
     margin: 0;
   }
 }
