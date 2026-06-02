@@ -1,6 +1,6 @@
 const PAPER_DIMENSIONS = {
-  A4: { portrait: { width: 595, height: 842 }, landscape: { width: 842, height: 595 } },
-  A3: { portrait: { width: 842, height: 1191 }, landscape: { width: 1191, height: 842 } },
+  A4: { portrait: { width: 794, height: 1123 }, landscape: { width: 1123, height: 794 } },
+  A3: { portrait: { width: 1123, height: 1587 }, landscape: { width: 1587, height: 1123 } },
 };
 
 const WARNING = 'Too many dishes for this page with current design settings. Try compact mode, hide descriptions, reduce image size, or split into another page.';
@@ -16,8 +16,8 @@ export function paperDimensions(paperSize = 'A4', orientation = 'portrait') {
 
 export function calculateFitAllLayout(input = {}) {
   const itemCount = Math.max(0, Math.floor(number(input.itemCount, 0)));
-  const pageWidth = number(input.pageWidthPx, input.pageWidth ?? 595);
-  const pageHeight = number(input.pageHeightPx, input.pageHeight ?? 842);
+  const pageWidth = number(input.pageWidthPx, input.pageWidth ?? 794);
+  const pageHeight = number(input.pageHeightPx, input.pageHeight ?? 1123);
   const pageMargin = clamp(number(input.pageMargin, 34), 0, Math.min(pageWidth, pageHeight) / 3);
   const headerHeight = Math.max(0, number(input.headerHeight, 0));
   const footerHeight = Math.max(0, number(input.footerHeight, 0));
