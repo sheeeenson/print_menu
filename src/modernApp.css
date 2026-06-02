@@ -120,6 +120,10 @@ body {
   pointer-events: none;
 }
 
+.layout-print-section.admin-collapsed .preview-stage {
+  padding-top: 76px;
+}
+
 .layout-admin-panel,
 .category-panel {
   border-right: 1px solid var(--app-border);
@@ -135,7 +139,7 @@ body {
   position: fixed;
   top: 82px;
   left: 14px;
-  z-index: 20;
+  z-index: 24;
   border: 1px solid var(--app-border);
   border-radius: 999px;
   background: #ffffff;
@@ -150,6 +154,79 @@ body {
   border-color: var(--app-border-strong);
   color: #000000;
   transform: translateY(-1px);
+}
+
+.collapsed-page-switcher {
+  position: fixed;
+  top: 78px;
+  left: 142px;
+  right: 18px;
+  z-index: 22;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--app-shadow-soft);
+  overflow: hidden;
+}
+
+.collapsed-page-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  padding: 6px;
+  scrollbar-width: none;
+}
+
+.collapsed-page-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.collapsed-page-pill {
+  flex: 0 0 auto;
+  min-width: 122px;
+  scroll-snap-align: start;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--app-muted);
+  padding: 8px 13px;
+  text-align: left;
+}
+
+.collapsed-page-pill span,
+.collapsed-page-pill small {
+  display: block;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collapsed-page-pill span {
+  color: inherit;
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.collapsed-page-pill small {
+  margin-top: 1px;
+  color: #9ca3af;
+  font-size: 0.68rem;
+  font-weight: 750;
+  text-transform: capitalize;
+}
+
+.collapsed-page-pill.selected {
+  border-color: var(--app-border-strong);
+  background: #111827;
+  color: #ffffff;
+}
+
+.collapsed-page-pill.selected small {
+  color: rgba(255, 255, 255, 0.68);
 }
 
 .panel-section,
@@ -253,6 +330,10 @@ body {
   font-weight: 820;
 }
 
+.page-create-actions .primary-action {
+  width: 100%;
+}
+
 @media (max-width: 1180px) {
   .main-navigation {
     flex-wrap: wrap;
@@ -313,6 +394,17 @@ body {
     bottom: 14px;
     width: calc(100% - 28px);
     padding: 13px 16px;
+  }
+
+  .collapsed-page-switcher {
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    border-radius: 18px;
+  }
+
+  .layout-print-section.admin-collapsed .preview-stage {
+    padding-top: 72px;
   }
 
   .preview-stage {
@@ -382,6 +474,10 @@ body {
 
   .preview-toolbar h1 {
     font-size: 1.35rem;
+  }
+
+  .collapsed-page-pill {
+    min-width: 112px;
   }
 
   .paper-page {
