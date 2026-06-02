@@ -65,7 +65,7 @@ export function PageContentSelector({ project, page, actions }) {
     <section className="panel-section" aria-labelledby="page-content-title">
       <p className="eyebrow">Content</p>
       <h2 id="page-content-title">Content on this page</h2>
-      <p className="muted-text page-content-help">Drag selected categories or dishes to reorder them in the preview.</p>
+      <p className="muted-text page-content-help">Click a category to show dishes. Drag selected categories or dishes to reorder them in the preview.</p>
       <div className="category-checkbox-list page-content-order-list">
         {orderedCategories.map((category) => {
           const isSelected = selectedCategorySet.has(category.id);
@@ -80,9 +80,14 @@ export function PageContentSelector({ project, page, actions }) {
               onDragOver={(event) => event.preventDefault()}
               onDrop={(event) => dropCategory(event, category.id)}
             >
-              <div className="category-content-header">
-                <span className="drag-handle" aria-hidden="true">⋮⋮</span>
-                <label className="category-checkbox">
+              <button
+                className="category-content-header"
+                type="button"
+                onClick={() => isSelected && toggleOpen(category.id)}
+                aria-expanded={isSelected && isOpen}
+              >
+                <span className="drag-handle" aria-hidden="true" onClick={(event) => event.stopPropagation()}>⋮⋮</span>
+                <label className="category-checkbox" onClick={(event) => event.stopPropagation()}>
                   <input
                     type="checkbox"
                     checked={isSelected}
@@ -93,10 +98,8 @@ export function PageContentSelector({ project, page, actions }) {
                     <small>{category.nameGe || 'No Georgian title'}</small>
                   </span>
                 </label>
-                <button className="accordion-toggle" type="button" onClick={() => toggleOpen(category.id)} disabled={!isSelected} aria-expanded={isOpen}>
-                  {isOpen ? 'Hide' : 'Show'} dishes
-                </button>
-              </div>
+                <span className="accordion-indicator" aria-hidden="true">{isSelected && isOpen ? '−' : '+'}</span>
+              </button>
               {isSelected && isOpen && dishes.length ? (
                 <div className="page-dish-order-list">
                   {dishes.map((dish) => (
