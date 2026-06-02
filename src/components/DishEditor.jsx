@@ -30,6 +30,7 @@ const formatSizePriceBlock = (variants, labelField) => variants
 export function DishEditor({ dish, actions }) {
   const hasSizePrices = (dish.priceVariants ?? []).length > 0;
   const updateText = (field) => (event) => actions.updateDish(dish.id, { [field]: event.target.value });
+  const updateBoolean = (field) => (event) => actions.updateDish(dish.id, { [field]: event.target.checked });
   const updatePrice = (field) => (event) => actions.updateDish(dish.id, { [field]: parseOptionalNumber(event.target.value) }, field);
   const updateDishType = (event) => actions.updateDish(dish.id, { dishType: event.target.value, optionGroups: dish.optionGroups ?? [] });
 
@@ -73,8 +74,12 @@ export function DishEditor({ dish, actions }) {
       {hasSizePrices ? <p className="muted-text">Weight, discount, and base dish price are disabled for size-priced pizzas. Use only the prices below.</p> : null}
       <SizePriceEditor dish={dish} actions={actions} />
       <TextInput dish={dish} field="imageUrl" label="Image URL" placeholder="https://..." onChange={updateText('imageUrl')} />
+      <label className="toggle-label">
+        <input type="checkbox" checked={Boolean(dish.blurImage)} onChange={updateBoolean('blurImage')} />
+        Blur photo
+      </label>
       {dish.imageUrl ? (
-        <div className="image-preview">
+        <div className={`image-preview ${dish.blurImage ? 'blurred-image-preview' : ''}`}>
           <img src={dish.imageUrl} alt={`${dish.nameEn} preview`} />
         </div>
       ) : null}
