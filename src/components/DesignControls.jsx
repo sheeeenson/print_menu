@@ -5,6 +5,7 @@ import { GOOGLE_FONT_OPTIONS } from '../utils/typography.js';
 const controls = [
   ['pageMargin', 'Page margin', 12, 80, 1],
   ['cardGap', 'Card gap', 4, 40, 1],
+  ['uniformCardHeight', 'Card height', 160, 360, 1, 230],
   ['cardPadding', 'Card padding', 6, 32, 1],
   ['cardRadius', 'Card radius', 0, 32, 1],
   ['imageHeight', 'Image height', 60, 260, 1],
@@ -25,9 +26,11 @@ export function DesignControls({ page, actions }) {
   useEffect(() => {
     const imageToTitleGap = Number(page.designSettings.imageToTitleGap ?? 1.5);
     const titleContentGap = Number(page.designSettings.imageTitleGap ?? 1.5);
+    const uniformCardHeight = Number(page.designSettings.uniformCardHeight ?? 230);
     document.documentElement.style.setProperty('--image-to-title-gap', `${imageToTitleGap}px`);
     document.documentElement.style.setProperty('--image-title-gap', `${titleContentGap}px`);
-  }, [page.designSettings.imageToTitleGap, page.designSettings.imageTitleGap]);
+    document.documentElement.style.setProperty('--uniform-card-height', `${uniformCardHeight}px`);
+  }, [page.designSettings.imageToTitleGap, page.designSettings.imageTitleGap, page.designSettings.uniformCardHeight]);
 
   return (
     <details className="panel-section collapsible-panel" open>
@@ -41,7 +44,7 @@ export function DesignControls({ page, actions }) {
       <TypographyControls page={page} actions={actions} />
       <div className="design-subpanel">
         <h3 className="panel-subtitle">Spacing & typography</h3>
-        <p className="muted-text">Layout-specific grid controls live in the main Layout panel above. This section only changes visual spacing and type sizes.</p>
+        <p className="muted-text">Card gap controls both horizontal and vertical spacing. Card height keeps names and prices aligned across cards in non-designer layouts.</p>
         <div className="design-control-list">
           {controls.map(([field, label, min, max, step, fallback]) => (
             <DesignSlider key={field} page={page} field={field} label={label} min={min} max={max} step={step} fallback={fallback} actions={actions} />
