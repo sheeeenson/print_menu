@@ -11,6 +11,7 @@ import './stabilityFixes.css';
 import './imageRenderFixes.css';
 import './printOnlyPage.css';
 import './pizzaSizeLayoutFix.js';
+import './pizzaBaselineFix.css';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>
