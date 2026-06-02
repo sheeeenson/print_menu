@@ -109,16 +109,48 @@
   -webkit-box-orient: unset !important;
 }
 
+/* Configurable pizza/size dishes: no base price. Only size prices should be visible. */
+.preview-dish-card:has(.configurable-options) .preview-prices {
+  display: none !important;
+}
+
+.preview-dish-card:has(.configurable-options) .preview-meta-row {
+  justify-content: flex-start !important;
+}
+
+.configurable-options,
+.configurable-options span,
+.configurable-options p,
+.configurable-options li {
+  font-family: var(--price-font-family) !important;
+  font-size: calc(var(--new-price-size) * var(--font-scale, 1)) !important;
+  font-weight: var(--price-font-weight) !important;
+  letter-spacing: var(--price-letter-spacing) !important;
+  color: var(--preview-price-color) !important;
+  line-height: 1.18 !important;
+}
+
+.configurable-options .preview-old-price,
+.configurable-options del,
+.configurable-options s {
+  font-size: calc(var(--old-price-size) * var(--font-scale, 1)) !important;
+}
+
+/* Autofill should pack rows naturally, not stretch empty vertical space between rows. */
+.fit-autoFill .auto-fill-dish-grid,
+.fit-autoFill .preview-dish-grid {
+  align-content: start !important;
+  align-items: start !important;
+  grid-template-rows: none !important;
+  grid-auto-rows: auto !important;
+  row-gap: clamp(4px, var(--card-gap), 12px) !important;
+  column-gap: var(--card-gap) !important;
+}
+
 .fit-autoFill .preview-dish-card,
 .layout-mode-classicColumns .preview-dish-card {
   height: auto !important;
   min-height: max-content !important;
-}
-
-.fit-autoFill .auto-fill-dish-grid,
-.fit-autoFill .preview-dish-grid {
-  align-items: start !important;
-  grid-auto-rows: auto !important;
 }
 
 @media print {
@@ -182,5 +214,19 @@
     flex: 0 0 auto !important;
     margin: 0 !important;
     overflow: visible !important;
+  }
+
+  .preview-dish-card:has(.configurable-options) .preview-prices {
+    display: none !important;
+  }
+
+  .fit-autoFill .auto-fill-dish-grid,
+  .fit-autoFill .preview-dish-grid {
+    align-content: start !important;
+    align-items: start !important;
+    grid-template-rows: none !important;
+    grid-auto-rows: auto !important;
+    row-gap: clamp(4px, var(--card-gap), 12px) !important;
+    column-gap: var(--card-gap) !important;
   }
 }
