@@ -28,58 +28,45 @@ export function LayoutPrintSection({ project, actions }) {
   };
 
   return (
-    <>
-      <section className={`layout-print-section ${isAdminCollapsed ? 'admin-collapsed' : ''}`} aria-label="Layout workspace">
-        <button
-          className="admin-panel-toggle"
-          type="button"
-          onClick={() => setIsAdminCollapsed((value) => !value)}
-          aria-expanded={!isAdminCollapsed}
-        >
-          {isAdminCollapsed ? 'Show settings' : 'Hide settings'}
-        </button>
-        {isAdminCollapsed ? <CollapsedPageSwitcher project={project} actions={actions} /> : null}
-        <aside className="layout-admin-panel layout-sidebar" aria-hidden={isAdminCollapsed}>
-          {fitWarning ? <div className="panel-fit-warning" role="alert">{fitWarning}</div> : null}
-          <PageList project={project} actions={actions} onSelectPage={selectPageFromList} />
-          {selectedPage ? <PageSettingsPanel page={selectedPage} actions={actions} /> : null}
-          {selectedPage ? <PageContentSelector project={project} page={selectedPage} actions={actions} /> : null}
-          {selectedPage ? (
-            <LayoutPrintControls
-              page={selectedPage}
-              actions={actions}
-              onPrint={printPage}
-              onSaveAsPdf={() => setIsPdfModalOpen(true)}
-              selectedDish={selectedPreviewDish}
-            />
-          ) : null}
-          {selectedPage ? <HeaderSettingsPanel page={selectedPage} actions={actions} /> : null}
-          {selectedPage ? <FooterSettingsPanel page={selectedPage} actions={actions} /> : null}
-        </aside>
-        {selectedPage ? <PagePreview project={previewProject} page={selectedPage} selectedPreviewDishId={selectedPreviewDishId} onSelectPreviewDish={setSelectedPreviewDishId} onResizePreviewDish={actions.updateSelectedPageItemPlacement} /> : <div className="empty-state">Add a page to preview your menu.</div>}
+    <section className={`layout-print-section ${isAdminCollapsed ? 'admin-collapsed' : ''}`} aria-label="Layout workspace">
+      <button
+        className="admin-panel-toggle"
+        type="button"
+        onClick={() => setIsAdminCollapsed((value) => !value)}
+        aria-expanded={!isAdminCollapsed}
+      >
+        {isAdminCollapsed ? 'Show settings' : 'Hide settings'}
+      </button>
+      {isAdminCollapsed ? <CollapsedPageSwitcher project={project} actions={actions} /> : null}
+      <aside className="layout-admin-panel layout-sidebar" aria-hidden={isAdminCollapsed}>
+        {fitWarning ? <div className="panel-fit-warning" role="alert">{fitWarning}</div> : null}
+        <PageList project={project} actions={actions} onSelectPage={selectPageFromList} />
+        {selectedPage ? <PageSettingsPanel page={selectedPage} actions={actions} /> : null}
+        {selectedPage ? <PageContentSelector project={project} page={selectedPage} actions={actions} /> : null}
         {selectedPage ? (
-          <aside className="advanced-admin-panel" aria-hidden={isAdminCollapsed}>
-            <details className="panel-section advanced-layout-section" open>
-              <summary>Advanced layout controls</summary>
-              <p className="muted-text">Fine visual controls, typography, spacing, colors, and technical layout tuning.</p>
-              <DesignControls page={selectedPage} actions={actions} />
-            </details>
-          </aside>
-        ) : null}
-        {isPdfModalOpen ? <SavePdfModal onCancel={() => setIsPdfModalOpen(false)} onConfirm={confirmSaveAsPdf} /> : null}
-      </section>
-      {selectedPage ? (
-        <div className="print-only-clone" aria-hidden="true">
-          <PagePreview
-            project={previewProject}
+          <LayoutPrintControls
             page={selectedPage}
-            selectedPreviewDishId=""
-            onSelectPreviewDish={() => {}}
-            onResizePreviewDish={() => {}}
+            actions={actions}
+            onPrint={printPage}
+            onSaveAsPdf={() => setIsPdfModalOpen(true)}
+            selectedDish={selectedPreviewDish}
           />
-        </div>
+        ) : null}
+        {selectedPage ? <HeaderSettingsPanel page={selectedPage} actions={actions} /> : null}
+        {selectedPage ? <FooterSettingsPanel page={selectedPage} actions={actions} /> : null}
+      </aside>
+      {selectedPage ? <PagePreview project={previewProject} page={selectedPage} selectedPreviewDishId={selectedPreviewDishId} onSelectPreviewDish={setSelectedPreviewDishId} onResizePreviewDish={actions.updateSelectedPageItemPlacement} /> : <div className="empty-state">Add a page to preview your menu.</div>}
+      {selectedPage ? (
+        <aside className="advanced-admin-panel" aria-hidden={isAdminCollapsed}>
+          <details className="panel-section advanced-layout-section" open>
+            <summary>Advanced layout controls</summary>
+            <p className="muted-text">Fine visual controls, typography, spacing, colors, and technical layout tuning.</p>
+            <DesignControls page={selectedPage} actions={actions} />
+          </details>
+        </aside>
       ) : null}
-    </>
+      {isPdfModalOpen ? <SavePdfModal onCancel={() => setIsPdfModalOpen(false)} onConfirm={confirmSaveAsPdf} /> : null}
+    </section>
   );
 }
 
