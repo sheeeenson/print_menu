@@ -10,25 +10,15 @@ export function PageList({ project, actions }) {
       </div>
       <div className="page-list">
         {project.pages.map((page) => (
-          <div
+          <button
             key={page.id}
-            className={`page-list-item page-list-editable ${page.id === project.selectedPageId ? 'selected' : ''}`}
+            className={`page-list-item ${page.id === project.selectedPageId ? 'selected' : ''}`}
+            type="button"
             onClick={() => actions.selectPage(page.id)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') actions.selectPage(page.id);
-            }}
           >
-            <input
-              aria-label="Page name"
-              value={page.name}
-              onClick={(event) => event.stopPropagation()}
-              onFocus={() => actions.selectPage(page.id)}
-              onChange={(event) => actions.updatePageName(page.id, event.target.value)}
-            />
+            <span>{page.name || 'Untitled page'}</span>
             <small>{page.paperSize} · {page.orientation}</small>
-          </div>
+          </button>
         ))}
       </div>
       <div className="action-row page-actions">
