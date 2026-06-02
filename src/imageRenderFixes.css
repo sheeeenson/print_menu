@@ -142,7 +142,7 @@
   justify-content: flex-start !important;
 }
 
-/* Pizza size prices: one vertical block per size, with size, old price, sale price. */
+/* Pizza size prices: rows are sizes, old prices, then sale prices. */
 .configurable-options {
   width: 100% !important;
   margin-top: 2px !important;
@@ -155,8 +155,56 @@
   display: none !important;
 }
 
-.configurable-options.compact-options p,
-.configurable-options.step-list span {
+.configurable-options.pizza-size-matrix {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  width: 100% !important;
+  overflow: hidden !important;
+}
+
+.pizza-size-matrix .pizza-price-row {
+  display: grid !important;
+  grid-auto-flow: column !important;
+  grid-auto-columns: minmax(0, 1fr) !important;
+  column-gap: 6px !important;
+  align-items: center !important;
+  width: 100% !important;
+}
+
+.pizza-size-matrix .pizza-price-cell {
+  display: block !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+  font-family: var(--price-font-family) !important;
+  line-height: 1.08 !important;
+}
+
+.pizza-size-matrix .pizza-size-row-cell {
+  color: var(--preview-text-color) !important;
+  font-size: calc(var(--new-price-size) * var(--font-scale, 1) * 0.7) !important;
+  font-weight: 650 !important;
+}
+
+.pizza-size-matrix .pizza-old-row-cell {
+  color: var(--preview-muted-color) !important;
+  font-size: calc(var(--old-price-size) * var(--font-scale, 1) * 0.86) !important;
+  font-weight: var(--price-font-weight) !important;
+  text-decoration: line-through !important;
+  text-decoration-thickness: 1.5px !important;
+}
+
+.pizza-size-matrix .pizza-sale-row-cell {
+  color: var(--preview-price-color) !important;
+  font-size: calc(var(--new-price-size) * var(--font-scale, 1) * 0.88) !important;
+  font-weight: var(--price-font-weight) !important;
+}
+
+.configurable-options.compact-options:not(.pizza-size-matrix) p,
+.configurable-options.step-list:not(.pizza-size-matrix) span {
   display: block !important;
   white-space: pre-line !important;
   color: var(--preview-price-color) !important;
@@ -240,15 +288,17 @@
     -webkit-box-orient: vertical !important;
   }
 
-  .configurable-options.compact-options p,
-  .configurable-options.step-list span {
-    display: block !important;
-    white-space: pre-line !important;
-    color: var(--preview-price-color) !important;
-    font-family: var(--price-font-family) !important;
-    font-size: calc(var(--new-price-size) * var(--font-scale, 1) * 0.86) !important;
-    font-weight: var(--price-font-weight) !important;
-    line-height: 1.12 !important;
+  .configurable-options.pizza-size-matrix {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+  }
+
+  .pizza-size-matrix .pizza-price-row {
+    display: grid !important;
+    grid-auto-flow: column !important;
+    grid-auto-columns: minmax(0, 1fr) !important;
+    column-gap: 6px !important;
   }
 
   .preview-dish-card:has(.configurable-options) .preview-description,
