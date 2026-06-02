@@ -142,22 +142,62 @@
   justify-content: flex-start !important;
 }
 
-.configurable-options,
-.configurable-options span,
-.configurable-options p,
-.configurable-options li {
-  font-family: var(--price-font-family) !important;
-  font-size: calc(var(--new-price-size) * var(--font-scale, 1)) !important;
-  font-weight: var(--price-font-weight) !important;
-  letter-spacing: var(--price-letter-spacing) !important;
+/* Pizza size prices: one vertical block per size, with size, old price, sale price. */
+.configurable-options {
+  width: 100% !important;
+  margin-top: 2px !important;
   color: var(--preview-price-color) !important;
-  line-height: 1.18 !important;
+  font-family: var(--price-font-family) !important;
+  letter-spacing: var(--price-letter-spacing) !important;
 }
 
-.configurable-options .preview-old-price,
-.configurable-options del,
-.configurable-options s {
-  font-size: calc(var(--old-price-size) * var(--font-scale, 1)) !important;
+.configurable-options strong {
+  display: none !important;
+}
+
+.configurable-options.compact-options p,
+.configurable-options.step-list span {
+  display: block !important;
+  white-space: pre-line !important;
+  color: var(--preview-price-color) !important;
+  font-family: var(--price-font-family) !important;
+  font-size: calc(var(--new-price-size) * var(--font-scale, 1) * 0.86) !important;
+  font-weight: var(--price-font-weight) !important;
+  line-height: 1.12 !important;
+}
+
+.configurable-options.compact-options p {
+  margin: 0 !important;
+}
+
+.configurable-options.step-list {
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  list-style: none !important;
+}
+
+.configurable-options.step-list li {
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.configurable-options.compact-options,
+.configurable-options.step-list {
+  overflow: visible !important;
+}
+
+.preview-dish-card:has(.configurable-options) .preview-card-content {
+  gap: max(2px, var(--image-title-gap, 1.5px)) !important;
+}
+
+.preview-dish-card:has(.configurable-options) .preview-description {
+  display: none !important;
+}
+
+.preview-dish-card:has(.configurable-options) .preview-meta-row {
+  display: none !important;
 }
 
 /* Equal cards for all non-designer layouts. */
@@ -198,6 +238,23 @@
     white-space: normal !important;
     -webkit-line-clamp: 3 !important;
     -webkit-box-orient: vertical !important;
+  }
+
+  .configurable-options.compact-options p,
+  .configurable-options.step-list span {
+    display: block !important;
+    white-space: pre-line !important;
+    color: var(--preview-price-color) !important;
+    font-family: var(--price-font-family) !important;
+    font-size: calc(var(--new-price-size) * var(--font-scale, 1) * 0.86) !important;
+    font-weight: var(--price-font-weight) !important;
+    line-height: 1.12 !important;
+  }
+
+  .preview-dish-card:has(.configurable-options) .preview-description,
+  .preview-dish-card:has(.configurable-options) .preview-meta-row,
+  .preview-dish-card:has(.configurable-options) .preview-prices {
+    display: none !important;
   }
 
   .layout-mode-classicColumns .classic-columns-grid,
