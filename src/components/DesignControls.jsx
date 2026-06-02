@@ -7,14 +7,14 @@ const controls = [
   ['cardGap', 'Card gap', 4, 40, 1],
   ['cardPadding', 'Card padding', 6, 32, 1],
   ['cardRadius', 'Card radius', 0, 32, 1],
-  ['imageHeight', 'Image height', 60, 220, 1],
+  ['imageHeight', 'Image height', 60, 260, 1],
   ['imageToTitleGap', 'Image to title gap', 0, 40, 0.5, 1.5],
   ['imageTitleGap', 'Title/content gap', 0, 40, 0.5, 1.5],
   ['categoryTitleFontSize', 'Category title', 18, 44, 1],
-  ['dishTitleFontSize', 'Dish title', 12, 28, 1],
-  ['descriptionFontSize', 'Description', 9, 18, 1],
-  ['oldPriceFontSize', 'Old price', 9, 20, 1],
-  ['newPriceFontSize', 'New price', 12, 28, 1],
+  ['dishTitleFontSize', 'Dish title', 12, 34, 1],
+  ['descriptionFontSize', 'Description', 9, 20, 1],
+  ['oldPriceFontSize', 'Old price', 9, 22, 1],
+  ['newPriceFontSize', 'New price', 12, 32, 1],
   ['badgeFontSize', 'Badge', 8, 18, 1],
   ['weightFontSize', 'Weight', 8, 18, 1],
 ];
@@ -61,19 +61,12 @@ function TypographyControls({ page, actions }) {
   return (
     <div className="design-subpanel">
       <h3 className="panel-subtitle">Font system</h3>
-      <FontFamilyControl label="Category font" field="categoryFontFamily" settings={settings} onChange={custom} />
-      <FontFamilyControl label="Dish title font" field="dishTitleFontFamily" settings={settings} onChange={custom} />
-      <FontFamilyControl label="Description font" field="descriptionFontFamily" settings={settings} onChange={custom} />
-      <FontFamilyControl label="Price font" field="priceFontFamily" settings={settings} onChange={custom} />
-      <FontFamilyControl label="Badge font" field="badgeFontFamily" settings={settings} onChange={custom} />
+      <FontPairControl label="Category" familyField="categoryFontFamily" weightField="categoryFontWeight" settings={settings} onChange={custom} />
+      <FontPairControl label="Dish title" familyField="dishTitleFontFamily" weightField="dishTitleFontWeight" settings={settings} onChange={custom} />
+      <FontPairControl label="Description" familyField="descriptionFontFamily" weightField="descriptionFontWeight" settings={settings} onChange={custom} />
+      <FontPairControl label="Price" familyField="priceFontFamily" weightField="priceFontWeight" settings={settings} onChange={custom} />
+      <FontPairControl label="Badge" familyField="badgeFontFamily" weightField="badgeFontWeight" settings={settings} onChange={custom} />
       <FontFamilyControl label="Header/footer font" field="headerFooterFontFamily" settings={settings} onChange={custom} />
-      <div className="two-column-fields panel-two-column">
-        <WeightControl label="Category weight" field="categoryFontWeight" settings={settings} onChange={custom} />
-        <WeightControl label="Dish weight" field="dishTitleFontWeight" settings={settings} onChange={custom} />
-        <WeightControl label="Description weight" field="descriptionFontWeight" settings={settings} onChange={custom} />
-        <WeightControl label="Price weight" field="priceFontWeight" settings={settings} onChange={custom} />
-        <WeightControl label="Badge weight" field="badgeFontWeight" settings={settings} onChange={custom} />
-      </div>
       <LetterSpacingControl label="Category spacing" field="categoryLetterSpacing" settings={settings} onChange={custom} />
       <LetterSpacingControl label="Dish title spacing" field="dishTitleLetterSpacing" settings={settings} onChange={custom} />
       <LetterSpacingControl label="Price spacing" field="priceLetterSpacing" settings={settings} onChange={custom} />
@@ -96,6 +89,15 @@ function SelectControl({ label, value, onChange, options }) {
         {options.map(([optionValue, optionLabel]) => <option key={optionValue} value={optionValue}>{optionLabel}</option>)}
       </select>
     </label>
+  );
+}
+
+function FontPairControl({ label, familyField, weightField, settings, onChange }) {
+  return (
+    <div className="font-pair-control">
+      <FontFamilyControl label={`${label} font`} field={familyField} settings={settings} onChange={onChange} />
+      <WeightControl label={`${label} weight`} field={weightField} settings={settings} onChange={onChange} />
+    </div>
   );
 }
 
