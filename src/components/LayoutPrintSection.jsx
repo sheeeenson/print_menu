@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { DesignControls } from './DesignControls.jsx';
 import { FooterSettingsPanel } from './FooterSettingsPanel.jsx';
 import { HeaderSettingsPanel } from './HeaderSettingsPanel.jsx';
@@ -12,8 +12,6 @@ export function LayoutPrintSection({ project, actions }) {
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [selectedPreviewDishId, setSelectedPreviewDishId] = useState('');
   const [isAdminCollapsed, setIsAdminCollapsed] = useState(false);
-  const [isPageSettingsFocused, setIsPageSettingsFocused] = useState(false);
-  const pageSettingsRef = useRef(null);
   const selectedPage = project.pages.find((page) => page.id === project.selectedPageId) ?? project.pages[0];
   const previewProject = selectedPage ? projectWithPageOrder(project, selectedPage) : project;
   const fitWarning = selectedPage ? getFitWarning(previewProject, selectedPage) : '';
@@ -27,15 +25,10 @@ export function LayoutPrintSection({ project, actions }) {
   };
   const selectPageFromList = (pageId) => {
     actions.selectPage(pageId);
-    setIsPageSettingsFocused(true);
-    window.setTimeout(() => {
-      pageSettingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 0);
-    window.setTimeout(() => setIsPageSettingsFocused(false), 900);
   };
 
   return (
-    <section className={`layout-print-section ${isAdminCollapsed ? 'admin-collapsed' : ''}`} aria-label="Layout and print workspace">
+    <section className={`layout-print-section ${isAdminCollapsed ? 'admin-collapsed' : ''}`} aria-label="Layout workspace">
       <button
         className="admin-panel-toggle"
         type="button"
@@ -48,11 +41,7 @@ export function LayoutPrintSection({ project, actions }) {
       <aside className="layout-admin-panel layout-sidebar" aria-hidden={isAdminCollapsed}>
         {fitWarning ? <div className="panel-fit-warning" role="alert">{fitWarning}</div> : null}
         <PageList project={project} actions={actions} onSelectPage={selectPageFromList} />
-        {selectedPage ? (
-          <div ref={pageSettingsRef} className={isPageSettingsFocused ? 'page-settings-focus' : ''}>
-            <PageSettingsPanel page={selectedPage} actions={actions} />
-          </div>
-        ) : null}
+        {selectedPage ? <PageSettingsPanel page={selectedPage} actions={actions} /> : null}
         {selectedPage ? (
           <LayoutPrintControls
             page={selectedPage}
@@ -113,8 +102,8 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
       designSettings: {
         ...settings,
         layoutMode,
-        gridMode: layoutMode === 'smartAutoFit' ? 'autoFill' : layoutMode === 'snapGrid' ? 'custom' : 'preset',
-        resizeMode: layoutMode === 'manualDesigner' ? 'freeResize' : layoutMode === 'snapGrid' ? 'snapToGrid' : settings.resizeMode,
+        gridMode: layoutMode === 'smartAutoFit' ? 'autoFill' : 'preset',
+        resizeMode: layoutMode === 'manualDesigner' ? 'freeResize' : settings.resizeMode,
         gridPreset: layoutMode === 'classicColumns' ? columnPresetFor(settings.classicColumns) : settings.gridPreset,
       },
     });
@@ -137,7 +126,7 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
 
   return (
     <div className="panel-section preview-controls layout-print-controls">
-      <p className="eyebrow">Layout &amp; Print</p>
+      <p className="eyebrow">Layout</p>
       <h2>Layout</h2>
       <div className="print-action-row" aria-label="Print and demo actions">
         <button className="primary-action compact" type="button" onClick={onPrint}>Print</button>
@@ -149,8 +138,6 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
         <select value={settings.layoutMode} onChange={updateLayoutMode}>
           <option value="classicColumns">Classic columns</option>
           <option value="smartAutoFit">Smart auto-fit</option>
-          <option value="snapGrid">Snap grid</option>
-          <option value="fluidGrid">Fluid grid</option>
           <option value="manualDesigner">Manual designer</option>
         </select>
       </label>
@@ -171,24 +158,6 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
       </label>
       {settings.layoutMode === 'manualDesigner' ? (
         <p className="muted-text">Manual designer uses free positioning and free resize inside the printable content area.</p>
-      ) : null}
-      {settings.layoutMode === 'snapGrid' ? (
-        <div className="grid-resize-controls">
-          <h3>Snap Grid</h3>
-          <div className="two-column-fields">
-            <label className="field-label">Columns<input type="number" min="1" max="6" value={settings.customGrid.columns} onChange={(event) => actions.updateSelectedPageCustomGrid('columns', Number(event.target.value))} /></label>
-            <label className="field-label">Rows<input type="number" min="1" max="12" value={settings.customGrid.rows} onChange={(event) => actions.updateSelectedPageCustomGrid('rows', Number(event.target.value))} /></label>
-          </div>
-          <label className="slider-label"><span>Gap<strong>{settings.customGrid.gap}px</strong></span><input type="range" min="0" max="64" value={settings.customGrid.gap} onChange={(event) => actions.updateSelectedPageCustomGrid('gap', Number(event.target.value))} /></label>
-          <label className="toggle-label"><input type="checkbox" checked={settings.customGrid.densePacking} onChange={(event) => actions.updateSelectedPageCustomGrid('densePacking', event.target.checked)} /> Dense packing</label>
-        </div>
-      ) : null}
-      {settings.layoutMode === 'fluidGrid' ? (
-        <div className="grid-resize-controls">
-          <h3>Fluid Grid</h3>
-          <p className="muted-text">Cards stay in layout flow and resize smoothly with weight-based sizing.</p>
-          <label className="slider-label"><span>Gap<strong>{settings.cardGap}px</strong></span><input type="range" min="0" max="64" value={settings.cardGap} onChange={updateNumber('cardGap')} /></label>
-        </div>
       ) : null}
 
       <section className="settings-block image-settings-block">
@@ -220,7 +189,7 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
         <p className="muted-text">Prices always stay pinned to the bottom of every card.</p>
       </section>
 
-      {(['manualDesigner', 'snapGrid', 'fluidGrid'].includes(settings.layoutMode)) ? (
+      {settings.layoutMode === 'manualDesigner' ? (
         <SelectedCardControls page={page} actions={actions} selectedDish={selectedDish} placement={selectedPlacement} />
       ) : null}
 
@@ -257,45 +226,26 @@ function columnPresetFor(columns) {
   return { 1: 'oneColumn', 2: 'twoColumns', 3: 'threeColumns', 4: 'fourColumns', 5: 'fiveColumns' }[columns] ?? 'twoColumns';
 }
 
-const MANUAL_GRID_SPANS = Object.freeze(['1x1', '2x1', '1x2', '2x2', '3x3']);
-
 function SelectedCardControls({ page, actions, selectedDish, placement }) {
-  const isFluid = page.designSettings.layoutMode === 'fluidGrid';
-  const isFreeResize = page.designSettings.layoutMode === 'manualDesigner' && page.designSettings.resizeMode === 'freeResize';
   const current = {
-    mode: isFluid ? 'fluid' : isFreeResize ? 'free' : 'grid',
-    widthWeight: placement?.widthWeight ?? 1,
-    heightWeight: placement?.heightWeight ?? 1,
-    minWidthPercent: placement?.minWidthPercent ?? 12,
-    minHeightPercent: placement?.minHeightPercent ?? 8,
-    maxWidthPercent: placement?.maxWidthPercent ?? 100,
-    maxHeightPercent: placement?.maxHeightPercent ?? 100,
-    order: placement?.order ?? 0,
-    colSpan: placement?.colSpan ?? 1,
-    rowSpan: placement?.rowSpan ?? 1,
+    mode: 'free',
     xPercent: placement?.xPercent ?? 0,
     yPercent: placement?.yPercent ?? 0,
     widthPercent: placement?.widthPercent ?? 30,
     heightPercent: placement?.heightPercent ?? 22,
     zIndex: placement?.zIndex ?? 1,
-    priority: placement?.priority ?? 0,
   };
-  const maxColumns = page.designSettings.customGrid.columns;
-  const maxRows = page.designSettings.customGrid.rows;
-  const spanOptions = MANUAL_GRID_SPANS.map((span) => span.split('x').map(Number)).filter(([columns, rows]) => columns <= maxColumns && rows <= maxRows);
-  const colSpanOptions = [...new Set(spanOptions.filter(([, rows]) => rows === current.rowSpan).map(([columns]) => columns))];
-  const rowSpanOptions = [...new Set(spanOptions.filter(([columns]) => columns === current.colSpan).map(([, rows]) => rows))];
   const updatePlacement = (changes) => {
     if (!selectedDish) return;
-    actions.updateSelectedPageItemPlacement(selectedDish.id, { ...current, ...changes });
+    actions.updateSelectedPageItemPlacement(selectedDish.id, { ...current, ...changes, mode: 'free' });
   };
   const updatePercent = (field) => (event) => {
     const value = Number(event.target.value);
-    if (field === 'xPercent') updatePlacement({ xPercent: Math.min(value, 100 - current.widthPercent), mode: 'free' });
-    else if (field === 'yPercent') updatePlacement({ yPercent: Math.min(value, 100 - current.heightPercent), mode: 'free' });
-    else if (field === 'widthPercent') updatePlacement({ widthPercent: value, xPercent: Math.min(current.xPercent, 100 - value), mode: 'free' });
-    else if (field === 'heightPercent') updatePlacement({ heightPercent: value, yPercent: Math.min(current.yPercent, 100 - value), mode: 'free' });
-    else updatePlacement({ [field]: value, mode: 'free' });
+    if (field === 'xPercent') updatePlacement({ xPercent: Math.min(value, 100 - current.widthPercent) });
+    else if (field === 'yPercent') updatePlacement({ yPercent: Math.min(value, 100 - current.heightPercent) });
+    else if (field === 'widthPercent') updatePlacement({ widthPercent: value, xPercent: Math.min(current.xPercent, 100 - value) });
+    else if (field === 'heightPercent') updatePlacement({ heightPercent: value, yPercent: Math.min(current.yPercent, 100 - value) });
+    else updatePlacement({ [field]: value });
   };
 
   return (
@@ -303,45 +253,18 @@ function SelectedCardControls({ page, actions, selectedDish, placement }) {
       <div>
         <p className="eyebrow">Selected card</p>
         <strong>{selectedDish?.nameEn || 'Click a preview card'}</strong>
-        <small>{selectedDish ? (isFluid ? `${current.widthWeight.toFixed(2)} width × ${current.heightWeight.toFixed(2)} height` : isFreeResize ? `${current.widthPercent}% × ${current.heightPercent}%` : `${current.colSpan} columns × ${current.rowSpan} rows`) : 'Select a preview card to edit its size.'}</small>
+        <small>{selectedDish ? `${current.widthPercent}% × ${current.heightPercent}%` : 'Select a preview card to edit its size.'}</small>
       </div>
-      {isFluid ? (
-        <FluidSelectedCardControls current={current} selectedDish={selectedDish} updatePlacement={updatePlacement} actions={actions} />
-      ) : isFreeResize ? (
-        <div className="selected-free-controls">
-          <label className="field-label">Width %<input type="number" min="10" max="100" value={current.widthPercent} onChange={updatePercent('widthPercent')} disabled={!selectedDish} /></label>
-          <label className="field-label">Height %<input type="number" min="8" max="100" value={current.heightPercent} onChange={updatePercent('heightPercent')} disabled={!selectedDish} /></label>
-          <label className="field-label">X %<input type="number" min="0" max="100" value={current.xPercent} onChange={updatePercent('xPercent')} disabled={!selectedDish} /></label>
-          <label className="field-label">Y %<input type="number" min="0" max="100" value={current.yPercent} onChange={updatePercent('yPercent')} disabled={!selectedDish} /></label>
-          <label className="field-label">Z-index<input type="number" min="1" max="999" value={current.zIndex} onChange={updatePercent('zIndex')} disabled={!selectedDish} /></label>
-        </div>
-      ) : (
-        <div className="selected-card-span-controls">
-          <label className="field-label">Col span<select value={current.colSpan} onChange={(event) => updatePlacement({ colSpan: Number(event.target.value), mode: 'grid' })} disabled={!selectedDish}>{(colSpanOptions.length ? colSpanOptions : [1]).map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
-          <label className="field-label">Row span<select value={current.rowSpan} onChange={(event) => updatePlacement({ rowSpan: Number(event.target.value), mode: 'grid' })} disabled={!selectedDish}>{(rowSpanOptions.length ? rowSpanOptions : [1]).map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
-        </div>
-      )}
-      {!isFluid ? (
-        <div className="print-action-row">
-          <button className="secondary-action compact" type="button" onClick={() => selectedDish && actions.resetSelectedPageItemPlacement(selectedDish.id)} disabled={!selectedDish}>Reset selected card</button>
-          <button className="secondary-action compact" type="button" onClick={actions.resetSelectedPageItemPlacements}>Reset all card sizes</button>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function FluidSelectedCardControls({ current, selectedDish, updatePlacement, actions }) {
-  const updateWeight = (field) => (event) => updatePlacement({ [field]: Number(event.target.value), mode: 'fluid' });
-  const resetAllFluidSizes = () => actions.resetSelectedPageItemPlacements();
-  return (
-    <div className="selected-fluid-controls">
-      <p className="muted-text">Selected card size</p>
-      <label className="slider-label"><span>Width weight<strong>{current.widthWeight.toFixed(2)}</strong></span><input type="range" min="0.5" max="4" step="0.05" value={current.widthWeight} onChange={updateWeight('widthWeight')} disabled={!selectedDish} /></label>
-      <label className="slider-label"><span>Height weight<strong>{current.heightWeight.toFixed(2)}</strong></span><input type="range" min="0.5" max="4" step="0.05" value={current.heightWeight} onChange={updateWeight('heightWeight')} disabled={!selectedDish} /></label>
+      <div className="selected-free-controls">
+        <label className="field-label">Width %<input type="number" min="10" max="100" value={current.widthPercent} onChange={updatePercent('widthPercent')} disabled={!selectedDish} /></label>
+        <label className="field-label">Height %<input type="number" min="8" max="100" value={current.heightPercent} onChange={updatePercent('heightPercent')} disabled={!selectedDish} /></label>
+        <label className="field-label">X %<input type="number" min="0" max="100" value={current.xPercent} onChange={updatePercent('xPercent')} disabled={!selectedDish} /></label>
+        <label className="field-label">Y %<input type="number" min="0" max="100" value={current.yPercent} onChange={updatePercent('yPercent')} disabled={!selectedDish} /></label>
+        <label className="field-label">Z-index<input type="number" min="1" max="999" value={current.zIndex} onChange={updatePercent('zIndex')} disabled={!selectedDish} /></label>
+      </div>
       <div className="print-action-row">
-        <button className="secondary-action compact" type="button" onClick={() => selectedDish && actions.resetSelectedPageItemPlacement(selectedDish.id)} disabled={!selectedDish}>Reset selected card size</button>
-        <button className="secondary-action compact" type="button" onClick={resetAllFluidSizes}>Reset all fluid sizes</button>
+        <button className="secondary-action compact" type="button" onClick={() => selectedDish && actions.resetSelectedPageItemPlacement(selectedDish.id)} disabled={!selectedDish}>Reset selected card</button>
+        <button className="secondary-action compact" type="button" onClick={actions.resetSelectedPageItemPlacements}>Reset all card sizes</button>
       </div>
     </div>
   );
@@ -373,7 +296,11 @@ function projectWithPageOrder(project, page) {
   return {
     ...project,
     categories: [...project.categories].sort((a, b) => (categoryOrder.get(a.id) ?? 99999) - (categoryOrder.get(b.id) ?? 99999)),
-    dishes: [...project.dishes].sort((a, b) => (dishOrder.get(a.id) ?? 99999) - (dishOrder.get(b.id) ?? 99999)),
+    dishes: [...project.dishes].sort((a, b) => {
+      const categoryCompare = (categoryOrder.get(a.categoryId) ?? 99999) - (categoryOrder.get(b.categoryId) ?? 99999);
+      if (categoryCompare !== 0) return categoryCompare;
+      return (dishOrder.get(a.id) ?? 99999) - (dishOrder.get(b.id) ?? 99999);
+    }),
   };
 }
 
