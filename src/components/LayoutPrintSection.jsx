@@ -153,13 +153,6 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
         <input type="checkbox" checked={settings.showImages} onChange={update('showImages')} />
         Show images
       </label>
-      <label className="field-label">Image fit
-        <select value={settings.imageFitMode} onChange={update('imageFitMode')} disabled={!settings.showImages || settings.cardStyle === 'textOnly'}>
-          <option value="contain">Contain full image</option>
-          <option value="cover">Cover crop</option>
-          <option value="fill">Stretch</option>
-        </select>
-      </label>
       <label className="field-label">Image position
         <select value={settings.imagePosition} onChange={update('imagePosition')} disabled={!settings.showImages || settings.cardStyle === 'textOnly'}>
           <option value="center">Center</option>
@@ -171,8 +164,6 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
         </select>
       </label>
       <label className="slider-label"><span>Image zoom<strong>{settings.imageZoom}%</strong></span><input type="range" min="50" max="200" value={settings.imageZoom} onChange={updateNumber('imageZoom')} disabled={!settings.showImages || settings.cardStyle === 'textOnly'} /></label>
-      <label className="slider-label"><span>Image pan X<strong>{settings.imagePanX}</strong></span><input type="range" min="-50" max="50" value={settings.imagePanX} onChange={updateNumber('imagePanX')} disabled={!settings.showImages || settings.cardStyle === 'textOnly' || settings.imagePosition !== 'custom'} /></label>
-      <label className="slider-label"><span>Image pan Y<strong>{settings.imagePanY}</strong></span><input type="range" min="-50" max="50" value={settings.imagePanY} onChange={updateNumber('imagePanY')} disabled={!settings.showImages || settings.cardStyle === 'textOnly' || settings.imagePosition !== 'custom'} /></label>
       <label className="slider-label"><span>Image area<strong>{settings.imageAreaPercent}%</strong></span><input type="range" min="10" max="80" value={settings.imageAreaPercent} onChange={updateNumber('imageAreaPercent')} disabled={!settings.showImages || settings.cardStyle === 'textOnly'} /></label>
 
       <h3>Content</h3>
@@ -181,12 +172,6 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
         Show descriptions
       </label>
       <p className="muted-text">Prices always stay pinned to the bottom of every card.</p>
-      <label className="field-label">Configurable dish display
-        <select value={settings.configurableDisplayMode} onChange={update('configurableDisplayMode')}>
-          <option value="compactOptions">Compact options</option>
-          <option value="stepList">Step list</option>
-        </select>
-      </label>
 
       {(['manualDesigner', 'snapGrid', 'fluidGrid'].includes(settings.layoutMode)) ? (
         <SelectedCardControls page={page} actions={actions} selectedDish={selectedDish} placement={selectedPlacement} />
