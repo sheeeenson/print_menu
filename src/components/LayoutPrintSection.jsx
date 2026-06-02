@@ -42,6 +42,7 @@ export function LayoutPrintSection({ project, actions }) {
         {fitWarning ? <div className="panel-fit-warning" role="alert">{fitWarning}</div> : null}
         <PageList project={project} actions={actions} onSelectPage={selectPageFromList} />
         {selectedPage ? <PageSettingsPanel page={selectedPage} actions={actions} /> : null}
+        {selectedPage ? <PageContentSelector project={project} page={selectedPage} actions={actions} /> : null}
         {selectedPage ? (
           <LayoutPrintControls
             page={selectedPage}
@@ -51,18 +52,19 @@ export function LayoutPrintSection({ project, actions }) {
             selectedDish={selectedPreviewDish}
           />
         ) : null}
-        {selectedPage ? <PageContentSelector project={project} page={selectedPage} actions={actions} /> : null}
         {selectedPage ? <HeaderSettingsPanel page={selectedPage} actions={actions} /> : null}
         {selectedPage ? <FooterSettingsPanel page={selectedPage} actions={actions} /> : null}
-        {selectedPage ? (
-          <details className="panel-section advanced-layout-section">
-            <summary>Advanced layout controls</summary>
-            <p className="muted-text">Legacy grid, fitting, typography, and technical fit-all controls remain available here.</p>
-            <DesignControls page={selectedPage} actions={actions} />
-          </details>
-        ) : null}
       </aside>
       {selectedPage ? <PagePreview project={previewProject} page={selectedPage} selectedPreviewDishId={selectedPreviewDishId} onSelectPreviewDish={setSelectedPreviewDishId} onResizePreviewDish={actions.updateSelectedPageItemPlacement} /> : <div className="empty-state">Add a page to preview your menu.</div>}
+      {selectedPage ? (
+        <aside className="advanced-admin-panel" aria-hidden={isAdminCollapsed}>
+          <details className="panel-section advanced-layout-section" open>
+            <summary>Advanced layout controls</summary>
+            <p className="muted-text">Fine visual controls, typography, spacing, colors, and technical layout tuning.</p>
+            <DesignControls page={selectedPage} actions={actions} />
+          </details>
+        </aside>
+      ) : null}
       {isPdfModalOpen ? <SavePdfModal onCancel={() => setIsPdfModalOpen(false)} onConfirm={confirmSaveAsPdf} /> : null}
     </section>
   );
