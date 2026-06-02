@@ -161,6 +161,7 @@
   gap: 2px !important;
   width: 100% !important;
   overflow: hidden !important;
+  margin-top: auto !important;
 }
 
 .pizza-size-matrix .pizza-price-row {
@@ -184,7 +185,7 @@
 }
 
 .pizza-size-matrix .pizza-size-row-cell {
-  color: var(--preview-text-color) !important;
+  color: var(--preview-muted-color) !important;
   font-size: calc(var(--new-price-size) * var(--font-scale, 1) * 0.7) !important;
   font-weight: 650 !important;
 }
@@ -248,6 +249,14 @@
   display: none !important;
 }
 
+.preview-dish-card:has(.pizza-size-matrix) .preview-card-content {
+  justify-content: flex-start !important;
+}
+
+.preview-dish-card:has(.pizza-size-matrix) .pizza-size-matrix {
+  margin-top: auto !important;
+}
+
 /* Equal cards for all non-designer layouts. */
 .layout-mode-classicColumns .classic-columns-grid,
 .fit-autoFill .auto-fill-dish-grid,
@@ -292,6 +301,7 @@
     display: flex !important;
     flex-direction: column !important;
     gap: 2px !important;
+    margin-top: auto !important;
   }
 
   .pizza-size-matrix .pizza-price-row {
@@ -299,6 +309,10 @@
     grid-auto-flow: column !important;
     grid-auto-columns: minmax(0, 1fr) !important;
     column-gap: 6px !important;
+  }
+
+  .pizza-size-matrix .pizza-size-row-cell {
+    color: var(--preview-muted-color) !important;
   }
 
   .preview-dish-card:has(.configurable-options) .preview-description,
