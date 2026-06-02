@@ -8,6 +8,7 @@ import './pageContentControls.css';
 import './badgePosition.css';
 import './modernApp.css';
 import './stabilityFixes.css';
+import './imageRenderFixes.css';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>
