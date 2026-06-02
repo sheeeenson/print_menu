@@ -1,9 +1,54 @@
 /* Stabilization layer for the simplified Layout workflow. */
 
-/* Admin order: basic controls on the left, technical controls float on the right. */
+/* Static three-column layout: left settings, centered preview, right advanced settings. */
+.layout-print-section {
+  display: grid !important;
+  grid-template-columns: 390px minmax(0, 1fr) 360px !important;
+  min-height: calc(100vh - 64px) !important;
+  max-height: calc(100vh - 64px) !important;
+  overflow: hidden !important;
+}
+
+.layout-admin-panel,
+.advanced-admin-panel {
+  height: calc(100vh - 64px) !important;
+  max-height: calc(100vh - 64px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  background: #ffffff;
+  border-color: var(--app-border, #e5e7eb);
+}
+
 .layout-admin-panel {
   display: flex;
   flex-direction: column;
+  border-right: 1px solid var(--app-border, #e5e7eb) !important;
+}
+
+.advanced-admin-panel {
+  border-left: 1px solid var(--app-border, #e5e7eb);
+  padding: 22px;
+}
+
+.preview-stage {
+  min-height: 0 !important;
+  max-height: calc(100vh - 64px) !important;
+  overflow: hidden !important;
+}
+
+.paper-scroll {
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow: auto !important;
+}
+
+.layout-print-section.admin-collapsed {
+  grid-template-columns: 0 minmax(0, 1fr) 0 !important;
+}
+
+.layout-print-section.admin-collapsed .layout-admin-panel,
+.layout-print-section.admin-collapsed .advanced-admin-panel {
+  display: none !important;
 }
 
 .layout-admin-panel > .panel-fit-warning { order: 0; }
@@ -12,23 +57,22 @@
 .layout-admin-panel > section:has(#page-content-title) { order: 30; }
 .layout-admin-panel > .layout-print-controls { order: 40; }
 .layout-admin-panel > details:not(.advanced-layout-section) { order: 50; }
-.layout-admin-panel > .advanced-layout-section { order: 90; }
 
-@media (min-width: 1181px) {
-  .advanced-layout-section {
-    position: fixed;
-    top: 92px;
-    right: 18px;
-    z-index: 18;
-    width: min(360px, calc(100vw - 440px));
-    max-height: calc(100vh - 116px);
-    overflow: auto;
-    border: 1px solid var(--app-border, #e5e7eb) !important;
-    border-radius: 18px;
-    background: #ffffff !important;
-    padding: 16px !important;
-    box-shadow: var(--app-shadow-soft, 0 8px 24px rgba(17, 24, 39, 0.06));
-  }
+.advanced-layout-section {
+  position: static !important;
+  display: block !important;
+  width: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  border: 1px solid var(--app-border, #e5e7eb) !important;
+  border-radius: 18px;
+  background: #ffffff !important;
+  padding: 16px !important;
+  box-shadow: none !important;
+}
+
+.advanced-layout-section[open] > summary {
+  margin-bottom: 12px;
 }
 
 /* Preview paper sizes: use fixed ratio and true A3/A4 canvas dimensions. */
@@ -104,8 +148,16 @@
   grid-row: 1;
 }
 
+.preview-dish-card.card-layout-below {
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr) !important;
+  align-content: start !important;
+  gap: var(--image-to-title-gap, 1.5px) !important;
+}
+
 .preview-dish-card.card-layout-below .preview-image-box {
-  height: var(--image-height) !important;
+  height: min(var(--image-height), 58%) !important;
+  min-height: 42px !important;
 }
 
 .fit-autoFill .preview-image-box {
@@ -120,9 +172,11 @@
 .preview-dish-card.has-images .preview-card-content,
 .preview-dish-card.no-images .preview-card-content {
   display: grid !important;
+  grid-template-rows: auto auto auto minmax(0, auto) !important;
   gap: var(--image-title-gap, 1.5px) !important;
-  align-content: start;
+  align-content: start !important;
   min-height: 0;
+  overflow: visible !important;
 }
 
 .preview-dish-card.has-images .preview-title-row,
@@ -131,6 +185,8 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--image-title-gap, 1.5px) !important;
+  min-height: max-content !important;
+  overflow: visible !important;
 }
 
 .preview-dish-card .dish-title,
@@ -144,13 +200,17 @@
   margin-top: auto;
 }
 
-/* Titles must remain readable: no title clipping. */
-.preview-dish-card .dish-title {
+/* Titles/descriptions must remain visible in screen preview, not only in print. */
+.preview-dish-card .dish-title,
+.preview-dish-card .preview-description {
   display: block !important;
   -webkit-line-clamp: unset !important;
   -webkit-box-orient: unset !important;
   overflow: visible !important;
-  white-space: normal;
+  white-space: normal !important;
+  max-height: none !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 .preview-dish-card {
@@ -241,6 +301,7 @@
 
   .main-navigation,
   .layout-admin-panel,
+  .advanced-admin-panel,
   .admin-panel-toggle,
   .collapsed-page-switcher,
   .preview-toolbar,
@@ -287,7 +348,36 @@
   }
 }
 
+@media (max-width: 1180px) {
+  .layout-print-section {
+    grid-template-columns: minmax(320px, 390px) minmax(0, 1fr) !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .advanced-admin-panel {
+    display: none !important;
+  }
+}
+
 @media (max-width: 900px) {
+  .layout-print-section {
+    display: block !important;
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .layout-admin-panel,
+  .advanced-admin-panel {
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  .preview-stage {
+    max-height: none !important;
+  }
+
   .print-top-actions {
     width: 100%;
     justify-content: stretch;
