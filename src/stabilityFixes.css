@@ -1,0 +1,86 @@
+/* Stabilization layer for the simplified Layout & Print workflow. */
+
+/* Classic columns must always obey the selected column count. */
+.layout-mode-classicColumns .classic-columns-grid {
+  display: grid !important;
+  grid-template-columns: repeat(var(--classic-columns, 2), minmax(0, 1fr)) !important;
+  grid-auto-flow: row;
+  gap: var(--card-gap);
+  width: 100%;
+  align-items: stretch;
+}
+
+.layout-mode-classicColumns .classic-columns-grid .preview-dish-card {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Keep food images predictable: centered, never manually panned. */
+.preview-image-box img {
+  object-position: center center !important;
+  object-fit: cover;
+}
+
+.preview-image-placeholder {
+  place-items: center;
+}
+
+/* Default title spacing: visually equal to a 2x baseline gap from the image. */
+.preview-dish-card.has-images.card-layout-below,
+.preview-dish-card.has-images.card-layout-imageLeft,
+.preview-dish-card.has-images.card-layout-imageRight {
+  gap: 8px;
+}
+
+.preview-dish-card.has-images .preview-card-content,
+.preview-dish-card.has-images .preview-title-row {
+  gap: 8px;
+}
+
+.preview-dish-card.has-images .dish-title {
+  margin-top: 0;
+}
+
+/* Hide controls that are not part of the simplified working flow. */
+.layout-print-controls select option[value="snapGrid"],
+.layout-print-controls select option[value="fluidGrid"] {
+  display: none;
+}
+
+.layout-print-controls .image-settings-block .field-label:has(select),
+.layout-print-controls .image-settings-block .slider-label {
+  display: none;
+}
+
+.layout-print-controls .image-settings-block::after {
+  content: 'Images are centered automatically in every card.';
+  display: block;
+  color: var(--app-muted, #6b7280);
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+/* Make print controls easy to find again after panel reordering. */
+.layout-print-controls .print-action-row {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 8px 0 10px;
+  background: var(--app-surface, #ffffff);
+}
+
+.layout-print-controls .print-action-row button:nth-child(3) {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 900px) {
+  .layout-print-controls .print-action-row {
+    position: static;
+    grid-template-columns: 1fr;
+  }
+}
