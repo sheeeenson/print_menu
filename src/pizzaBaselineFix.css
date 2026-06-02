@@ -1,0 +1,26 @@
+/* Final pizza baseline alignment override. */
+
+.preview-dish-card:has(.pizza-size-matrix) .preview-card-content {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.preview-dish-card:has(.pizza-size-matrix) .pizza-size-matrix {
+  margin-top: auto !important;
+  padding-bottom: calc(var(--new-price-size) * var(--font-scale, 1) * 0.72) !important;
+}
+
+.pizza-size-matrix .pizza-size-row-cell {
+  color: var(--preview-muted-color) !important;
+}
+
+.pizza-size-matrix .pizza-sale-row-cell {
+  font-size: calc(var(--new-price-size) * var(--font-scale, 1)) !important;
+  line-height: 1.08 !important;
+}
+
+@media print {
+  .preview-dish-card:has(.pizza-size-matrix) .pizza-size-matrix {
+    padding-bottom: calc(var(--new-price-size) * var(--font-scale, 1) * 0.72) !important;
+  }
+}
