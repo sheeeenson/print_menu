@@ -106,6 +106,8 @@
 
 .preview-meta-row {
   margin-top: auto !important;
+  min-height: calc(var(--new-price-size) * var(--font-scale, 1) * 1.08) !important;
+  align-items: flex-end !important;
 }
 
 .preview-dish-card .preview-description,
@@ -162,6 +164,7 @@
   width: 100% !important;
   overflow: hidden !important;
   margin-top: auto !important;
+  padding-bottom: 0 !important;
 }
 
 .pizza-size-matrix .pizza-price-row {
@@ -198,10 +201,17 @@
   text-decoration-thickness: 1.5px !important;
 }
 
+.pizza-size-matrix .pizza-sale-row {
+  min-height: calc(var(--new-price-size) * var(--font-scale, 1) * 1.08) !important;
+  align-items: end !important;
+}
+
 .pizza-size-matrix .pizza-sale-row-cell {
   color: var(--preview-price-color) !important;
-  font-size: calc(var(--new-price-size) * var(--font-scale, 1) * 0.88) !important;
+  font-size: calc(var(--new-price-size) * var(--font-scale, 1)) !important;
   font-weight: var(--price-font-weight) !important;
+  line-height: 1.08 !important;
+  align-self: end !important;
 }
 
 .configurable-options.compact-options:not(.pizza-size-matrix) p,
@@ -297,11 +307,17 @@
     -webkit-box-orient: vertical !important;
   }
 
+  .preview-meta-row {
+    min-height: calc(var(--new-price-size) * var(--font-scale, 1) * 1.08) !important;
+    align-items: flex-end !important;
+  }
+
   .configurable-options.pizza-size-matrix {
     display: flex !important;
     flex-direction: column !important;
     gap: 2px !important;
     margin-top: auto !important;
+    padding-bottom: 0 !important;
   }
 
   .pizza-size-matrix .pizza-price-row {
@@ -313,6 +329,17 @@
 
   .pizza-size-matrix .pizza-size-row-cell {
     color: var(--preview-muted-color) !important;
+  }
+
+  .pizza-size-matrix .pizza-sale-row {
+    min-height: calc(var(--new-price-size) * var(--font-scale, 1) * 1.08) !important;
+    align-items: end !important;
+  }
+
+  .pizza-size-matrix .pizza-sale-row-cell {
+    font-size: calc(var(--new-price-size) * var(--font-scale, 1)) !important;
+    line-height: 1.08 !important;
+    align-self: end !important;
   }
 
   .preview-dish-card:has(.configurable-options) .preview-description,
