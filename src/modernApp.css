@@ -1,18 +1,18 @@
 :root {
   color-scheme: light;
-  --app-bg: #f6f7fb;
-  --app-surface: rgba(255, 255, 255, 0.92);
-  --app-surface-strong: #ffffff;
-  --app-border: rgba(15, 23, 42, 0.10);
-  --app-border-strong: rgba(15, 23, 42, 0.16);
-  --app-text: #0f172a;
-  --app-muted: #64748b;
-  --app-accent: #7c3aed;
-  --app-accent-dark: #5b21b6;
-  --app-radius-lg: 24px;
-  --app-radius-md: 16px;
-  --app-shadow: 0 18px 55px rgba(15, 23, 42, 0.10);
-  --app-shadow-soft: 0 10px 30px rgba(15, 23, 42, 0.08);
+  --app-bg: #f7f7f5;
+  --app-surface: #ffffff;
+  --app-surface-soft: #fafafa;
+  --app-border: #e5e7eb;
+  --app-border-strong: #d1d5db;
+  --app-text: #111827;
+  --app-muted: #6b7280;
+  --app-accent: #111827;
+  --app-accent-dark: #000000;
+  --app-radius-lg: 18px;
+  --app-radius-md: 12px;
+  --app-shadow: 0 18px 46px rgba(17, 24, 39, 0.08);
+  --app-shadow-soft: 0 8px 24px rgba(17, 24, 39, 0.06);
 }
 
 html {
@@ -21,26 +21,25 @@ html {
 
 body {
   min-width: 0;
-  background:
-    radial-gradient(circle at top left, rgba(124, 58, 237, 0.12), transparent 34rem),
-    radial-gradient(circle at top right, rgba(14, 165, 233, 0.10), transparent 34rem),
-    var(--app-bg);
+  background: var(--app-bg);
   color: var(--app-text);
 }
 
 .main-navigation {
-  min-height: 68px;
-  padding: 10px clamp(14px, 2vw, 28px);
+  min-height: 64px;
+  padding: 10px clamp(14px, 2vw, 26px);
   border-bottom: 1px solid var(--app-border);
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.75) inset;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+  box-shadow: none;
 }
 
 .brand-mark {
-  border-radius: 16px;
-  background: linear-gradient(135deg, #111827, #7c3aed);
-  box-shadow: 0 12px 28px rgba(124, 58, 237, 0.24);
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  background: #111827;
+  box-shadow: none;
 }
 
 .project-name-input {
@@ -50,8 +49,8 @@ body {
 .section-tabs,
 .project-actions {
   border: 1px solid var(--app-border);
-  background: rgba(241, 245, 249, 0.72);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.85) inset;
+  background: #f3f4f6;
+  box-shadow: none;
 }
 
 .section-tabs button,
@@ -62,7 +61,7 @@ body {
 .secondary-action,
 .accordion-toggle,
 .page-dish-order-actions button {
-  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease, transform 0.14s ease;
 }
 
 .section-tabs button.active,
@@ -74,13 +73,17 @@ body {
   background: #ffffff;
   border-color: var(--app-border-strong);
   color: var(--app-text);
-  box-shadow: var(--app-shadow-soft);
+  box-shadow: none;
 }
 
 .primary-action {
-  border-radius: 14px;
-  background: linear-gradient(135deg, var(--app-accent), var(--app-accent-dark));
-  box-shadow: 0 14px 34px rgba(124, 58, 237, 0.26);
+  border-radius: 12px;
+  background: #111827;
+  box-shadow: none;
+}
+
+.primary-action:hover {
+  background: #000000;
 }
 
 .secondary-action,
@@ -101,7 +104,7 @@ body {
   grid-template-columns: minmax(320px, 390px) minmax(0, 1fr);
   background: transparent;
   position: relative;
-  transition: grid-template-columns 0.22s ease;
+  transition: grid-template-columns 0.2s ease;
 }
 
 .layout-print-section.admin-collapsed {
@@ -120,33 +123,32 @@ body {
 .layout-admin-panel,
 .category-panel {
   border-right: 1px solid var(--app-border);
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(18px);
+  background: #ffffff;
+  backdrop-filter: none;
 }
 
 .layout-admin-panel {
-  transition: opacity 0.18s ease, padding 0.22s ease;
+  transition: opacity 0.16s ease, padding 0.2s ease;
 }
 
 .admin-panel-toggle {
   position: fixed;
-  top: 84px;
+  top: 82px;
   left: 14px;
   z-index: 20;
   border: 1px solid var(--app-border);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
+  background: #ffffff;
   color: var(--app-text);
-  padding: 9px 13px;
+  padding: 8px 12px;
   box-shadow: var(--app-shadow-soft);
-  font-size: 0.82rem;
-  font-weight: 900;
-  backdrop-filter: blur(16px);
+  font-size: 0.8rem;
+  font-weight: 850;
 }
 
 .admin-panel-toggle:hover {
-  border-color: rgba(124, 58, 237, 0.34);
-  color: var(--app-accent-dark);
+  border-color: var(--app-border-strong);
+  color: #000000;
   transform: translateY(-1px);
 }
 
@@ -161,7 +163,7 @@ body {
 .saved-grid-card {
   border-color: var(--app-border);
   background: var(--app-surface);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.75) inset;
+  box-shadow: none;
 }
 
 .panel-section {
@@ -172,7 +174,7 @@ body {
 .empty-state,
 .placeholder-panel {
   border-radius: var(--app-radius-lg);
-  box-shadow: var(--app-shadow-soft);
+  box-shadow: none;
 }
 
 .field-label input,
@@ -185,51 +187,50 @@ body {
   border-color: var(--app-border);
   background: #ffffff;
   color: var(--app-text);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.85) inset;
+  box-shadow: none;
 }
 
 .field-label input:focus,
 .field-label textarea:focus,
 .field-label select:focus,
 .color-label input:focus {
-  outline: 3px solid rgba(124, 58, 237, 0.18);
-  border-color: rgba(124, 58, 237, 0.45);
+  outline: 3px solid rgba(17, 24, 39, 0.10);
+  border-color: #9ca3af;
 }
 
 .eyebrow {
-  color: var(--app-accent-dark);
+  color: #6b7280;
+  letter-spacing: 0.13em;
 }
 
 .preview-stage {
-  padding: clamp(16px, 2vw, 28px);
+  padding: clamp(14px, 2vw, 26px);
 }
 
 .paper-scroll {
   border: 1px solid var(--app-border);
-  border-radius: 32px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.70), rgba(241, 245, 249, 0.80)),
-    radial-gradient(circle at top, rgba(124, 58, 237, 0.11), transparent 32rem);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  border-radius: 24px;
+  background: #f3f4f6;
+  box-shadow: none;
 }
 
 .paper-page {
-  border-radius: 10px;
-  box-shadow: 0 28px 75px rgba(15, 23, 42, 0.22);
+  border-radius: 8px;
+  box-shadow: 0 22px 55px rgba(17, 24, 39, 0.14);
 }
 
 .settings-block {
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-md);
-  background: rgba(255, 255, 255, 0.64);
-  padding: 14px;
-  margin: 14px 0;
+  background: var(--app-surface-soft);
+  padding: 13px;
+  margin: 12px 0;
 }
 
 .settings-block h3,
 .inline-advanced-controls summary {
   color: var(--app-text);
-  font-weight: 900;
+  font-weight: 850;
 }
 
 .content-section {
@@ -239,6 +240,17 @@ body {
 .category-panel,
 .dish-workspace {
   min-width: 0;
+}
+
+.preview-toolbar span,
+.save-status,
+.section-tabs button,
+.project-actions button,
+.action-row button,
+.subsection-title button,
+.secondary-action,
+.primary-action {
+  font-weight: 820;
 }
 
 @media (max-width: 1180px) {
@@ -314,7 +326,7 @@ body {
 
   .paper-scroll {
     padding: 14px 12px 70px;
-    border-radius: 22px;
+    border-radius: 18px;
   }
 
   .paper-page {
@@ -353,8 +365,8 @@ body {
   }
 
   .brand-mark {
-    width: 42px;
-    height: 42px;
+    width: 40px;
+    height: 40px;
   }
 
   .section-tabs button,
