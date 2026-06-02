@@ -1,6 +1,6 @@
 const PAPER_DIMENSIONS = {
-  A4: { portrait: { width: 595, height: 842 }, landscape: { width: 842, height: 595 } },
-  A3: { portrait: { width: 842, height: 1191 }, landscape: { width: 1191, height: 842 } },
+  A4: { portrait: { width: 794, height: 1123 }, landscape: { width: 1123, height: 794 } },
+  A3: { portrait: { width: 1123, height: 1587 }, landscape: { width: 1587, height: 1123 } },
 };
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
