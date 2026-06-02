@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { DesignControls } from './DesignControls.jsx';
 import { FooterSettingsPanel } from './FooterSettingsPanel.jsx';
 import { HeaderSettingsPanel } from './HeaderSettingsPanel.jsx';
@@ -12,6 +12,8 @@ export function LayoutPrintSection({ project, actions }) {
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [selectedPreviewDishId, setSelectedPreviewDishId] = useState('');
   const [isAdminCollapsed, setIsAdminCollapsed] = useState(false);
+  const [isPageSettingsFocused, setIsPageSettingsFocused] = useState(false);
+  const pageSettingsRef = useRef(null);
   const selectedPage = project.pages.find((page) => page.id === project.selectedPageId) ?? project.pages[0];
   const previewProject = selectedPage ? projectWithPageOrder(project, selectedPage) : project;
   const fitWarning = selectedPage ? getFitWarning(previewProject, selectedPage) : '';
@@ -22,6 +24,14 @@ export function LayoutPrintSection({ project, actions }) {
   const confirmSaveAsPdf = () => {
     setIsPdfModalOpen(false);
     window.print();
+  };
+  const selectPageFromList = (pageId) => {
+    actions.selectPage(pageId);
+    setIsPageSettingsFocused(true);
+    window.setTimeout(() => {
+      pageSettingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
+    window.setTimeout(() => setIsPageSettingsFocused(false), 900);
   };
 
   return (
@@ -37,7 +47,12 @@ export function LayoutPrintSection({ project, actions }) {
       {isAdminCollapsed ? <CollapsedPageSwitcher project={project} actions={actions} /> : null}
       <aside className="layout-admin-panel layout-sidebar" aria-hidden={isAdminCollapsed}>
         {fitWarning ? <div className="panel-fit-warning" role="alert">{fitWarning}</div> : null}
-
+        <PageList project={project} actions={actions} onSelectPage={selectPageFromList} />
+        {selectedPage ? (
+          <div ref={pageSettingsRef} className={isPageSettingsFocused ? 'page-settings-focus' : ''}>
+            <PageSettingsPanel page={selectedPage} actions={actions} />
+          </div>
+        ) : null}
         {selectedPage ? (
           <LayoutPrintControls
             page={selectedPage}
@@ -47,8 +62,6 @@ export function LayoutPrintSection({ project, actions }) {
             selectedDish={selectedPreviewDish}
           />
         ) : null}
-        <PageList project={project} actions={actions} />
-        {selectedPage ? <PageSettingsPanel page={selectedPage} actions={actions} /> : null}
         {selectedPage ? <PageContentSelector project={project} page={selectedPage} actions={actions} /> : null}
         {selectedPage ? <HeaderSettingsPanel page={selectedPage} actions={actions} /> : null}
         {selectedPage ? <FooterSettingsPanel page={selectedPage} actions={actions} /> : null}
