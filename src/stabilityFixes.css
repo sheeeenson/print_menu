@@ -1,5 +1,49 @@
 /* Stabilization layer for the simplified Layout workflow. */
 
+/* Admin order: basic controls on the left, technical controls float on the right. */
+.layout-admin-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.layout-admin-panel > .panel-fit-warning { order: 0; }
+.layout-admin-panel > section:has(#page-list-title) { order: 10; }
+.layout-admin-panel > section:has(#page-settings-title) { order: 20; }
+.layout-admin-panel > section:has(#page-content-title) { order: 30; }
+.layout-admin-panel > .layout-print-controls { order: 40; }
+.layout-admin-panel > details:not(.advanced-layout-section) { order: 50; }
+.layout-admin-panel > .advanced-layout-section { order: 90; }
+
+@media (min-width: 1181px) {
+  .advanced-layout-section {
+    position: fixed;
+    top: 92px;
+    right: 18px;
+    z-index: 18;
+    width: min(360px, calc(100vw - 440px));
+    max-height: calc(100vh - 116px);
+    overflow: auto;
+    border: 1px solid var(--app-border, #e5e7eb) !important;
+    border-radius: 18px;
+    background: #ffffff !important;
+    padding: 16px !important;
+    box-shadow: var(--app-shadow-soft, 0 8px 24px rgba(17, 24, 39, 0.06));
+  }
+}
+
+/* Preview paper sizes: use fixed ratio and true A3/A4 canvas dimensions. */
+.paper-page {
+  width: var(--paper-width-px) !important;
+  height: var(--paper-height-px) !important;
+  min-height: 0 !important;
+  max-width: none;
+}
+
+.paper-a4.paper-portrait { --paper-width-px: 595px; --paper-height-px: 842px; }
+.paper-a4.paper-landscape { --paper-width-px: 842px; --paper-height-px: 595px; }
+.paper-a3.paper-portrait { --paper-width-px: 842px; --paper-height-px: 1191px; }
+.paper-a3.paper-landscape { --paper-width-px: 1191px; --paper-height-px: 842px; transform: none !important; margin-bottom: 0 !important; }
+
 /* Classic columns must always obey the selected column count. */
 .layout-mode-classicColumns .classic-columns-grid {
   display: grid !important;
@@ -7,22 +51,65 @@
   grid-auto-flow: row;
   gap: var(--card-gap);
   width: 100%;
-  align-items: stretch;
+  height: 100%;
+  align-items: start;
+  align-content: start;
+  overflow: hidden;
 }
 
-.layout-mode-classicColumns .classic-columns-grid .preview-dish-card {
+.layout-mode-classicColumns .classic-columns-grid .preview-dish-card,
+.auto-fill-dish-grid .preview-dish-card {
   width: 100%;
   min-width: 0;
 }
 
-/* Keep food images predictable: centered, never manually panned. */
+/* Keep food images predictable: center focus, zoom via Image zoom. */
 .preview-image-box img {
   object-position: center center !important;
   object-fit: cover;
+  transform: scale(var(--image-zoom, 1));
+  transform-origin: center center;
 }
 
 .preview-image-placeholder {
   place-items: center;
+}
+
+/* Working image left / image right layouts. */
+.preview-dish-card.card-layout-imageLeft,
+.preview-dish-card.card-layout-imageRight {
+  display: grid !important;
+  grid-template-columns: minmax(64px, var(--side-image-width, 38%)) minmax(0, 1fr);
+  align-items: stretch;
+  gap: var(--image-to-title-gap, 1.5px) !important;
+}
+
+.preview-dish-card.card-layout-imageRight {
+  grid-template-columns: minmax(0, 1fr) minmax(64px, var(--side-image-width, 38%));
+}
+
+.preview-dish-card.card-layout-imageLeft .preview-image-box,
+.preview-dish-card.card-layout-imageRight .preview-image-box {
+  height: auto !important;
+  min-height: 100%;
+}
+
+.preview-dish-card.card-layout-imageRight .preview-image-box {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.preview-dish-card.card-layout-imageRight .preview-card-content {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.preview-dish-card.card-layout-below .preview-image-box {
+  height: var(--image-height) !important;
+}
+
+.fit-autoFill .preview-image-box {
+  height: min(var(--image-height), var(--auto-image-height, var(--image-height))) !important;
 }
 
 /* Spacing controls: image-to-title is card/image gap; title/content is inner content gap. */
@@ -30,29 +117,50 @@
   gap: var(--image-to-title-gap, 1.5px) !important;
 }
 
-.preview-dish-card.has-images .preview-card-content {
+.preview-dish-card.has-images .preview-card-content,
+.preview-dish-card.no-images .preview-card-content {
   display: grid !important;
   gap: var(--image-title-gap, 1.5px) !important;
   align-content: start;
   min-height: 0;
 }
 
-.preview-dish-card.has-images .preview-title-row {
+.preview-dish-card.has-images .preview-title-row,
+.preview-dish-card.no-images .preview-title-row {
   display: flex !important;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--image-title-gap, 1.5px) !important;
 }
 
-.preview-dish-card.has-images .dish-title,
-.preview-dish-card.has-images .preview-description,
-.preview-dish-card.has-images .configurable-options {
+.preview-dish-card .dish-title,
+.preview-dish-card .preview-description,
+.preview-dish-card .configurable-options {
   margin-top: 0 !important;
   margin-bottom: 0 !important;
 }
 
-.preview-dish-card.has-images .preview-meta-row {
+.preview-dish-card .preview-meta-row {
   margin-top: auto;
+}
+
+/* Titles must remain readable: no title clipping. */
+.preview-dish-card .dish-title {
+  display: block !important;
+  -webkit-line-clamp: unset !important;
+  -webkit-box-orient: unset !important;
+  overflow: visible !important;
+  white-space: normal;
+}
+
+.preview-dish-card {
+  overflow: hidden;
+  max-height: 100%;
+}
+
+.page-content {
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* Pizza size tables should show only size, old price and current price, without Choose Size labels. */
@@ -82,13 +190,12 @@
   display: none;
 }
 
-.layout-print-controls .image-settings-block .field-label:has(select),
-.layout-print-controls .image-settings-block .slider-label {
+.layout-print-controls .image-settings-block .field-label:has(select) {
   display: none;
 }
 
 .layout-print-controls .image-settings-block::after {
-  content: 'Images are centered automatically in every card.';
+  content: 'Images are centered automatically. Use Image zoom and Image area to control crop and size.';
   display: block;
   color: var(--app-muted, #6b7280);
   font-size: 0.82rem;
