@@ -1,0 +1,27 @@
+/* Optional blurred photo mode for placeholder dishes. */
+
+.image-preview.blurred-image-preview img,
+.preview-dish-card.image-blurred .preview-image-box img {
+  filter: blur(9px) saturate(0.9) brightness(0.96) !important;
+  transform: translate(-50%, -50%) scale(calc(var(--image-zoom, 1) * 1.04)) !important;
+}
+
+.preview-dish-card.image-blurred .preview-image-box::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.16);
+  z-index: 1;
+}
+
+.preview-dish-card.image-blurred .preview-badges {
+  z-index: 2;
+}
+
+@media print {
+  .preview-dish-card.image-blurred .preview-image-box img {
+    filter: blur(9px) saturate(0.9) brightness(0.96) !important;
+    transform: translate(-50%, -50%) scale(calc(var(--image-zoom, 1) * 1.04)) !important;
+  }
+}
