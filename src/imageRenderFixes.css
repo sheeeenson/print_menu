@@ -90,17 +90,17 @@
   align-items: flex-start !important;
   justify-content: space-between !important;
   gap: var(--image-title-gap, 1.5px) !important;
-  min-height: calc(var(--dish-title-size) * var(--font-scale, 1) * 2.25) !important;
+  min-height: calc(var(--dish-title-size) * var(--font-scale, 1) * 3.36) !important;
 }
 
 .preview-dish-card .dish-title {
   display: -webkit-box !important;
-  min-height: calc(var(--dish-title-size) * var(--font-scale, 1) * 2.25) !important;
-  max-height: calc(var(--dish-title-size) * var(--font-scale, 1) * 2.25) !important;
+  min-height: calc(var(--dish-title-size) * var(--font-scale, 1) * 3.36) !important;
+  max-height: calc(var(--dish-title-size) * var(--font-scale, 1) * 3.36) !important;
   line-height: 1.12 !important;
   overflow: hidden !important;
   white-space: normal !important;
-  -webkit-line-clamp: 2 !important;
+  -webkit-line-clamp: 3 !important;
   -webkit-box-orient: vertical !important;
 }
 
@@ -186,17 +186,17 @@
 
 @media print {
   .preview-title-row {
-    min-height: calc(var(--dish-title-size) * var(--font-scale, 1) * 2.25) !important;
+    min-height: calc(var(--dish-title-size) * var(--font-scale, 1) * 3.36) !important;
   }
 
   .preview-dish-card .dish-title {
     display: -webkit-box !important;
-    min-height: calc(var(--dish-title-size) * var(--font-scale, 1) * 2.25) !important;
-    max-height: calc(var(--dish-title-size) * var(--font-scale, 1) * 2.25) !important;
+    min-height: calc(var(--dish-title-size) * var(--font-scale, 1) * 3.36) !important;
+    max-height: calc(var(--dish-title-size) * var(--font-scale, 1) * 3.36) !important;
     line-height: 1.12 !important;
     overflow: hidden !important;
     white-space: normal !important;
-    -webkit-line-clamp: 2 !important;
+    -webkit-line-clamp: 3 !important;
     -webkit-box-orient: vertical !important;
   }
 
