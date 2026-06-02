@@ -10,6 +10,7 @@ import './modernApp.css';
 import './stabilityFixes.css';
 import './imageRenderFixes.css';
 import './printOnlyPage.css';
+import './pizzaSizeLayoutFix.js';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>
