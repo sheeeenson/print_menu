@@ -1,4 +1,9 @@
-export function PageList({ project, actions }) {
+export function PageList({ project, actions, onSelectPage }) {
+  const selectPage = (pageId) => {
+    if (onSelectPage) onSelectPage(pageId);
+    else actions.selectPage(pageId);
+  };
+
   return (
     <section className="panel-section" aria-labelledby="page-list-title">
       <div className="subsection-title">
@@ -13,7 +18,7 @@ export function PageList({ project, actions }) {
             key={page.id}
             className={`page-list-item ${page.id === project.selectedPageId ? 'selected' : ''}`}
             type="button"
-            onClick={() => actions.selectPage(page.id)}
+            onClick={() => selectPage(page.id)}
           >
             <span>{page.name || 'Untitled page'}</span>
             <small>{page.paperSize} · {page.orientation}</small>
