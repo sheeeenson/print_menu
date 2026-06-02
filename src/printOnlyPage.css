@@ -1,0 +1,96 @@
+/* Last print override: print only the menu paper, never the app layout or settings columns. */
+
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .paper-page.print-page,
+  .paper-page.print-page * {
+    visibility: visible !important;
+  }
+
+  .main-navigation,
+  .layout-admin-panel,
+  .advanced-admin-panel,
+  .admin-panel-toggle,
+  .collapsed-page-switcher,
+  .preview-toolbar,
+  .modal-backdrop,
+  .empty-state {
+    display: none !important;
+  }
+
+  .app-shell,
+  .workspace,
+  .layout-print-section,
+  .preview-stage,
+  .paper-scroll,
+  .preview-page-wrapper,
+  .print-root {
+    display: block !important;
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  .layout-print-section {
+    grid-template-columns: none !important;
+  }
+
+  .paper-page.print-page {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    display: block !important;
+    margin: 0 !important;
+    transform: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .paper-a4.paper-portrait { width: 210mm !important; height: 297mm !important; }
+  .paper-a4.paper-landscape { width: 297mm !important; height: 210mm !important; }
+  .paper-a3.paper-portrait { width: 297mm !important; height: 420mm !important; }
+  .paper-a3.paper-landscape { width: 420mm !important; height: 297mm !important; }
+
+  .print-page-inner {
+    height: 100% !important;
+  }
+
+  .page-content {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+  }
+
+  @page {
+    margin: 0;
+  }
+}
