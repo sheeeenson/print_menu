@@ -5,6 +5,7 @@ import './googleFonts.css';
 import './styles.css';
 import './dishSpacing.css';
 import './pageContentControls.css';
+import './badgePosition.css';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>
