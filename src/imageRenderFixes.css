@@ -71,7 +71,7 @@
   gap: var(--image-title-gap, 1.5px) !important;
   min-width: 0 !important;
   min-height: 0 !important;
-  overflow: visible !important;
+  overflow: hidden !important;
 }
 
 .preview-title-row,
@@ -149,21 +149,28 @@
   font-size: calc(var(--old-price-size) * var(--font-scale, 1)) !important;
 }
 
-/* Autofill should pack rows naturally, not stretch empty vertical space between rows. */
+/* Equal cards for all non-designer layouts. */
+.layout-mode-classicColumns .classic-columns-grid,
 .fit-autoFill .auto-fill-dish-grid,
 .fit-autoFill .preview-dish-grid {
   align-content: start !important;
-  align-items: start !important;
-  grid-template-rows: none !important;
-  grid-auto-rows: auto !important;
+  align-items: stretch !important;
+  grid-auto-rows: var(--uniform-card-height, 210px) !important;
   row-gap: clamp(4px, var(--card-gap), 12px) !important;
   column-gap: var(--card-gap) !important;
 }
 
-.fit-autoFill .preview-dish-card,
-.layout-mode-classicColumns .preview-dish-card {
+.layout-mode-classicColumns .preview-dish-card,
+.fit-autoFill .preview-dish-card {
+  height: var(--uniform-card-height, 210px) !important;
+  min-height: var(--uniform-card-height, 210px) !important;
+  max-height: var(--uniform-card-height, 210px) !important;
+}
+
+.layout-mode-manualDesigner .preview-dish-card {
   height: auto !important;
-  min-height: max-content !important;
+  min-height: 0 !important;
+  max-height: none !important;
 }
 
 @media print {
@@ -216,7 +223,7 @@
     display: flex !important;
     flex-direction: column !important;
     gap: var(--image-title-gap, 1.5px) !important;
-    overflow: visible !important;
+    overflow: hidden !important;
   }
 
   .preview-title-row,
@@ -242,13 +249,20 @@
     display: none !important;
   }
 
+  .layout-mode-classicColumns .classic-columns-grid,
   .fit-autoFill .auto-fill-dish-grid,
   .fit-autoFill .preview-dish-grid {
     align-content: start !important;
-    align-items: start !important;
-    grid-template-rows: none !important;
-    grid-auto-rows: auto !important;
+    align-items: stretch !important;
+    grid-auto-rows: var(--uniform-card-height, 210px) !important;
     row-gap: clamp(4px, var(--card-gap), 12px) !important;
     column-gap: var(--card-gap) !important;
+  }
+
+  .layout-mode-classicColumns .preview-dish-card,
+  .fit-autoFill .preview-dish-card {
+    height: var(--uniform-card-height, 210px) !important;
+    min-height: var(--uniform-card-height, 210px) !important;
+    max-height: var(--uniform-card-height, 210px) !important;
   }
 }
