@@ -9,6 +9,22 @@ export function PageContentSelector({ project, page, actions }) {
   const categoryOrder = new Map(selectedCategoryIds.map((categoryId, index) => [categoryId, index]));
   const orderedCategories = [...project.categories].sort((a, b) => (categoryOrder.get(a.id) ?? 9999) - (categoryOrder.get(b.id) ?? 9999));
 
+  const groupedDishIdsForCategories = (categoryIds) => {
+    const dishOrder = new Map(selectedDishIds.map((dishId, index) => [dishId, index]));
+    const categorySet = new Set(categoryIds);
+    return categoryIds.flatMap((categoryId) => project.dishes
+      .filter((dish) => dish.visible && categorySet.has(dish.categoryId) && dish.categoryId === categoryId)
+      .sort((a, b) => (dishOrder.get(a.id) ?? 9999) - (dishOrder.get(b.id) ?? 9999))
+      .map((dish) => dish.id));
+  };
+
+  const applyCategorySelection = (categoryIds) => {
+    actions.updateSelectedPage({
+      selectedCategoryIds: categoryIds,
+      selectedDishIds: groupedDishIdsForCategories(categoryIds),
+    });
+  };
+
   const toggleOpen = (categoryId) => {
     setOpenCategoryIds((current) => {
       const next = new Set(current);
@@ -22,7 +38,7 @@ export function PageContentSelector({ project, page, actions }) {
     const nextIds = checked
       ? [...selectedCategoryIds, categoryId]
       : selectedCategoryIds.filter((id) => id !== categoryId);
-    actions.setPageCategories(nextIds);
+    applyCategorySelection(nextIds);
   };
 
   const orderedCategoryDishes = (categoryId) => {
@@ -47,7 +63,7 @@ export function PageContentSelector({ project, page, actions }) {
     event.preventDefault();
     const draggedCategoryId = event.dataTransfer.getData('text/category-id');
     const nextIds = reorderArray(selectedCategoryIds, draggedCategoryId, targetCategoryId);
-    if (nextIds !== selectedCategoryIds) actions.updateSelectedPage({ selectedCategoryIds: nextIds });
+    if (nextIds !== selectedCategoryIds) applyCategorySelection(nextIds);
   };
 
   const dropDish = (event, targetDishId) => {
@@ -56,8 +72,14 @@ export function PageContentSelector({ project, page, actions }) {
     const draggedDish = project.dishes.find((dish) => dish.id === draggedDishId);
     const targetDish = project.dishes.find((dish) => dish.id === targetDishId);
     if (!draggedDish || !targetDish || draggedDish.categoryId !== targetDish.categoryId) return;
-    const nextIds = reorderArray(selectedDishIds, draggedDishId, targetDishId);
-    if (nextIds !== selectedDishIds) actions.updateSelectedPage({ selectedDishIds: nextIds });
+    const categoryDishIds = orderedCategoryDishes(draggedDish.categoryId).map((dish) => dish.id);
+    const reorderedCategoryDishIds = reorderArray(categoryDishIds, draggedDishId, targetDishId);
+    const nextIds = selectedCategoryIds.flatMap((categoryId) => (
+      categoryId === draggedDish.categoryId
+        ? reorderedCategoryDishIds
+        : groupedDishIdsForCategories([categoryId])
+    ));
+    actions.updateSelectedPage({ selectedDishIds: nextIds });
   };
 
   return (
