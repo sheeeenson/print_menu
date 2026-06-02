@@ -1,0 +1,385 @@
+:root {
+  color-scheme: light;
+  --app-bg: #f6f7fb;
+  --app-surface: rgba(255, 255, 255, 0.92);
+  --app-surface-strong: #ffffff;
+  --app-border: rgba(15, 23, 42, 0.10);
+  --app-border-strong: rgba(15, 23, 42, 0.16);
+  --app-text: #0f172a;
+  --app-muted: #64748b;
+  --app-accent: #7c3aed;
+  --app-accent-dark: #5b21b6;
+  --app-radius-lg: 24px;
+  --app-radius-md: 16px;
+  --app-shadow: 0 18px 55px rgba(15, 23, 42, 0.10);
+  --app-shadow-soft: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+html {
+  background: var(--app-bg);
+}
+
+body {
+  min-width: 0;
+  background:
+    radial-gradient(circle at top left, rgba(124, 58, 237, 0.12), transparent 34rem),
+    radial-gradient(circle at top right, rgba(14, 165, 233, 0.10), transparent 34rem),
+    var(--app-bg);
+  color: var(--app-text);
+}
+
+.main-navigation {
+  min-height: 68px;
+  padding: 10px clamp(14px, 2vw, 28px);
+  border-bottom: 1px solid var(--app-border);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.75) inset;
+}
+
+.brand-mark {
+  border-radius: 16px;
+  background: linear-gradient(135deg, #111827, #7c3aed);
+  box-shadow: 0 12px 28px rgba(124, 58, 237, 0.24);
+}
+
+.project-name-input {
+  color: var(--app-text);
+}
+
+.section-tabs,
+.project-actions {
+  border: 1px solid var(--app-border);
+  background: rgba(241, 245, 249, 0.72);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.85) inset;
+}
+
+.section-tabs button,
+.project-actions button,
+.action-row button,
+.subsection-title button,
+.badge-row button,
+.secondary-action,
+.accordion-toggle,
+.page-dish-order-actions button {
+  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.section-tabs button.active,
+.section-tabs button:hover,
+.project-actions button:hover,
+.action-row button:hover,
+.subsection-title button:hover,
+.badge-row button:hover {
+  background: #ffffff;
+  border-color: var(--app-border-strong);
+  color: var(--app-text);
+  box-shadow: var(--app-shadow-soft);
+}
+
+.primary-action {
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--app-accent), var(--app-accent-dark));
+  box-shadow: 0 14px 34px rgba(124, 58, 237, 0.26);
+}
+
+.secondary-action,
+.action-row button,
+.subsection-title button,
+.badge-row button,
+.page-actions button {
+  border-color: var(--app-border);
+  background: #ffffff;
+}
+
+.save-status {
+  border: 1px solid var(--app-border);
+  background: #ffffff;
+}
+
+.layout-print-section {
+  grid-template-columns: minmax(320px, 390px) minmax(0, 1fr);
+  background: transparent;
+  position: relative;
+  transition: grid-template-columns 0.22s ease;
+}
+
+.layout-print-section.admin-collapsed {
+  grid-template-columns: 0 minmax(0, 1fr);
+}
+
+.layout-print-section.admin-collapsed .layout-admin-panel {
+  padding-left: 0;
+  padding-right: 0;
+  border-right: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.layout-admin-panel,
+.category-panel {
+  border-right: 1px solid var(--app-border);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(18px);
+}
+
+.layout-admin-panel {
+  transition: opacity 0.18s ease, padding 0.22s ease;
+}
+
+.admin-panel-toggle {
+  position: fixed;
+  top: 84px;
+  left: 14px;
+  z-index: 20;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--app-text);
+  padding: 9px 13px;
+  box-shadow: var(--app-shadow-soft);
+  font-size: 0.82rem;
+  font-weight: 900;
+  backdrop-filter: blur(16px);
+}
+
+.admin-panel-toggle:hover {
+  border-color: rgba(124, 58, 237, 0.34);
+  color: var(--app-accent-dark);
+  transform: translateY(-1px);
+}
+
+.panel-section,
+.editor-card,
+.category-card,
+.page-list-item,
+.category-content-card,
+.selected-card-controls,
+.grid-resize-controls,
+.inline-advanced-controls,
+.saved-grid-card {
+  border-color: var(--app-border);
+  background: var(--app-surface);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.75) inset;
+}
+
+.panel-section {
+  border-bottom-color: var(--app-border);
+}
+
+.editor-card,
+.empty-state,
+.placeholder-panel {
+  border-radius: var(--app-radius-lg);
+  box-shadow: var(--app-shadow-soft);
+}
+
+.field-label input,
+.field-label textarea,
+.field-label select,
+.badge-row input,
+.badge-row select,
+.color-label input:not([type="color"]),
+.grid-number-control input[type="number"] {
+  border-color: var(--app-border);
+  background: #ffffff;
+  color: var(--app-text);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.85) inset;
+}
+
+.field-label input:focus,
+.field-label textarea:focus,
+.field-label select:focus,
+.color-label input:focus {
+  outline: 3px solid rgba(124, 58, 237, 0.18);
+  border-color: rgba(124, 58, 237, 0.45);
+}
+
+.eyebrow {
+  color: var(--app-accent-dark);
+}
+
+.preview-stage {
+  padding: clamp(16px, 2vw, 28px);
+}
+
+.paper-scroll {
+  border: 1px solid var(--app-border);
+  border-radius: 32px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.70), rgba(241, 245, 249, 0.80)),
+    radial-gradient(circle at top, rgba(124, 58, 237, 0.11), transparent 32rem);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88);
+}
+
+.paper-page {
+  border-radius: 10px;
+  box-shadow: 0 28px 75px rgba(15, 23, 42, 0.22);
+}
+
+.settings-block {
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  background: rgba(255, 255, 255, 0.64);
+  padding: 14px;
+  margin: 14px 0;
+}
+
+.settings-block h3,
+.inline-advanced-controls summary {
+  color: var(--app-text);
+  font-weight: 900;
+}
+
+.content-section {
+  grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+}
+
+.category-panel,
+.dish-workspace {
+  min-width: 0;
+}
+
+@media (max-width: 1180px) {
+  .main-navigation {
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+
+  .brand-block {
+    min-width: min(100%, 320px);
+  }
+
+  .save-status {
+    margin-left: 0;
+  }
+
+  .layout-print-section {
+    grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .workspace {
+    min-height: auto;
+  }
+
+  .main-navigation {
+    position: static;
+    gap: 10px;
+  }
+
+  .section-tabs,
+  .project-actions {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .layout-print-section,
+  .layout-print-section.admin-collapsed,
+  .content-section {
+    display: block;
+    min-height: auto;
+  }
+
+  .layout-admin-panel,
+  .category-panel {
+    max-height: none;
+    border-right: 0;
+    border-bottom: 1px solid var(--app-border);
+  }
+
+  .layout-print-section.admin-collapsed .layout-admin-panel {
+    display: none;
+  }
+
+  .admin-panel-toggle {
+    top: auto;
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+    width: calc(100% - 28px);
+    padding: 13px 16px;
+  }
+
+  .preview-stage {
+    padding: 14px;
+    min-height: 70vh;
+  }
+
+  .preview-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .paper-scroll {
+    padding: 14px 12px 70px;
+    border-radius: 22px;
+  }
+
+  .paper-page {
+    transform: scale(0.72);
+    transform-origin: top center;
+    margin-bottom: -180px;
+  }
+
+  .paper-a4.paper-landscape,
+  .paper-a3.paper-landscape {
+    transform: scale(0.48);
+    margin-bottom: -330px;
+  }
+
+  .two-column-fields,
+  .four-column-fields,
+  .badge-row,
+  .panel-two-column {
+    grid-template-columns: 1fr;
+  }
+
+  .dish-workspace,
+  .category-panel,
+  .layout-admin-panel {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 560px) {
+  .project-name-input {
+    width: 100%;
+  }
+
+  .brand-block {
+    width: 100%;
+  }
+
+  .brand-mark {
+    width: 42px;
+    height: 42px;
+  }
+
+  .section-tabs button,
+  .project-actions button {
+    white-space: nowrap;
+  }
+
+  .print-action-row,
+  .action-row {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .preview-toolbar h1 {
+    font-size: 1.35rem;
+  }
+
+  .paper-page {
+    transform: scale(0.56);
+    margin-bottom: -300px;
+  }
+
+  .paper-a4.paper-landscape,
+  .paper-a3.paper-landscape {
+    transform: scale(0.36);
+    margin-bottom: -420px;
+  }
+}
