@@ -37,11 +37,11 @@ function parsePizzaBlocks(text) {
     if (!priceLines.length) return null;
     const oldPrice = priceLines.find(isStruck) ?? (priceLines.length > 1 ? priceLines[0] : '');
     const salePrice = priceLines.length > 1 ? priceLines[priceLines.length - 1] : priceLines.find((line) => !isStruck(line)) ?? '';
-    if (!oldPrice && !salePrice) return null;
+    if (!salePrice) return null;
     return { size, oldPrice: normalizePrice(oldPrice), salePrice: normalizePrice(salePrice) };
   }).filter(Boolean);
 
-  return items.length >= 2 ? items.slice(0, 3) : [];
+  return items.length ? items.slice(0, 3) : [];
 }
 
 function createCell(className, value) {
@@ -68,6 +68,7 @@ function enhanceConfigurableOptions(element) {
 
   element.dataset.pizzaMatrixEnhanced = 'true';
   element.classList.add('pizza-size-matrix');
+  element.style.setProperty('--pizza-size-count', String(items.length));
   element.innerHTML = '';
   element.appendChild(createRow('pizza-size-row', items, 'size'));
   element.appendChild(createRow('pizza-old-row', items, 'oldPrice'));
