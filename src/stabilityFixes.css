@@ -1,4 +1,4 @@
-/* Stabilization layer for the simplified Layout & Print workflow. */
+/* Stabilization layer for the simplified Layout workflow. */
 
 /* Classic columns must always obey the selected column count. */
 .layout-mode-classicColumns .classic-columns-grid {
@@ -25,16 +25,16 @@
   place-items: center;
 }
 
-/* Default title spacing: visually equal to a 2x baseline gap from the image. */
+/* Default title spacing: 1.5px, still controlled by the Image to title gap setting when changed. */
 .preview-dish-card.has-images.card-layout-below,
 .preview-dish-card.has-images.card-layout-imageLeft,
 .preview-dish-card.has-images.card-layout-imageRight {
-  gap: 8px;
+  gap: var(--image-to-title-gap, 1.5px) !important;
 }
 
 .preview-dish-card.has-images .preview-card-content,
 .preview-dish-card.has-images .preview-title-row {
-  gap: 8px;
+  gap: var(--image-title-gap, 1.5px) !important;
 }
 
 .preview-dish-card.has-images .dish-title {
@@ -61,26 +61,96 @@
   line-height: 1.35;
 }
 
-/* Make print controls easy to find again after panel reordering. */
-.layout-print-controls .print-action-row {
-  position: sticky;
-  top: 0;
-  z-index: 4;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin: 0 0 14px;
-  padding: 8px 0 10px;
-  background: var(--app-surface, #ffffff);
+/* Print buttons now live in the top navigation. Hide the duplicate row in the left panel. */
+.layout-print-controls > .print-action-row {
+  display: none !important;
 }
 
-.layout-print-controls .print-action-row button:nth-child(3) {
-  grid-column: 1 / -1;
+.print-top-actions {
+  display: flex;
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid var(--app-border, #e5e7eb);
+  border-radius: 999px;
+  background: #f3f4f6;
+}
+
+/* Print only the menu page, not the application chrome. */
+@media print {
+  html,
+  body,
+  #root,
+  .app-shell,
+  .workspace,
+  .layout-print-section,
+  .preview-stage,
+  .paper-scroll,
+  .preview-page-wrapper {
+    width: auto !important;
+    height: auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+  }
+
+  .main-navigation,
+  .layout-admin-panel,
+  .admin-panel-toggle,
+  .collapsed-page-switcher,
+  .preview-toolbar,
+  .empty-state,
+  .modal-backdrop {
+    display: none !important;
+  }
+
+  .preview-stage,
+  .paper-scroll,
+  .preview-page-wrapper {
+    display: block !important;
+  }
+
+  .print-root {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .paper-page.print-page {
+    display: block !important;
+    width: var(--paper-width) !important;
+    height: var(--paper-height) !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: var(--page-margin) !important;
+    transform: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    overflow: hidden !important;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .paper-a4.paper-portrait { --paper-width: 210mm; --paper-height: 297mm; }
+  .paper-a4.paper-landscape { --paper-width: 297mm; --paper-height: 210mm; }
+  .paper-a3.paper-portrait { --paper-width: 297mm; --paper-height: 420mm; }
+  .paper-a3.paper-landscape { --paper-width: 420mm; --paper-height: 297mm; }
+
+  @page {
+    margin: 0;
+  }
 }
 
 @media (max-width: 900px) {
-  .layout-print-controls .print-action-row {
-    position: static;
-    grid-template-columns: 1fr;
+  .print-top-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .print-top-actions button {
+    flex: 1;
   }
 }
