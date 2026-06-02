@@ -25,20 +25,34 @@
   place-items: center;
 }
 
-/* Default title spacing: 1.5px, still controlled by the Image to title gap setting when changed. */
-.preview-dish-card.has-images.card-layout-below,
-.preview-dish-card.has-images.card-layout-imageLeft,
-.preview-dish-card.has-images.card-layout-imageRight {
+/* Spacing controls: image-to-title is card/image gap; title/content is inner content gap. */
+.preview-dish-card.has-images {
   gap: var(--image-to-title-gap, 1.5px) !important;
 }
 
-.preview-dish-card.has-images .preview-card-content,
+.preview-dish-card.has-images .preview-card-content {
+  display: grid !important;
+  gap: var(--image-title-gap, 1.5px) !important;
+  align-content: start;
+  min-height: 0;
+}
+
 .preview-dish-card.has-images .preview-title-row {
+  display: flex !important;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: var(--image-title-gap, 1.5px) !important;
 }
 
-.preview-dish-card.has-images .dish-title {
-  margin-top: 0;
+.preview-dish-card.has-images .dish-title,
+.preview-dish-card.has-images .preview-description,
+.preview-dish-card.has-images .configurable-options {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.preview-dish-card.has-images .preview-meta-row {
+  margin-top: auto;
 }
 
 /* Pizza size tables should show only size, old price and current price, without Choose Size labels. */
@@ -96,7 +110,7 @@
   background: #f3f4f6;
 }
 
-/* Print only the menu page, not the application chrome. */
+/* Print only the menu page, preserving the same canvas ratio as preview so content fills the page. */
 @media print {
   html,
   body,
@@ -130,21 +144,13 @@
 
   .preview-stage,
   .paper-scroll,
-  .preview-page-wrapper {
-    display: block !important;
-  }
-
+  .preview-page-wrapper,
   .print-root {
     display: block !important;
-    margin: 0 !important;
-    padding: 0 !important;
   }
 
   .paper-page.print-page {
     display: block !important;
-    width: var(--paper-width) !important;
-    height: var(--paper-height) !important;
-    min-height: 0 !important;
     margin: 0 !important;
     padding: var(--page-margin) !important;
     transform: none !important;
@@ -155,10 +161,19 @@
     page-break-after: always;
   }
 
-  .paper-a4.paper-portrait { --paper-width: 210mm; --paper-height: 297mm; }
-  .paper-a4.paper-landscape { --paper-width: 297mm; --paper-height: 210mm; }
-  .paper-a3.paper-portrait { --paper-width: 297mm; --paper-height: 420mm; }
-  .paper-a3.paper-landscape { --paper-width: 420mm; --paper-height: 297mm; }
+  .paper-a4.paper-portrait { width: 210mm !important; height: 297mm !important; }
+  .paper-a4.paper-landscape { width: 297mm !important; height: 210mm !important; }
+  .paper-a3.paper-portrait { width: 297mm !important; height: 420mm !important; }
+  .paper-a3.paper-landscape { width: 420mm !important; height: 297mm !important; }
+
+  .print-page-inner {
+    height: 100% !important;
+  }
+
+  .page-content {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+  }
 
   @page {
     margin: 0;
