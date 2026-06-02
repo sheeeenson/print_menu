@@ -4,16 +4,16 @@
 }
 
 .page-content-order-list {
-  gap: 10px;
+  gap: 8px;
 }
 
 .category-content-card {
   display: grid;
-  gap: 8px;
-  border: 1px solid #eadfd4;
-  border-radius: 16px;
-  background: #fffdfa;
-  padding: 8px;
+  gap: 6px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 4px;
 }
 
 .category-content-card[draggable="true"] {
@@ -25,52 +25,56 @@
 }
 
 .category-content-header {
+  width: 100%;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: inherit;
+  padding: 6px;
+  text-align: left;
+}
+
+.category-content-header:hover {
+  background: #f8fafc;
 }
 
 .category-content-card .category-checkbox {
   margin-bottom: 0;
   border: 0;
   background: transparent;
-  padding: 6px 4px;
+  padding: 0;
 }
 
 .drag-handle {
-  color: #b7aa9b;
+  color: #cbd5e1;
   cursor: grab;
   font-weight: 950;
   letter-spacing: -0.18em;
   user-select: none;
 }
 
-.accordion-toggle {
-  border: 1px solid #ded1c1;
+.accordion-indicator {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid #e5e7eb;
   border-radius: 999px;
-  background: #fff;
-  color: #574d45;
-  padding: 7px 10px;
-  font-size: 0.74rem;
-  font-weight: 850;
-  white-space: nowrap;
-}
-
-.accordion-toggle:hover:not(:disabled) {
-  border-color: #9b1c31;
-  color: #9b1c31;
-}
-
-.accordion-toggle:disabled {
-  cursor: not-allowed;
-  opacity: 0.35;
+  background: #ffffff;
+  color: #334155;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .page-dish-order-list {
   display: grid;
-  gap: 6px;
-  margin: -2px 0 8px 28px;
+  gap: 5px;
+  margin: 0 4px 6px 30px;
 }
 
 .page-dish-order-row {
@@ -78,11 +82,16 @@
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 8px;
-  border: 1px solid #eadfd4;
-  border-radius: 12px;
-  background: #fff;
+  border: 1px solid #edf0f4;
+  border-radius: 11px;
+  background: #fafafa;
   padding: 8px 10px;
   cursor: grab;
+}
+
+.page-dish-order-row:hover {
+  background: #f8fafc;
+  border-color: #e2e8f0;
 }
 
 .page-dish-order-row:active {
@@ -97,23 +106,23 @@
 
 .page-dish-order-row strong {
   overflow: hidden;
-  color: #231f20;
+  color: #111827;
   font-size: 0.82rem;
-  font-weight: 850;
+  font-weight: 760;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .page-dish-order-row small {
   overflow: hidden;
-  color: #7c7065;
+  color: #64748b;
   font-size: 0.74rem;
-  font-weight: 700;
+  font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .page-dish-empty {
-  margin: -2px 0 8px 28px;
+  margin: 0 0 8px 30px;
   font-size: 0.8rem;
 }
