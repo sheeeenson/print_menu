@@ -20,6 +20,12 @@ export const DEFAULT_IMAGE_MENU_SETTINGS = Object.freeze({
   descriptionColor: '#312b25',
   backgroundMode: 'auto',
   manualBackgroundColor: '#f3eadf',
+  showBadge: false,
+  badgeImageUrl: '',
+  badgeSize: 18,
+  badgeX: 18,
+  badgeY: 18,
+  badgePosition: 'topRight',
 });
 
 const normalizeNumber = (value, fallback, min, max) => {
@@ -30,6 +36,7 @@ const normalizeNumber = (value, fallback, min, max) => {
 
 const normalizeColor = (value, fallback) => /^#[0-9a-fA-F]{3,8}$/.test(value ?? '') ? value : fallback;
 const normalizeGridVariant = (value) => [2, 4, 6].includes(Number(value)) ? Number(value) : 2;
+const normalizeBadgePosition = (value) => ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(value) ? value : DEFAULT_IMAGE_MENU_SETTINGS.badgePosition;
 
 export const normalizeImageMenuSettings = (settings = {}) => ({
   ...DEFAULT_IMAGE_MENU_SETTINGS,
@@ -51,6 +58,12 @@ export const normalizeImageMenuSettings = (settings = {}) => ({
   descriptionColor: normalizeColor(settings.descriptionColor, DEFAULT_IMAGE_MENU_SETTINGS.descriptionColor),
   backgroundMode: ['auto', 'manual', 'blurred'].includes(settings.backgroundMode) ? settings.backgroundMode : DEFAULT_IMAGE_MENU_SETTINGS.backgroundMode,
   manualBackgroundColor: normalizeColor(settings.manualBackgroundColor, DEFAULT_IMAGE_MENU_SETTINGS.manualBackgroundColor),
+  showBadge: Boolean(settings.showBadge),
+  badgeImageUrl: settings.badgeImageUrl || '',
+  badgeSize: normalizeNumber(settings.badgeSize, DEFAULT_IMAGE_MENU_SETTINGS.badgeSize, 6, 60),
+  badgeX: normalizeNumber(settings.badgeX, DEFAULT_IMAGE_MENU_SETTINGS.badgeX, 0, 160),
+  badgeY: normalizeNumber(settings.badgeY, DEFAULT_IMAGE_MENU_SETTINGS.badgeY, 0, 160),
+  badgePosition: normalizeBadgePosition(settings.badgePosition),
 });
 
 export const createImageMenuPage = (dishes = [], name = 'Image Page') => ({
