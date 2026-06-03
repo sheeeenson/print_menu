@@ -20,8 +20,8 @@
     transform: none !important;
     box-shadow: none !important;
     margin: 0 !important;
-    page-break-after: always;
-    break-after: page;
+    page-break-after: auto !important;
+    break-after: auto !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
