@@ -15,6 +15,7 @@ export const DEFAULT_IMAGE_MENU_SETTINGS = Object.freeze({
   textBottomOffset: 30,
   textPaddingLeft: 30,
   textPaddingRight: 30,
+  textAlign: 'center',
   enTitleFont: 'Inter, Arial, sans-serif',
   geTitleFont: 'Noto Serif Georgian, Noto Serif, serif',
   descriptionFont: 'Inter, Arial, sans-serif',
@@ -45,6 +46,7 @@ const normalizeColor = (value, fallback) => /^#[0-9a-fA-F]{3,8}$/.test(value ?? 
 const normalizeGridVariant = (value) => [2, 4, 6].includes(Number(value)) ? Number(value) : 2;
 const normalizeBadgePosition = (value) => ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(value) ? value : DEFAULT_IMAGE_MENU_SETTINGS.badgePosition;
 const normalizeOverlayGradient = (value) => ['off', 'light', 'medium', 'strong'].includes(value) ? value : DEFAULT_IMAGE_MENU_SETTINGS.overlayGradient;
+const normalizeTextAlign = (value) => ['left', 'center', 'right'].includes(value) ? value : DEFAULT_IMAGE_MENU_SETTINGS.textAlign;
 
 export const normalizeImageMenuSettings = (settings = {}) => ({
   ...DEFAULT_IMAGE_MENU_SETTINGS,
@@ -61,6 +63,7 @@ export const normalizeImageMenuSettings = (settings = {}) => ({
   textBottomOffset: normalizeNumber(settings.textBottomOffset, DEFAULT_IMAGE_MENU_SETTINGS.textBottomOffset, 0, 150),
   textPaddingLeft: normalizeNumber(settings.textPaddingLeft, DEFAULT_IMAGE_MENU_SETTINGS.textPaddingLeft, 0, 120),
   textPaddingRight: normalizeNumber(settings.textPaddingRight, DEFAULT_IMAGE_MENU_SETTINGS.textPaddingRight, 0, 120),
+  textAlign: normalizeTextAlign(settings.textAlign),
   enTitleFont: settings.enTitleFont || DEFAULT_IMAGE_MENU_SETTINGS.enTitleFont,
   geTitleFont: settings.geTitleFont || DEFAULT_IMAGE_MENU_SETTINGS.geTitleFont,
   descriptionFont: settings.descriptionFont || DEFAULT_IMAGE_MENU_SETTINGS.descriptionFont,
