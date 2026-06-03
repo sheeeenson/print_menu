@@ -1,0 +1,52 @@
+@media print {
+  body:has(.image-menu-section) * {
+    visibility: hidden !important;
+  }
+
+  body:has(.image-menu-section) .image-menu-page,
+  body:has(.image-menu-section) .image-menu-page * {
+    visibility: visible !important;
+  }
+
+  body:has(.image-menu-section) .image-menu-preview-shell,
+  body:has(.image-menu-section) .image-menu-page {
+    position: static !important;
+    overflow: visible !important;
+  }
+
+  body:has(.image-menu-section) .image-menu-page {
+    width: 297mm !important;
+    height: 210mm !important;
+    transform: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    page-break-after: always;
+    break-after: page;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body:has(.image-menu-section) .image-menu-preview-shell {
+    padding: 0 !important;
+    background: transparent !important;
+  }
+
+  body:has(.image-menu-section) .image-menu-section,
+  body:has(.image-menu-section) .image-menu-preview-stage {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+  }
+
+  body:has(.image-menu-section) .image-menu-panel,
+  body:has(.image-menu-section) .image-menu-toolbar,
+  body:has(.image-menu-section) .main-navigation {
+    display: none !important;
+  }
+
+  @page {
+    size: A4 landscape;
+    margin: 0;
+  }
+}
