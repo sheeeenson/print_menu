@@ -25,6 +25,7 @@
 
 .preview-dish-card.pizza-price-card .preview-card-content {
   padding-bottom: 0 !important;
+  gap: var(--image-title-gap, 1.5px) !important;
 }
 
 .preview-dish-card.pizza-price-card .preview-meta-row {
@@ -43,7 +44,8 @@
   line-height: 1 !important;
 }
 
-.pizza-size-info {
+/* Higher specificity than imageRenderFixes.css .configurable-options.pizza-size-matrix. */
+.preview-dish-card.pizza-price-card .configurable-options.pizza-size-info.pizza-size-matrix {
   display: grid !important;
   grid-template-rows: auto auto !important;
   gap: 2px !important;
@@ -51,9 +53,10 @@
   margin-top: 0 !important;
   margin-bottom: 3px !important;
   padding: 0 !important;
+  flex: 0 0 auto !important;
 }
 
-.pizza-size-info .pizza-price-row,
+.preview-dish-card.pizza-price-card .configurable-options.pizza-size-info.pizza-size-matrix .pizza-price-row,
 .pizza-sale-prices .pizza-price-row {
   display: grid !important;
   grid-auto-flow: column !important;
@@ -63,7 +66,7 @@
   width: 100% !important;
 }
 
-.pizza-size-info .pizza-price-cell,
+.preview-dish-card.pizza-price-card .configurable-options.pizza-size-info.pizza-size-matrix .pizza-price-cell,
 .pizza-sale-prices .pizza-price-cell {
   display: block !important;
   min-width: 0 !important;
@@ -76,17 +79,17 @@
   padding: 0 !important;
 }
 
-.pizza-size-info .pizza-size-row-cell,
-.pizza-size-info .pizza-old-row-cell {
+.preview-dish-card.pizza-price-card .configurable-options.pizza-size-info.pizza-size-matrix .pizza-size-row-cell,
+.preview-dish-card.pizza-price-card .configurable-options.pizza-size-info.pizza-size-matrix .pizza-old-row-cell {
   color: var(--preview-muted-color) !important;
 }
 
-.pizza-size-info .pizza-size-row-cell {
+.preview-dish-card.pizza-price-card .configurable-options.pizza-size-info.pizza-size-matrix .pizza-size-row-cell {
   font-size: calc(var(--new-price-size) * var(--font-scale, 1) * 0.7) !important;
   font-weight: 650 !important;
 }
 
-.pizza-size-info .pizza-old-row-cell {
+.preview-dish-card.pizza-price-card .configurable-options.pizza-size-info.pizza-size-matrix .pizza-old-row-cell {
   font-size: calc(var(--old-price-size) * var(--font-scale, 1) * 0.86) !important;
   font-weight: var(--price-font-weight) !important;
   text-decoration: line-through !important;
@@ -121,7 +124,7 @@
     margin-top: auto !important;
   }
 
-  .pizza-size-info,
+  .preview-dish-card.pizza-price-card .configurable-options.pizza-size-info.pizza-size-matrix,
   .pizza-sale-prices .pizza-price-row {
     display: grid !important;
   }
