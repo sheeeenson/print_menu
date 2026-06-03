@@ -13,11 +13,18 @@ export const DEFAULT_IMAGE_MENU_SETTINGS = Object.freeze({
   titleLanguageGap: 5,
   titleDescriptionGap: 12,
   textBottomOffset: 30,
+  textPaddingLeft: 30,
+  textPaddingRight: 30,
   enTitleFont: 'Inter, Arial, sans-serif',
   geTitleFont: 'Noto Serif Georgian, Noto Serif, serif',
   descriptionFont: 'Inter, Arial, sans-serif',
   textColor: '#050505',
   descriptionColor: '#312b25',
+  oldPriceSize: 17,
+  salePriceSize: 28,
+  oldPriceColor: '#5f564d',
+  salePriceColor: '#050505',
+  overlayGradient: 'off',
   backgroundMode: 'auto',
   manualBackgroundColor: '#f3eadf',
   showBadge: false,
@@ -37,6 +44,7 @@ const normalizeNumber = (value, fallback, min, max) => {
 const normalizeColor = (value, fallback) => /^#[0-9a-fA-F]{3,8}$/.test(value ?? '') ? value : fallback;
 const normalizeGridVariant = (value) => [2, 4, 6].includes(Number(value)) ? Number(value) : 2;
 const normalizeBadgePosition = (value) => ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(value) ? value : DEFAULT_IMAGE_MENU_SETTINGS.badgePosition;
+const normalizeOverlayGradient = (value) => ['off', 'light', 'medium', 'strong'].includes(value) ? value : DEFAULT_IMAGE_MENU_SETTINGS.overlayGradient;
 
 export const normalizeImageMenuSettings = (settings = {}) => ({
   ...DEFAULT_IMAGE_MENU_SETTINGS,
@@ -51,11 +59,18 @@ export const normalizeImageMenuSettings = (settings = {}) => ({
   titleLanguageGap: normalizeNumber(settings.titleLanguageGap, DEFAULT_IMAGE_MENU_SETTINGS.titleLanguageGap, 0, 48),
   titleDescriptionGap: normalizeNumber(settings.titleDescriptionGap, DEFAULT_IMAGE_MENU_SETTINGS.titleDescriptionGap, 0, 64),
   textBottomOffset: normalizeNumber(settings.textBottomOffset, DEFAULT_IMAGE_MENU_SETTINGS.textBottomOffset, 0, 150),
+  textPaddingLeft: normalizeNumber(settings.textPaddingLeft, DEFAULT_IMAGE_MENU_SETTINGS.textPaddingLeft, 0, 120),
+  textPaddingRight: normalizeNumber(settings.textPaddingRight, DEFAULT_IMAGE_MENU_SETTINGS.textPaddingRight, 0, 120),
   enTitleFont: settings.enTitleFont || DEFAULT_IMAGE_MENU_SETTINGS.enTitleFont,
   geTitleFont: settings.geTitleFont || DEFAULT_IMAGE_MENU_SETTINGS.geTitleFont,
   descriptionFont: settings.descriptionFont || DEFAULT_IMAGE_MENU_SETTINGS.descriptionFont,
   textColor: normalizeColor(settings.textColor, DEFAULT_IMAGE_MENU_SETTINGS.textColor),
   descriptionColor: normalizeColor(settings.descriptionColor, DEFAULT_IMAGE_MENU_SETTINGS.descriptionColor),
+  oldPriceSize: normalizeNumber(settings.oldPriceSize, DEFAULT_IMAGE_MENU_SETTINGS.oldPriceSize, 8, 48),
+  salePriceSize: normalizeNumber(settings.salePriceSize, DEFAULT_IMAGE_MENU_SETTINGS.salePriceSize, 12, 72),
+  oldPriceColor: normalizeColor(settings.oldPriceColor, DEFAULT_IMAGE_MENU_SETTINGS.oldPriceColor),
+  salePriceColor: normalizeColor(settings.salePriceColor, DEFAULT_IMAGE_MENU_SETTINGS.salePriceColor),
+  overlayGradient: normalizeOverlayGradient(settings.overlayGradient),
   backgroundMode: ['auto', 'manual', 'blurred'].includes(settings.backgroundMode) ? settings.backgroundMode : DEFAULT_IMAGE_MENU_SETTINGS.backgroundMode,
   manualBackgroundColor: normalizeColor(settings.manualBackgroundColor, DEFAULT_IMAGE_MENU_SETTINGS.manualBackgroundColor),
   showBadge: Boolean(settings.showBadge),
