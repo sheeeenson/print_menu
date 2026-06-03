@@ -1,23 +1,23 @@
 const STORAGE_KEY = 'restaurant-menu-studio:image-menu:v1';
 
+const createId = (prefix) => `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
+
 export const DEFAULT_IMAGE_MENU_SETTINGS = Object.freeze({
-  gridVariant: 4,
-  selectedDishIds: [],
-  imageSize: 72,
+  imageSize: 68,
   imageX: 0,
-  imageY: -6,
+  imageY: -8,
   showDescriptions: true,
-  enTitleSize: 30,
+  enTitleSize: 29,
   geTitleSize: 24,
   descriptionSize: 12,
-  titleLanguageGap: 6,
-  titleDescriptionGap: 10,
-  textBottomOffset: 28,
+  titleLanguageGap: 5,
+  titleDescriptionGap: 12,
+  textBottomOffset: 30,
   enTitleFont: 'Inter, Arial, sans-serif',
-  geTitleFont: 'Inter, Arial, sans-serif',
+  geTitleFont: 'Noto Serif Georgian, Noto Serif, serif',
   descriptionFont: 'Inter, Arial, sans-serif',
-  textColor: '#231f20',
-  descriptionColor: '#5d5148',
+  textColor: '#050505',
+  descriptionColor: '#312b25',
   backgroundMode: 'auto',
   manualBackgroundColor: '#f3eadf',
 });
@@ -29,49 +29,71 @@ const normalizeNumber = (value, fallback, min, max) => {
 };
 
 const normalizeColor = (value, fallback) => /^#[0-9a-fA-F]{3,8}$/.test(value ?? '') ? value : fallback;
+const normalizeGridVariant = (value) => [2, 4, 6].includes(Number(value)) ? Number(value) : 2;
 
-export const normalizeImageMenuSettings = (settings = {}, dishes = []) => {
+export const normalizeImageMenuSettings = (settings = {}) => ({
+  ...DEFAULT_IMAGE_MENU_SETTINGS,
+  ...settings,
+  imageSize: normalizeNumber(settings.imageSize, DEFAULT_IMAGE_MENU_SETTINGS.imageSize, 20, 120),
+  imageX: normalizeNumber(settings.imageX, DEFAULT_IMAGE_MENU_SETTINGS.imageX, -50, 50),
+  imageY: normalizeNumber(settings.imageY, DEFAULT_IMAGE_MENU_SETTINGS.imageY, -50, 50),
+  showDescriptions: settings.showDescriptions === undefined ? DEFAULT_IMAGE_MENU_SETTINGS.showDescriptions : Boolean(settings.showDescriptions),
+  enTitleSize: normalizeNumber(settings.enTitleSize, DEFAULT_IMAGE_MENU_SETTINGS.enTitleSize, 12, 72),
+  geTitleSize: normalizeNumber(settings.geTitleSize, DEFAULT_IMAGE_MENU_SETTINGS.geTitleSize, 12, 72),
+  descriptionSize: normalizeNumber(settings.descriptionSize, DEFAULT_IMAGE_MENU_SETTINGS.descriptionSize, 8, 30),
+  titleLanguageGap: normalizeNumber(settings.titleLanguageGap, DEFAULT_IMAGE_MENU_SETTINGS.titleLanguageGap, 0, 48),
+  titleDescriptionGap: normalizeNumber(settings.titleDescriptionGap, DEFAULT_IMAGE_MENU_SETTINGS.titleDescriptionGap, 0, 64),
+  textBottomOffset: normalizeNumber(settings.textBottomOffset, DEFAULT_IMAGE_MENU_SETTINGS.textBottomOffset, 0, 150),
+  enTitleFont: settings.enTitleFont || DEFAULT_IMAGE_MENU_SETTINGS.enTitleFont,
+  geTitleFont: settings.geTitleFont || DEFAULT_IMAGE_MENU_SETTINGS.geTitleFont,
+  descriptionFont: settings.descriptionFont || DEFAULT_IMAGE_MENU_SETTINGS.descriptionFont,
+  textColor: normalizeColor(settings.textColor, DEFAULT_IMAGE_MENU_SETTINGS.textColor),
+  descriptionColor: normalizeColor(settings.descriptionColor, DEFAULT_IMAGE_MENU_SETTINGS.descriptionColor),
+  backgroundMode: ['auto', 'manual', 'blurred'].includes(settings.backgroundMode) ? settings.backgroundMode : DEFAULT_IMAGE_MENU_SETTINGS.backgroundMode,
+  manualBackgroundColor: normalizeColor(settings.manualBackgroundColor, DEFAULT_IMAGE_MENU_SETTINGS.manualBackgroundColor),
+});
+
+export const createImageMenuPage = (dishes = [], name = 'Image Page') => ({
+  id: createId('imagePage'),
+  name,
+  gridVariant: 2,
+  selectedDishIds: dishes.filter((dish) => dish.visible !== false).slice(0, 2).map((dish) => dish.id),
+  settings: { ...DEFAULT_IMAGE_MENU_SETTINGS },
+});
+
+const normalizeImageMenuPage = (page = {}, dishes = [], index = 0) => {
   const dishIds = new Set(dishes.map((dish) => dish.id));
-  const selectedDishIds = Array.isArray(settings.selectedDishIds)
-    ? settings.selectedDishIds.filter((dishId) => dishIds.has(dishId))
+  const gridVariant = normalizeGridVariant(page.gridVariant);
+  const selectedDishIds = Array.isArray(page.selectedDishIds)
+    ? page.selectedDishIds.filter((dishId) => dishIds.has(dishId)).slice(0, gridVariant)
     : [];
-  const gridVariant = [2, 4, 6].includes(Number(settings.gridVariant)) ? Number(settings.gridVariant) : DEFAULT_IMAGE_MENU_SETTINGS.gridVariant;
 
   return {
-    ...DEFAULT_IMAGE_MENU_SETTINGS,
-    ...settings,
+    id: page.id || createId('imagePage'),
+    name: page.name || `Image Page ${index + 1}`,
     gridVariant,
     selectedDishIds,
-    imageSize: normalizeNumber(settings.imageSize, DEFAULT_IMAGE_MENU_SETTINGS.imageSize, 20, 120),
-    imageX: normalizeNumber(settings.imageX, DEFAULT_IMAGE_MENU_SETTINGS.imageX, -50, 50),
-    imageY: normalizeNumber(settings.imageY, DEFAULT_IMAGE_MENU_SETTINGS.imageY, -50, 50),
-    showDescriptions: settings.showDescriptions === undefined ? DEFAULT_IMAGE_MENU_SETTINGS.showDescriptions : Boolean(settings.showDescriptions),
-    enTitleSize: normalizeNumber(settings.enTitleSize, DEFAULT_IMAGE_MENU_SETTINGS.enTitleSize, 12, 72),
-    geTitleSize: normalizeNumber(settings.geTitleSize, DEFAULT_IMAGE_MENU_SETTINGS.geTitleSize, 12, 72),
-    descriptionSize: normalizeNumber(settings.descriptionSize, DEFAULT_IMAGE_MENU_SETTINGS.descriptionSize, 8, 28),
-    titleLanguageGap: normalizeNumber(settings.titleLanguageGap, DEFAULT_IMAGE_MENU_SETTINGS.titleLanguageGap, 0, 48),
-    titleDescriptionGap: normalizeNumber(settings.titleDescriptionGap, DEFAULT_IMAGE_MENU_SETTINGS.titleDescriptionGap, 0, 64),
-    textBottomOffset: normalizeNumber(settings.textBottomOffset, DEFAULT_IMAGE_MENU_SETTINGS.textBottomOffset, 0, 140),
-    enTitleFont: settings.enTitleFont || DEFAULT_IMAGE_MENU_SETTINGS.enTitleFont,
-    geTitleFont: settings.geTitleFont || DEFAULT_IMAGE_MENU_SETTINGS.geTitleFont,
-    descriptionFont: settings.descriptionFont || DEFAULT_IMAGE_MENU_SETTINGS.descriptionFont,
-    textColor: normalizeColor(settings.textColor, DEFAULT_IMAGE_MENU_SETTINGS.textColor),
-    descriptionColor: normalizeColor(settings.descriptionColor, DEFAULT_IMAGE_MENU_SETTINGS.descriptionColor),
-    backgroundMode: ['auto', 'manual', 'blurred'].includes(settings.backgroundMode) ? settings.backgroundMode : DEFAULT_IMAGE_MENU_SETTINGS.backgroundMode,
-    manualBackgroundColor: normalizeColor(settings.manualBackgroundColor, DEFAULT_IMAGE_MENU_SETTINGS.manualBackgroundColor),
+    settings: normalizeImageMenuSettings(page.settings ?? {}),
   };
 };
 
-export const loadImageMenuSettings = (dishes = []) => {
+export const normalizeImageMenuProject = (project = {}, dishes = []) => {
+  let pages = Array.isArray(project.pages) ? project.pages.map((page, index) => normalizeImageMenuPage(page, dishes, index)) : [];
+  if (pages.length === 0) pages = [createImageMenuPage(dishes, 'Image Page 1')];
+  const selectedPageId = pages.some((page) => page.id === project.selectedPageId) ? project.selectedPageId : pages[0].id;
+  return { pages, selectedPageId };
+};
+
+export const loadImageMenuProject = (dishes = []) => {
   try {
     const rawValue = window.localStorage.getItem(STORAGE_KEY);
-    return normalizeImageMenuSettings(rawValue ? JSON.parse(rawValue) : DEFAULT_IMAGE_MENU_SETTINGS, dishes);
+    return normalizeImageMenuProject(rawValue ? JSON.parse(rawValue) : {}, dishes);
   } catch (error) {
     console.warn('Unable to restore Image Menu settings. Loading defaults.', error);
-    return normalizeImageMenuSettings(DEFAULT_IMAGE_MENU_SETTINGS, dishes);
+    return normalizeImageMenuProject({}, dishes);
   }
 };
 
-export const saveImageMenuSettings = (settings) => {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+export const saveImageMenuProject = (project) => {
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
 };
