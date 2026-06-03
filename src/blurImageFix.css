@@ -3,7 +3,7 @@
 
 .image-preview.blurred-image-preview img,
 .preview-dish-card.image-blurred .preview-image-box img {
-  filter: blur(9px) !important;
+  filter: blur(5px) brightness(1.08) !important;
 }
 
 .preview-dish-card.image-blurred .preview-badges {
@@ -12,6 +12,6 @@
 
 @media print {
   .preview-dish-card.image-blurred .preview-image-box img {
-    filter: blur(9px) !important;
+    filter: blur(5px) brightness(1.08) !important;
   }
 }
