@@ -6,6 +6,7 @@
   min-height: 0 !important;
 }
 
+/* Reserve space for the bottom price block so text above cannot overlap it. */
 .preview-dish-card:has(.pizza-size-matrix) .preview-card-content {
   padding-bottom: calc(var(--new-price-size) * var(--font-scale, 1) * 3.05 + var(--price-bottom-offset, 0px)) !important;
 }
@@ -14,6 +15,7 @@
   padding-bottom: calc(var(--new-price-size) * var(--font-scale, 1) + var(--price-bottom-offset, 0px)) !important;
 }
 
+/* The bottom edge is identical for regular prices and pizza sale rows. */
 .preview-dish-card:has(.pizza-size-matrix) .pizza-size-matrix,
 .preview-dish-card:not(:has(.pizza-size-matrix)) .preview-meta-row {
   position: absolute !important;
@@ -44,13 +46,27 @@
   line-height: 1 !important;
 }
 
+.pizza-size-matrix {
+  display: grid !important;
+  grid-template-rows: auto auto calc(var(--new-price-size) * var(--font-scale, 1)) !important;
+  gap: 2px !important;
+}
+
 .pizza-size-matrix .pizza-price-row {
+  display: grid !important;
+  grid-auto-flow: column !important;
+  grid-auto-columns: minmax(0, 1fr) !important;
+  column-gap: 6px !important;
   align-items: end !important;
+  width: 100% !important;
 }
 
 .pizza-size-matrix .pizza-sale-row {
-  min-height: calc(var(--new-price-size) * var(--font-scale, 1)) !important;
   align-items: end !important;
+  height: calc(var(--new-price-size) * var(--font-scale, 1)) !important;
+  min-height: calc(var(--new-price-size) * var(--font-scale, 1)) !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 .preview-new-price,
@@ -63,6 +79,8 @@
   letter-spacing: var(--price-letter-spacing) !important;
   line-height: 1 !important;
   vertical-align: bottom !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 .pizza-size-matrix .pizza-size-row-cell,
@@ -76,8 +94,16 @@
     bottom: var(--price-bottom-offset, 0px) !important;
   }
 
+  .pizza-size-matrix {
+    display: grid !important;
+    grid-template-rows: auto auto calc(var(--new-price-size) * var(--font-scale, 1)) !important;
+    gap: 2px !important;
+  }
+
   .preview-new-price,
   .pizza-size-matrix .pizza-sale-row-cell {
     line-height: 1 !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 }
