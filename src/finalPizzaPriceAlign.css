@@ -62,8 +62,8 @@
 .preview-dish-card.has-pizza-bottom-sale-row .pizza-sale-row.only-sale-price-row {
   display: grid !important;
   grid-template-columns: repeat(var(--pizza-size-count, 3), minmax(0, 1fr)) !important;
-  grid-auto-flow: column !important;
-  grid-auto-columns: minmax(0, 1fr) !important;
+  grid-auto-flow: row !important;
+  grid-auto-columns: unset !important;
   column-gap: 6px !important;
   align-items: end !important;
   width: 100% !important;
