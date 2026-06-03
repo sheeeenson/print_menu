@@ -1,7 +1,7 @@
 /* Absolute final price alignment lock.
    Every card uses .preview-meta-row as the only bottom price baseline.
    Pizza cm/old-price rows are placed above that baseline and cannot define it.
-   Pizza rows always use a fixed 3-column grid; filled sizes occupy columns from left to right. */
+   Pizza rows use a fixed 3-column grid aligned to the right edge of the card. */
 
 .preview-dish-card .preview-card-content {
   position: relative !important;
@@ -20,7 +20,7 @@
   bottom: var(--price-bottom-offset, 0px) !important;
   display: flex !important;
   align-items: flex-end !important;
-  justify-content: space-between !important;
+  justify-content: flex-end !important;
   min-height: calc(var(--new-price-size) * var(--font-scale, 1)) !important;
   margin: 0 !important;
   padding: 0 !important;
@@ -43,11 +43,12 @@
 .preview-dish-card.has-pizza-bottom-sale-row .preview-prices.only-bottom-price-row {
   display: block !important;
   width: 100% !important;
+  margin-left: auto !important;
 }
 
 .preview-dish-card.has-pizza-bottom-sale-row .configurable-options.pizza-size-info-only {
   position: absolute !important;
-  left: 0 !important;
+  left: auto !important;
   right: 0 !important;
   bottom: calc(var(--new-price-size) * var(--font-scale, 1) + 7px + var(--price-bottom-offset, 0px)) !important;
   display: grid !important;
@@ -67,7 +68,7 @@
   grid-auto-columns: unset !important;
   column-gap: 6px !important;
   align-items: end !important;
-  justify-items: center !important;
+  justify-items: end !important;
   width: 100% !important;
 }
 
@@ -103,7 +104,7 @@
   line-height: 1 !important;
   margin: 0 !important;
   padding: 0 !important;
-  text-align: center !important;
+  text-align: right !important;
   justify-self: stretch !important;
 }
 
@@ -129,10 +130,12 @@
   .preview-dish-card.has-pizza-bottom-sale-row .preview-meta-row.pizza-bottom-price-row {
     position: absolute !important;
     bottom: var(--price-bottom-offset, 0px) !important;
+    justify-content: flex-end !important;
   }
 
   .preview-dish-card.has-pizza-bottom-sale-row .configurable-options.pizza-size-info-only {
     position: absolute !important;
+    right: 0 !important;
     bottom: calc(var(--new-price-size) * var(--font-scale, 1) + 7px + var(--price-bottom-offset, 0px)) !important;
   }
 }
