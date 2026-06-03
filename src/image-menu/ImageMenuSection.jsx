@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import './imageMenu.css';
+import './imageMenuPrint.css';
 import { ImageMenuPreview } from './ImageMenuPreview.jsx';
 import { createImageMenuPage, loadImageMenuProject, saveImageMenuProject } from './imageMenuStorage.js';
 
