@@ -44,18 +44,18 @@ function parsePizzaBlocks(text) {
   return items.length ? items.slice(0, 3) : [];
 }
 
-function createCell(className, value) {
+function createCell(className, value, extraClassName = '') {
   const cell = document.createElement('span');
-  cell.className = `pizza-price-cell ${className}`;
+  cell.className = ['pizza-price-cell', className, extraClassName].filter(Boolean).join(' ');
   cell.textContent = value || '';
   return cell;
 }
 
-function createRow(className, items, field) {
+function createRow(className, items, field, extraCellClassName = '') {
   const row = document.createElement('div');
   row.className = `pizza-price-row ${className}`;
   items.forEach((item) => {
-    row.appendChild(createCell(`${className}-cell`, item[field]));
+    row.appendChild(createCell(`${className}-cell`, item[field], extraCellClassName));
   });
   return row;
 }
@@ -63,7 +63,7 @@ function createRow(className, items, field) {
 function createSalePriceRow(items) {
   const prices = document.createElement('span');
   prices.className = 'preview-prices pizza-sale-prices only-bottom-price-row';
-  const row = createRow('pizza-sale-row only-sale-price-row', items, 'salePrice');
+  const row = createRow('pizza-sale-row only-sale-price-row', items, 'salePrice', 'preview-new-price');
   prices.appendChild(row);
   return prices;
 }
