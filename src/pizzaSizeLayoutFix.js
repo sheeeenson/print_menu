@@ -44,6 +44,10 @@ function parsePizzaBlocks(text) {
   return items.length ? items.slice(0, 3) : [];
 }
 
+function setPizzaSizeCount(target, count) {
+  target?.style?.setProperty('--pizza-size-count', String(count));
+}
+
 function createCell(className, value, extraClassName = '') {
   const cell = document.createElement('span');
   cell.className = ['pizza-price-cell', className, extraClassName].filter(Boolean).join(' ');
@@ -54,6 +58,7 @@ function createCell(className, value, extraClassName = '') {
 function createRow(className, items, field, extraCellClassName = '') {
   const row = document.createElement('div');
   row.className = `pizza-price-row ${className}`;
+  setPizzaSizeCount(row, items.length);
   items.forEach((item) => {
     row.appendChild(createCell(`${className}-cell`, item[field], extraCellClassName));
   });
@@ -63,6 +68,7 @@ function createRow(className, items, field, extraCellClassName = '') {
 function createSalePriceRow(items) {
   const prices = document.createElement('span');
   prices.className = 'preview-prices pizza-sale-prices only-bottom-price-row';
+  setPizzaSizeCount(prices, items.length);
   const row = createRow('pizza-sale-row only-sale-price-row', items, 'salePrice', 'preview-new-price');
   prices.appendChild(row);
   return prices;
@@ -79,12 +85,13 @@ function enhanceConfigurableOptions(element) {
   const metaRow = card?.querySelector('.preview-meta-row');
   if (!card || !content || !metaRow) return;
 
+  const count = items.length;
   element.dataset.pizzaMatrixEnhanced = 'true';
   element.classList.add('pizza-size-matrix', 'pizza-size-info', 'pizza-size-info-only');
   card.classList.add('pizza-price-card', 'has-pizza-bottom-sale-row');
   content.classList.add('pizza-price-content');
   metaRow.classList.add('pizza-bottom-price-row');
-  element.style.setProperty('--pizza-size-count', String(items.length));
+  [card, content, metaRow, element].forEach((target) => setPizzaSizeCount(target, count));
   element.innerHTML = '';
   element.appendChild(createRow('pizza-size-row', items, 'size'));
   element.appendChild(createRow('pizza-old-row', items, 'oldPrice'));
