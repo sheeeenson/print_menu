@@ -1,6 +1,6 @@
 const SIZE_PATTERN = /(?:\d+(?:[.,]\d+)?\s*(?:cm|სმ))|(?:small|medium|large)/i;
 const PRICE_PATTERN = /\d+(?:[.,]\d+)?\s*₾?/;
-const STRIKE_CHARS = /[\u0336\u0335]/g;
+const STRIKE_CHARS = /[\u0336\u0335]/;
 
 function cleanText(value) {
   return String(value ?? '').replace(/\u00a0/g, ' ').trim();
