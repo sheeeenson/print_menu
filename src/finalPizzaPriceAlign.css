@@ -1,6 +1,7 @@
 /* Absolute final price alignment lock.
    Every card uses .preview-meta-row as the only bottom price baseline.
-   Pizza cm/old-price rows are placed above that baseline and cannot define it. */
+   Pizza cm/old-price rows are placed above that baseline and cannot define it.
+   Pizza rows always use a fixed 3-column grid; filled sizes occupy columns from left to right. */
 
 .preview-dish-card .preview-card-content {
   position: relative !important;
@@ -61,11 +62,12 @@
 .preview-dish-card.has-pizza-bottom-sale-row .pizza-size-info-only .pizza-price-row,
 .preview-dish-card.has-pizza-bottom-sale-row .pizza-sale-row.only-sale-price-row {
   display: grid !important;
-  grid-template-columns: repeat(var(--pizza-size-count, 3), minmax(0, 1fr)) !important;
-  grid-auto-flow: row !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  grid-auto-flow: column !important;
   grid-auto-columns: unset !important;
   column-gap: 6px !important;
   align-items: end !important;
+  justify-items: center !important;
   width: 100% !important;
 }
 
