@@ -62,8 +62,8 @@ function createRow(className, items, field) {
 
 function createSalePriceRow(items) {
   const prices = document.createElement('span');
-  prices.className = 'preview-prices pizza-sale-prices';
-  const row = createRow('pizza-sale-row', items, 'salePrice');
+  prices.className = 'preview-prices pizza-sale-prices only-bottom-price-row';
+  const row = createRow('pizza-sale-row only-sale-price-row', items, 'salePrice');
   prices.appendChild(row);
   return prices;
 }
@@ -75,12 +75,15 @@ function enhanceConfigurableOptions(element) {
   if (!items.length) return;
 
   const card = element.closest('.preview-dish-card');
+  const content = card?.querySelector('.preview-card-content');
   const metaRow = card?.querySelector('.preview-meta-row');
-  if (!card || !metaRow) return;
+  if (!card || !content || !metaRow) return;
 
   element.dataset.pizzaMatrixEnhanced = 'true';
-  element.classList.add('pizza-size-matrix', 'pizza-size-info');
-  card.classList.add('pizza-price-card');
+  element.classList.add('pizza-size-matrix', 'pizza-size-info', 'pizza-size-info-only');
+  card.classList.add('pizza-price-card', 'has-pizza-bottom-sale-row');
+  content.classList.add('pizza-price-content');
+  metaRow.classList.add('pizza-bottom-price-row');
   element.style.setProperty('--pizza-size-count', String(items.length));
   element.innerHTML = '';
   element.appendChild(createRow('pizza-size-row', items, 'size'));
