@@ -194,6 +194,7 @@ function previewStyle(page, autoFillLayout, fitAllLayout, itemCount = 0) {
     '--new-price-size': `${settings.newPriceFontSize}px`,
     '--badge-size': `${settings.badgeFontSize}px`,
     '--weight-size': `${settings.weightFontSize}px`,
+    '--price-bottom-offset': `${settings.priceBottomOffset ?? 0}px`,
     '--preview-columns': columns,
     '--grid-columns': settings.customGrid.columns,
     '--grid-rows': customRows,
