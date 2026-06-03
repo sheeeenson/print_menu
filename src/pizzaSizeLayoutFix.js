@@ -96,14 +96,7 @@ function enhanceConfigurableOptions(element) {
   element.appendChild(createRow('pizza-size-row', items, 'size'));
   element.appendChild(createRow('pizza-old-row', items, 'oldPrice'));
 
-  const weight = metaRow.querySelector('.preview-weight');
   metaRow.innerHTML = '';
-  if (weight) metaRow.appendChild(weight);
-  else {
-    const emptyWeight = document.createElement('span');
-    emptyWeight.className = 'preview-weight';
-    metaRow.appendChild(emptyWeight);
-  }
   metaRow.appendChild(createSalePriceRow(items));
 }
 
