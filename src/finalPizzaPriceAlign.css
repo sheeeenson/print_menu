@@ -61,6 +61,7 @@
 .preview-dish-card.has-pizza-bottom-sale-row .pizza-size-info-only .pizza-price-row,
 .preview-dish-card.has-pizza-bottom-sale-row .pizza-sale-row.only-sale-price-row {
   display: grid !important;
+  grid-template-columns: repeat(var(--pizza-size-count, 3), minmax(0, 1fr)) !important;
   grid-auto-flow: column !important;
   grid-auto-columns: minmax(0, 1fr) !important;
   column-gap: 6px !important;
@@ -89,7 +90,8 @@
   padding: 0 !important;
 }
 
-.preview-dish-card.has-pizza-bottom-sale-row .pizza-size-info-only .pizza-price-cell {
+.preview-dish-card.has-pizza-bottom-sale-row .pizza-size-info-only .pizza-price-cell,
+.preview-dish-card.has-pizza-bottom-sale-row .pizza-sale-row.only-sale-price-row .pizza-price-cell {
   display: block !important;
   min-width: 0 !important;
   overflow: hidden !important;
@@ -99,6 +101,8 @@
   line-height: 1 !important;
   margin: 0 !important;
   padding: 0 !important;
+  text-align: right !important;
+  justify-self: stretch !important;
 }
 
 .preview-dish-card.has-pizza-bottom-sale-row .pizza-size-info-only .pizza-size-row-cell,
