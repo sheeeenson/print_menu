@@ -1,0 +1,87 @@
+/* Absolute final pizza price alignment lock.
+   Only .preview-meta-row is allowed to define the bottom price baseline. */
+
+.preview-dish-card.has-pizza-bottom-sale-row .preview-card-content.pizza-price-content {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+}
+
+.preview-dish-card.has-pizza-bottom-sale-row .configurable-options.pizza-size-info-only {
+  display: grid !important;
+  grid-template-rows: auto auto !important;
+  gap: 2px !important;
+  width: 100% !important;
+  margin-top: 0 !important;
+  margin-bottom: 3px !important;
+  padding: 0 !important;
+  flex: 0 0 auto !important;
+  position: static !important;
+  bottom: auto !important;
+}
+
+.preview-dish-card.has-pizza-bottom-sale-row .preview-meta-row.pizza-bottom-price-row {
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: space-between !important;
+  margin-top: auto !important;
+  min-height: calc(var(--new-price-size) * var(--font-scale, 1)) !important;
+  position: static !important;
+  bottom: auto !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+}
+
+.preview-dish-card.has-pizza-bottom-sale-row .preview-prices.only-bottom-price-row {
+  display: block !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+}
+
+.preview-dish-card.has-pizza-bottom-sale-row .pizza-sale-row.only-sale-price-row {
+  display: grid !important;
+  grid-auto-flow: column !important;
+  grid-auto-columns: minmax(0, 1fr) !important;
+  column-gap: 6px !important;
+  align-items: end !important;
+  height: calc(var(--new-price-size) * var(--font-scale, 1)) !important;
+  min-height: calc(var(--new-price-size) * var(--font-scale, 1)) !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.preview-dish-card.has-pizza-bottom-sale-row .pizza-sale-row.only-sale-price-row .pizza-sale-row-cell,
+.preview-dish-card:not(.has-pizza-bottom-sale-row) .preview-new-price {
+  display: inline-block !important;
+  color: var(--preview-price-color) !important;
+  font-family: var(--price-font-family) !important;
+  font-size: calc(var(--new-price-size) * var(--font-scale, 1)) !important;
+  font-weight: var(--price-font-weight) !important;
+  letter-spacing: var(--price-letter-spacing) !important;
+  line-height: 1 !important;
+  vertical-align: bottom !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.preview-dish-card.has-pizza-bottom-sale-row .pizza-size-info-only .pizza-size-row-cell,
+.preview-dish-card.has-pizza-bottom-sale-row .pizza-size-info-only .pizza-old-row-cell {
+  color: var(--preview-muted-color) !important;
+}
+
+@media print {
+  .preview-dish-card.has-pizza-bottom-sale-row .configurable-options.pizza-size-info-only {
+    position: static !important;
+    bottom: auto !important;
+    margin-top: 0 !important;
+  }
+
+  .preview-dish-card.has-pizza-bottom-sale-row .preview-meta-row.pizza-bottom-price-row {
+    position: static !important;
+    bottom: auto !important;
+    margin-top: auto !important;
+  }
+}
