@@ -42,14 +42,8 @@ export function MainNavigation({ snapshot, actions }) {
 
   return (
     <nav className="main-navigation top-nav" aria-label="Main navigation">
-      <div className="brand-block">
-        <span className="brand-mark">RMS</span>
-        <input
-          aria-label="Project name"
-          className="project-name-input"
-          value={project.projectName}
-          onChange={(event) => actions.setProjectName(event.target.value)}
-        />
+      <div className="brand-block compact-brand-block">
+        <span className="brand-mark" aria-label="Restaurant Menu Studio">✏️</span>
       </div>
       <div className="section-tabs" role="tablist" aria-label="Application sections">
         <button
