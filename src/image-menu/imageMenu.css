@@ -43,7 +43,7 @@
 .image-menu-bg-blurred { background: #eee5d8; }
 .image-menu-blur-bg { position: absolute; inset: -24px; width: calc(100% + 48px); height: calc(100% + 48px); object-fit: cover; filter: blur(28px) saturate(1.05); opacity: 0.56; z-index: 0; }
 .image-menu-photo-wrap { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; padding-bottom: 110px; }
-.image-menu-photo { display: block; max-width: 100%; height: auto; max-height: 70%; object-fit: contain; filter: drop-shadow(0 28px 34px rgba(29, 23, 17, 0.17)); }
+.image-menu-photo { display: block; max-width: 100%; height: auto; max-height: 70%; object-fit: contain; filter: none; }
 .image-menu-photo-placeholder { aspect-ratio: 1.45; border-radius: 28px; display: grid; place-items: center; background: rgba(255,255,255,0.45); color: #7c7065; font-weight: 900; }
 .image-menu-text { position: absolute; left: 30px; right: 30px; z-index: 3; text-align: center; }
 .image-menu-text[data-align='left'] { text-align: left; }
