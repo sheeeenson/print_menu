@@ -16,8 +16,54 @@ const getPrice = (value) => {
 };
 
 const toRgb = (data, index) => ({ r: data[index], g: data[index + 1], b: data[index + 2], a: data[index + 3] });
-const isUsefulPixel = ({ r, g, b, a }) => a > 180 && !(r > 246 && g > 246 && b > 246) && !(r < 10 && g < 10 && b < 10);
+const isUsefulPixel = ({ a }) => a > 180;
 const rgbToHex = ({ r, g, b }) => `#${[r, g, b].map((value) => value.toString(16).padStart(2, '0')).join('')}`;
+const colorKey = ({ r, g, b }) => `${r},${g},${b}`;
+
+const getDominantColor = (pixels) => {
+  const exactBuckets = new Map();
+  pixels.forEach((pixel) => {
+    const key = colorKey(pixel);
+    exactBuckets.set(key, (exactBuckets.get(key) || 0) + 1);
+  });
+
+  let bestKey = '';
+  let bestCount = 0;
+  exactBuckets.forEach((count, key) => {
+    if (count > bestCount) {
+      bestKey = key;
+      bestCount = count;
+    }
+  });
+
+  if (bestCount >= 4) {
+    const [r, g, b] = bestKey.split(',').map(Number);
+    return { r, g, b };
+  }
+
+  const softBuckets = new Map();
+  pixels.forEach((pixel) => {
+    const key = [pixel.r, pixel.g, pixel.b].map((value) => Math.round(value / 4) * 4).join(',');
+    const bucket = softBuckets.get(key) || { count: 0, r: 0, g: 0, b: 0 };
+    bucket.count += 1;
+    bucket.r += pixel.r;
+    bucket.g += pixel.g;
+    bucket.b += pixel.b;
+    softBuckets.set(key, bucket);
+  });
+
+  let bestBucket = null;
+  softBuckets.forEach((bucket) => {
+    if (!bestBucket || bucket.count > bestBucket.count) bestBucket = bucket;
+  });
+
+  if (!bestBucket) throw new Error('No dominant color found');
+  return {
+    r: Math.round(bestBucket.r / bestBucket.count),
+    g: Math.round(bestBucket.g / bestBucket.count),
+    b: Math.round(bestBucket.b / bestBucket.count),
+  };
+};
 
 const sampleImageColor = (imageUrl) => new Promise((resolve, reject) => {
   if (!imageUrl) {
@@ -35,7 +81,8 @@ const sampleImageColor = (imageUrl) => new Promise((resolve, reject) => {
   image.referrerPolicy = 'no-referrer';
   image.onload = () => {
     try {
-      const size = 42;
+      const size = 64;
+      const edgeWidth = 10;
       const canvas = document.createElement('canvas');
       canvas.width = size;
       canvas.height = size;
@@ -50,25 +97,14 @@ const sampleImageColor = (imageUrl) => new Promise((resolve, reject) => {
           const pixel = toRgb(data, (y * size + x) * 4);
           if (!isUsefulPixel(pixel)) continue;
           allPixels.push(pixel);
-          if (x < 8 || x > size - 9 || y < 8 || y > size - 9) edgePixels.push(pixel);
+          if (x < edgeWidth || x >= size - edgeWidth || y < edgeWidth || y >= size - edgeWidth) edgePixels.push(pixel);
         }
       }
 
       const sourcePixels = edgePixels.length > 20 ? edgePixels : allPixels;
       if (!sourcePixels.length) throw new Error('No useful image pixels');
 
-      const color = sourcePixels.reduce((acc, pixel) => ({
-        r: acc.r + pixel.r,
-        g: acc.g + pixel.g,
-        b: acc.b + pixel.b,
-      }), { r: 0, g: 0, b: 0 });
-
-      const average = {
-        r: Math.round(color.r / sourcePixels.length),
-        g: Math.round(color.g / sourcePixels.length),
-        b: Math.round(color.b / sourcePixels.length),
-      };
-      const hex = rgbToHex(average);
+      const hex = rgbToHex(getDominantColor(sourcePixels));
       colorCache.set(imageUrl, hex);
       resolve(hex);
     } catch (error) {
