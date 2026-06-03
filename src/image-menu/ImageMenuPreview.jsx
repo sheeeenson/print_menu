@@ -178,7 +178,7 @@ function ImageMenuCard({ dish, settings, index }) {
           </div>
         ) : null}
         {(oldPrice || salePrice) ? (
-          <div className="image-menu-prices">
+          <div className="image-menu-prices" style={{ gap: `${settings.priceGap}px` }}>
             {oldPrice ? <span className="image-menu-old-price" style={{ color: settings.oldPriceColor, fontSize: `${settings.oldPriceSize}px` }}>{oldPrice}</span> : null}
             {salePrice ? <strong className="image-menu-sale-price" style={{ color: settings.salePriceColor, fontSize: `${settings.salePriceSize}px` }}>{salePrice}</strong> : null}
           </div>
