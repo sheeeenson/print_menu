@@ -7,6 +7,7 @@ export function MainNavigation({ snapshot, actions }) {
   const importInputRef = useRef(null);
   const saveStatusClass = saveStatus === 'Unsaved' || saveStatus === 'Saving' ? 'unsaved' : saveStatus.startsWith('Could not import') ? 'error' : 'saved';
   const isLayout = project.selectedSection === APP_SECTIONS.LAYOUT_PRINT;
+  const isImageMenu = project.selectedSection === APP_SECTIONS.IMAGE_MENU;
 
   const handleImportClick = () => {
     importInputRef.current?.click();
@@ -64,6 +65,13 @@ export function MainNavigation({ snapshot, actions }) {
           onClick={() => actions.setSection(APP_SECTIONS.LAYOUT_PRINT)}
         >
           Layout
+        </button>
+        <button
+          className={isImageMenu ? 'active' : ''}
+          type="button"
+          onClick={() => actions.setSection(APP_SECTIONS.IMAGE_MENU)}
+        >
+          Image Menu
         </button>
       </div>
       {isLayout ? (
