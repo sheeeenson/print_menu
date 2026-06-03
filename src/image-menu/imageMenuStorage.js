@@ -1,6 +1,6 @@
 const STORAGE_KEY = 'restaurant-menu-studio:image-menu:v1';
 
-const createId = (prefix) => `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
+const createId = (prefix) => prefix + '_' + Math.random().toString(36).slice(2, 10);
 
 export const DEFAULT_IMAGE_MENU_SETTINGS = Object.freeze({
   imageSize: 68,
@@ -25,6 +25,7 @@ export const DEFAULT_IMAGE_MENU_SETTINGS = Object.freeze({
   salePriceSize: 28,
   oldPriceColor: '#5f564d',
   salePriceColor: '#050505',
+  priceGap: 12,
   overlayGradient: 'off',
   backgroundMode: 'auto',
   manualBackgroundColor: '#f3eadf',
@@ -73,6 +74,7 @@ export const normalizeImageMenuSettings = (settings = {}) => ({
   salePriceSize: normalizeNumber(settings.salePriceSize, DEFAULT_IMAGE_MENU_SETTINGS.salePriceSize, 12, 72),
   oldPriceColor: normalizeColor(settings.oldPriceColor, DEFAULT_IMAGE_MENU_SETTINGS.oldPriceColor),
   salePriceColor: normalizeColor(settings.salePriceColor, DEFAULT_IMAGE_MENU_SETTINGS.salePriceColor),
+  priceGap: normalizeNumber(settings.priceGap, DEFAULT_IMAGE_MENU_SETTINGS.priceGap, 0, 80),
   overlayGradient: normalizeOverlayGradient(settings.overlayGradient),
   backgroundMode: ['auto', 'manual', 'blurred'].includes(settings.backgroundMode) ? settings.backgroundMode : DEFAULT_IMAGE_MENU_SETTINGS.backgroundMode,
   manualBackgroundColor: normalizeColor(settings.manualBackgroundColor, DEFAULT_IMAGE_MENU_SETTINGS.manualBackgroundColor),
@@ -101,7 +103,7 @@ const normalizeImageMenuPage = (page = {}, dishes = [], index = 0) => {
 
   return {
     id: page.id || createId('imagePage'),
-    name: page.name || `Image Page ${index + 1}`,
+    name: page.name || 'Image Page ' + (index + 1),
     gridVariant,
     selectedDishIds,
     settings: normalizeImageMenuSettings(page.settings ?? {}),
