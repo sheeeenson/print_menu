@@ -57,7 +57,7 @@ function createCell(className, value, extraClassName = '') {
 
 function createRow(className, items, field, extraCellClassName = '') {
   const row = document.createElement('div');
-  row.className = `pizza-price-row ${className}`;
+  row.className = `pizza-price-row ${className} pizza-count-${items.length}`;
   setPizzaSizeCount(row, items.length);
   items.forEach((item) => {
     row.appendChild(createCell(`${className}-cell`, item[field], extraCellClassName));
@@ -67,7 +67,7 @@ function createRow(className, items, field, extraCellClassName = '') {
 
 function createSalePriceRow(items) {
   const prices = document.createElement('span');
-  prices.className = 'preview-prices pizza-sale-prices only-bottom-price-row';
+  prices.className = `preview-prices pizza-sale-prices only-bottom-price-row pizza-count-${items.length}`;
   setPizzaSizeCount(prices, items.length);
   const row = createRow('pizza-sale-row only-sale-price-row', items, 'salePrice', 'preview-new-price');
   prices.appendChild(row);
@@ -87,10 +87,10 @@ function enhanceConfigurableOptions(element) {
 
   const count = items.length;
   element.dataset.pizzaMatrixEnhanced = 'true';
-  element.classList.add('pizza-size-matrix', 'pizza-size-info', 'pizza-size-info-only');
-  card.classList.add('pizza-price-card', 'has-pizza-bottom-sale-row');
+  element.classList.add('pizza-size-matrix', 'pizza-size-info', 'pizza-size-info-only', `pizza-count-${count}`);
+  card.classList.add('pizza-price-card', 'has-pizza-bottom-sale-row', `pizza-count-${count}`);
   content.classList.add('pizza-price-content');
-  metaRow.classList.add('pizza-bottom-price-row');
+  metaRow.classList.add('pizza-bottom-price-row', `pizza-count-${count}`);
   [card, content, metaRow, element].forEach((target) => setPizzaSizeCount(target, count));
   element.innerHTML = '';
   element.appendChild(createRow('pizza-size-row', items, 'size'));
