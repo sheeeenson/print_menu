@@ -13,6 +13,7 @@ import './printOnlyPage.css';
 import './pizzaSizeLayoutFix.js';
 import './pizzaBaselineFix.css';
 import './blurImageFix.css';
+import './finalPizzaPriceAlign.css';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>
