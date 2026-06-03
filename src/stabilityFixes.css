@@ -91,7 +91,7 @@
 /* Classic columns must always obey the selected column count. */
 .layout-mode-classicColumns .classic-columns-grid {
   display: grid !important;
-  grid-template-columns: repeat(var(--classic-columns, 2), minmax(0, 1fr)) !important;
+  grid-template-columns: repeat(var(--preview-columns, 2), minmax(0, 1fr)) !important;
   grid-auto-flow: row;
   gap: var(--card-gap);
   width: 100%;
