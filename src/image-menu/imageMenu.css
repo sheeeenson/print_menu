@@ -31,7 +31,8 @@
 .secondary-action { border: 1px solid #ded1c1; border-radius: 14px; background: #fffaf2; color: #231f20; padding: 12px 18px; font-weight: 850; }
 .secondary-action.compact { padding: 9px 13px; }
 .image-menu-preview-shell { overflow: auto; padding: 22px 26px 44px; display: grid; justify-items: center; align-items: start; min-height: 0; border-radius: 28px; background: radial-gradient(circle at top, rgba(255,250,242,0.95), rgba(223,214,201,0.42)); }
-.image-menu-page { width: 1123px; height: 794px; background: transparent; color: #231f20; box-shadow: 0 28px 70px rgba(54, 42, 31, 0.25); overflow: hidden; display: grid; transform: scale(0.86); transform-origin: top center; margin-bottom: calc(794px * -0.14); border: 0; gap: 0; }
+.image-menu-page-wrap { width: calc(1123px * 0.86); height: calc(794px * 0.86); position: relative; }
+.image-menu-page { width: 1123px; height: 794px; background: transparent; color: #231f20; box-shadow: none; overflow: hidden; display: grid; transform: scale(0.86); transform-origin: top left; border: 0; outline: 0; gap: 0; }
 .image-menu-grid-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .image-menu-grid-four { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
 .image-menu-grid-six { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
