@@ -11,6 +11,7 @@ const controls = [
   ['imageHeight', 'Image height', 60, 260, 1],
   ['imageToTitleGap', 'Image to title gap', 0, 40, 0.5, 1.5],
   ['imageTitleGap', 'Title/content gap', 0, 40, 0.5, 1.5],
+  ['priceBottomOffset', 'Price bottom offset', 0, 40, 1, 0],
   ['categoryTitleFontSize', 'Category title', 18, 44, 1],
   ['dishTitleFontSize', 'Dish title', 12, 34, 1],
   ['descriptionFontSize', 'Description', 9, 20, 1],
@@ -27,10 +28,12 @@ export function DesignControls({ page, actions }) {
     const imageToTitleGap = Number(page.designSettings.imageToTitleGap ?? 1.5);
     const titleContentGap = Number(page.designSettings.imageTitleGap ?? 1.5);
     const uniformCardHeight = Number(page.designSettings.uniformCardHeight ?? 230);
+    const priceBottomOffset = Number(page.designSettings.priceBottomOffset ?? 0);
     document.documentElement.style.setProperty('--image-to-title-gap', `${imageToTitleGap}px`);
     document.documentElement.style.setProperty('--image-title-gap', `${titleContentGap}px`);
     document.documentElement.style.setProperty('--uniform-card-height', `${uniformCardHeight}px`);
-  }, [page.designSettings.imageToTitleGap, page.designSettings.imageTitleGap, page.designSettings.uniformCardHeight]);
+    document.documentElement.style.setProperty('--price-bottom-offset', `${priceBottomOffset}px`);
+  }, [page.designSettings.imageToTitleGap, page.designSettings.imageTitleGap, page.designSettings.uniformCardHeight, page.designSettings.priceBottomOffset]);
 
   return (
     <details className="panel-section collapsible-panel" open>
@@ -44,7 +47,7 @@ export function DesignControls({ page, actions }) {
       <TypographyControls page={page} actions={actions} />
       <div className="design-subpanel">
         <h3 className="panel-subtitle">Spacing & typography</h3>
-        <p className="muted-text">Card gap controls both horizontal and vertical spacing. Card height keeps names and prices aligned across cards in non-designer layouts.</p>
+        <p className="muted-text">Card gap controls both horizontal and vertical spacing. Price bottom offset moves the shared price line for regular dishes and pizza size prices together.</p>
         <div className="design-control-list">
           {controls.map(([field, label, min, max, step, fallback]) => (
             <DesignSlider key={field} page={page} field={field} label={label} min={min} max={max} step={step} fallback={fallback} actions={actions} />
