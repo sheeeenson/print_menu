@@ -39,16 +39,12 @@ export function ImageMenuSection({ project }) {
   const [imageProject, setImageProject] = useState(() => loadImageMenuProject(dishes));
   const [openCategoryIds, setOpenCategoryIds] = useState(() => new Set(project.categories.map((category) => category.id)));
   const selectedPage = imageProject.pages.find((page) => page.id === imageProject.selectedPageId) ?? imageProject.pages[0];
-  const sourcePage = project.pages?.find((page) => page.id === project.selectedPageId) ?? project.pages?.[0];
-  const selectedContentCategoryIds = sourcePage?.selectedCategoryIds?.length ? new Set(sourcePage.selectedCategoryIds) : null;
 
   const categoryGroups = useMemo(() => project.categories
-    .filter((category) => !selectedContentCategoryIds || selectedContentCategoryIds.has(category.id))
     .map((category) => ({
       category,
       dishes: dishes.filter((dish) => dish.categoryId === category.id),
-    }))
-    .filter((group) => group.dishes.length > 0), [project.categories, dishes, selectedContentCategoryIds]);
+    })), [project.categories, dishes]);
 
   useEffect(() => {
     setImageProject((current) => loadImageMenuProject(dishes.length ? dishes : project.dishes));
@@ -166,10 +162,11 @@ export function ImageMenuSection({ project }) {
                   {isOpen ? (
                     <div className="image-menu-category-body">
                       <div className="image-menu-category-actions">
-                        <button type="button" onClick={() => selectCategoryDishes(categoryDishes)} disabled={selectedPage.selectedDishIds.length >= selectedPage.gridVariant && selectedCount === 0}>Select all</button>
+                        <button type="button" onClick={() => selectCategoryDishes(categoryDishes)} disabled={categoryDishes.length === 0 || (selectedPage.selectedDishIds.length >= selectedPage.gridVariant && selectedCount === 0)}>Select all</button>
                         <button type="button" onClick={() => clearCategoryDishes(categoryDishes)} disabled={selectedCount === 0}>Clear</button>
                       </div>
                       <div className="image-menu-dish-picker">
+                        {categoryDishes.length === 0 ? <p className="muted-text">No dishes in this category yet.</p> : null}
                         {categoryDishes.map((dish) => {
                           const selected = selectedPage.selectedDishIds.includes(dish.id);
                           return (
