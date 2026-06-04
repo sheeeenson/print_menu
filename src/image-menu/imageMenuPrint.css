@@ -4,31 +4,31 @@
     margin: 0;
   }
 
-  body:has(.image-menu-section) {
+  html,
+  body {
     margin: 0 !important;
     padding: 0 !important;
-    background: transparent !important;
+    background: #ffffff !important;
   }
 
-  body:has(.image-menu-section) * {
-    visibility: hidden !important;
+  body:has(.image-menu-section) .main-navigation,
+  body:has(.image-menu-section) .project-actions,
+  body:has(.image-menu-section) .section-tabs,
+  body:has(.image-menu-section) .image-menu-panel,
+  body:has(.image-menu-section) .image-menu-toolbar,
+  body:has(.image-menu-section) .preview-zoom-control {
+    display: none !important;
   }
 
-  body:has(.image-menu-section) .image-menu-preview-shell,
-  body:has(.image-menu-section) .image-menu-preview-shell *,
-  body:has(.image-menu-section) .image-menu-page,
-  body:has(.image-menu-section) .image-menu-page * {
-    visibility: visible !important;
-  }
-
+  body:has(.image-menu-section) .app-shell,
+  body:has(.image-menu-section) .workspace,
   body:has(.image-menu-section) .image-menu-section,
   body:has(.image-menu-section) .image-menu-preview-stage,
   body:has(.image-menu-section) .image-menu-preview-zoom-frame,
   body:has(.image-menu-section) .image-menu-preview-shell {
     display: block !important;
-    position: static !important;
     width: 297mm !important;
-    height: auto !important;
+    height: 210mm !important;
     min-height: 0 !important;
     max-height: 210mm !important;
     margin: 0 !important;
@@ -40,7 +40,6 @@
   }
 
   body:has(.image-menu-section) .image-menu-page {
-    position: static !important;
     display: block !important;
     width: 297mm !important;
     height: 210mm !important;
@@ -53,17 +52,7 @@
     box-shadow: none !important;
     page-break-after: avoid !important;
     break-after: avoid !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-  body:has(.image-menu-section) .image-menu-panel,
-  body:has(.image-menu-section) .image-menu-toolbar,
-  body:has(.image-menu-section) .main-navigation,
-  body:has(.image-menu-section) .project-actions,
-  body:has(.image-menu-section) .section-tabs,
-  body:has(.image-menu-section) .preview-zoom-control {
-    display: none !important;
-    visibility: hidden !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }
