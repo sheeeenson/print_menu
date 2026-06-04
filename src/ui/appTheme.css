@@ -1,6 +1,6 @@
 :root{
   --ui-font:'Inter',Arial,sans-serif;
-  --ui-bg:#f4f2ef;
+  --ui-bg:#2f3138;
   --ui-panel:#101116;
   --ui-panel-2:#171922;
   --ui-card:#1c1f29;
@@ -12,7 +12,8 @@
   --ui-subtle:#827c76;
   --ui-accent:#8c3dff;
   --ui-accent-2:#b95cff;
-  --ui-preview:#f4f2ef;
+  --ui-preview:#d7d3cc;
+  --ui-preview-deep:#cbc6be;
   --ui-white:#fff;
   --ui-radius:14px;
   --ui-radius-lg:20px;
@@ -43,7 +44,7 @@ button:hover{transform:translateY(-1px)}
 
 .primary-action{background:linear-gradient(180deg,var(--ui-accent),#6f26e8)!important;color:#fff!important;border:1px solid rgba(190,120,255,.68)!important;border-radius:16px!important;box-shadow:0 12px 24px rgba(140,61,255,.26)!important;font-weight:800!important}.secondary-action,.action-row button,.subsection-title button,.badge-row button{background:var(--ui-card-2)!important;color:var(--ui-text)!important;border:1px solid var(--ui-border)!important;border-radius:16px!important;box-shadow:none!important;min-height:48px!important}.action-row button.danger{color:#ff8d8d!important}
 
-button:contains('Hide settings'){display:none!important}.image-menu-page-actions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:14px!important}.paper-scroll,.image-menu-preview-shell{background:#ebe8e3!important;border-radius:24px!important;padding:22px 26px 44px!important}.paper-page,.image-menu-page{box-shadow:0 24px 70px rgba(0,0,0,.16)!important}.image-preview,.preview-image-box,.preview-image-placeholder{background:var(--ui-card-2)!important;border-color:var(--ui-border)!important;color:var(--ui-muted)!important}
+button:contains('Hide settings'){display:none!important}.image-menu-page-actions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:14px!important}.paper-scroll,.image-menu-preview-shell{background:var(--ui-preview-deep)!important;border-radius:24px!important;padding:22px 26px 44px!important}.paper-page,.image-menu-page{box-shadow:0 24px 70px rgba(0,0,0,.16)!important}.image-preview,.preview-image-box,.preview-image-placeholder{background:var(--ui-card-2)!important;border-color:var(--ui-border)!important;color:var(--ui-muted)!important}
 
-@media(max-width:900px){.main-navigation,.main-navigation.top-nav{position:relative!important;top:auto!important}.project-actions{grid-template-columns:repeat(2,minmax(0,1fr))!important}.project-actions button.primary-action{grid-column:1/-1!important}.project-actions button{min-height:52px!important}.section-tabs{flex:1 1 100%!important;order:2!important}.section-tabs button{min-width:120px!important;flex:1 0 auto!important}.content-section,.layout-print-section,.image-menu-section{height:auto!important;min-height:calc(100vh - 60px)!important;overflow:visible!important}.category-panel,.layout-admin-panel,.image-menu-panel{height:auto!important;max-height:none!important;overflow:visible!important;min-height:calc(100vh - 60px)!important}.dish-workspace,.preview-stage,.image-menu-preview-stage{height:auto!important;max-height:none!important;overflow:visible!important;min-height:calc(100vh - 60px)!important}.paper-scroll,.image-menu-preview-shell{height:auto!important;max-height:none!important;overflow:auto!important}}
+@media(max-width:900px){.main-navigation,.main-navigation.top-nav{position:relative!important;top:auto!important}.project-actions{grid-template-columns:repeat(2,minmax(0,1fr))!important}.project-actions button.primary-action{grid-column:1/-1!important}.project-actions button{min-height:52px!important}.section-tabs{flex:1 1 100%!important;order:2!important}.section-tabs button{min-width:120px!important;flex:1 0 auto!important}.content-section,.layout-print-section,.image-menu-section{height:auto!important;min-height:calc(100vh - 60px)!important;overflow:visible!important;background:var(--ui-preview)!important}.category-panel,.layout-admin-panel,.image-menu-panel{height:auto!important;max-height:none!important;overflow:visible!important;min-height:calc(100vh - 60px)!important}.dish-workspace,.preview-stage,.image-menu-preview-stage{height:auto!important;max-height:none!important;overflow:visible!important;min-height:calc(100vh - 60px)!important;background:var(--ui-preview)!important}.paper-scroll,.image-menu-preview-shell{height:auto!important;max-height:none!important;overflow:auto!important;background:var(--ui-preview-deep)!important}}
 @media print{.main-navigation,.main-navigation.top-nav,.project-actions,.section-tabs,.save-status{box-shadow:none!important;transform:none!important}.paper-page,.image-menu-page{box-shadow:none!important}}
