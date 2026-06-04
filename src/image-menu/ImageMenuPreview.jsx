@@ -135,8 +135,8 @@ function ImageMenuCard({ dish, settings, index }) {
     right: `${settings.textPaddingRight}px`,
   };
   const priceStyle = {
-    gap: `${settings.priceGap}px`,
-    transform: `translateY(${settings.priceYOffset ?? 0}px)`,
+    columnGap: `${settings.priceGap}px`,
+    marginTop: `${12 + Number(settings.priceYOffset ?? 0)}px`,
   };
 
   useEffect(() => {
