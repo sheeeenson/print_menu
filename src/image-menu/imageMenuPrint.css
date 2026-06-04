@@ -1,4 +1,11 @@
 @media print {
+  html,
+  body:has(.image-menu-section),
+  body:has(.image-menu-section) .app-shell,
+  body:has(.image-menu-section) .workspace {
+    background: #ffffff !important;
+  }
+
   body:has(.image-menu-section) * {
     visibility: hidden !important;
   }
@@ -20,6 +27,7 @@
     transform: none !important;
     box-shadow: none !important;
     margin: 0 !important;
+    background: #ffffff !important;
     page-break-after: auto !important;
     break-after: auto !important;
     -webkit-print-color-adjust: exact;
@@ -28,7 +36,7 @@
 
   body:has(.image-menu-section) .image-menu-preview-shell {
     padding: 0 !important;
-    background: transparent !important;
+    background: #ffffff !important;
   }
 
   body:has(.image-menu-section) .image-menu-section,
@@ -36,7 +44,7 @@
     display: block !important;
     padding: 0 !important;
     margin: 0 !important;
-    background: transparent !important;
+    background: #ffffff !important;
   }
 
   body:has(.image-menu-section) .image-menu-panel,
