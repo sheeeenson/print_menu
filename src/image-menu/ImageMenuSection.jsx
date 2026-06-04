@@ -235,7 +235,6 @@ export function ImageMenuSection({ project }) {
         <div className="preview-toolbar image-menu-toolbar">
           <div><p className="eyebrow">A4 Landscape</p><h1>{selectedPage.name}</h1></div>
           <div className="image-menu-toolbar-actions">
-            <button className="primary-action compact" type="button" onClick={() => window.print()}>🖨 Print Image Menu</button>
             <button className="secondary-action compact" type="button" onClick={() => alert('PNG export can be blocked by external image CORS. Use print/PDF if the image host does not allow canvas export.')}>⇩ Export PNG</button>
           </div>
         </div>
