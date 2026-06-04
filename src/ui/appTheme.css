@@ -325,3 +325,21 @@ input[type='radio'] {
     transform: none !important;
   }
 }
+
+.category-panel,
+.layout-admin-panel,
+.image-menu-panel {
+  background: #111216 !important;
+  color: #f5f2ee !important;
+}
+
+.editor-card,
+.panel-section,
+.category-card,
+.page-list-item,
+.category-checkbox {
+  background: #1a1c22 !important;
+  color: #f5f2ee !important;
+  border-color: rgba(255,255,255,.12) !important;
+  box-shadow: none !important;
+}
