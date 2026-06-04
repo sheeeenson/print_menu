@@ -6,26 +6,7 @@ const isUsefulPixel = ({ a }) => a > 180;
 const rgbToHex = ({ r, g, b }) => `#${[r, g, b].map((value) => value.toString(16).padStart(2, '0')).join('')}`;
 const colorKey = ({ r, g, b }) => `${r},${g},${b}`;
 
-const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-
 export const getFallbackImageBackground = (index = 0) => fallbackBackgrounds[index % fallbackBackgrounds.length];
-
-export const hexToRgb = (hex) => {
-  const value = String(hex || '').replace('#', '');
-  if (![3, 6].includes(value.length)) return { r: 242, g: 234, b: 223 };
-  const normalized = value.length === 3 ? value.split('').map((char) => char + char).join('') : value;
-  const number = Number.parseInt(normalized, 16);
-  if (!Number.isFinite(number)) return { r: 242, g: 234, b: 223 };
-  return { r: (number >> 16) & 255, g: (number >> 8) & 255, b: number & 255 };
-};
-
-export const mixRgb = (color, target, amount) => ({
-  r: Math.round(color.r + (target.r - color.r) * amount),
-  g: Math.round(color.g + (target.g - color.g) * amount),
-  b: Math.round(color.b + (target.b - color.b) * amount),
-});
-
-export const rgbToCss = ({ r, g, b }, alpha = 1) => `rgba(${clamp(r, 0, 255)}, ${clamp(g, 0, 255)}, ${clamp(b, 0, 255)}, ${alpha})`;
 
 const getDominantColor = (pixels) => {
   const exactBuckets = new Map();
@@ -121,19 +102,3 @@ export const sampleImageColor = (imageUrl) => new Promise((resolve, reject) => {
   image.onerror = reject;
   image.src = imageUrl;
 });
-
-export const createImagePalette = (baseHex) => {
-  const base = hexToRgb(baseHex);
-  const light = mixRgb(base, { r: 255, g: 255, b: 255 }, 0.42);
-  const dark = mixRgb(base, { r: 12, g: 10, b: 9 }, 0.44);
-  const glow = mixRgb(base, { r: 255, g: 255, b: 255 }, 0.2);
-
-  return {
-    baseHex,
-    base: rgbToCss(base),
-    light: rgbToCss(light),
-    dark: rgbToCss(dark),
-    glow: rgbToCss(glow, 0.62),
-    gradient: `radial-gradient(circle at 58% 42%, ${rgbToCss(light)} 0%, ${rgbToCss(base)} 42%, ${rgbToCss(dark)} 100%)`,
-  };
-};
