@@ -15,8 +15,7 @@
   body:has(.image-menu-section) .project-actions,
   body:has(.image-menu-section) .section-tabs,
   body:has(.image-menu-section) .image-menu-panel,
-  body:has(.image-menu-section) .image-menu-toolbar,
-  body:has(.image-menu-section) .preview-zoom-control {
+  body:has(.image-menu-section) .image-menu-toolbar {
     display: none !important;
   }
 
@@ -24,7 +23,6 @@
   body:has(.image-menu-section) .workspace,
   body:has(.image-menu-section) .image-menu-section,
   body:has(.image-menu-section) .image-menu-preview-stage,
-  body:has(.image-menu-section) .image-menu-preview-zoom-frame,
   body:has(.image-menu-section) .image-menu-preview-shell {
     display: block !important;
     width: 297mm !important;
