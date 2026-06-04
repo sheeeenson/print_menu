@@ -1,11 +1,12 @@
 @media print {
-  html,
-  body {
-    width: 297mm !important;
-    height: 210mm !important;
+  @page {
+    size: A4 landscape;
+    margin: 0;
+  }
+
+  body:has(.image-menu-section) {
     margin: 0 !important;
     padding: 0 !important;
-    overflow: hidden !important;
     background: transparent !important;
   }
 
@@ -13,13 +14,13 @@
     visibility: hidden !important;
   }
 
+  body:has(.image-menu-section) .image-menu-preview-shell,
+  body:has(.image-menu-section) .image-menu-preview-shell *,
   body:has(.image-menu-section) .image-menu-page,
   body:has(.image-menu-section) .image-menu-page * {
     visibility: visible !important;
   }
 
-  body:has(.image-menu-section) .app-shell,
-  body:has(.image-menu-section) .workspace,
   body:has(.image-menu-section) .image-menu-section,
   body:has(.image-menu-section) .image-menu-preview-stage,
   body:has(.image-menu-section) .image-menu-preview-zoom-frame,
@@ -27,9 +28,9 @@
     display: block !important;
     position: static !important;
     width: 297mm !important;
-    height: 210mm !important;
+    height: auto !important;
     min-height: 0 !important;
-    max-height: none !important;
+    max-height: 210mm !important;
     margin: 0 !important;
     padding: 0 !important;
     overflow: hidden !important;
@@ -39,9 +40,8 @@
   }
 
   body:has(.image-menu-section) .image-menu-page {
+    position: static !important;
     display: block !important;
-    position: fixed !important;
-    inset: 0 auto auto 0 !important;
     width: 297mm !important;
     height: 210mm !important;
     min-height: 210mm !important;
@@ -55,7 +55,6 @@
     break-after: avoid !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
-    contain: paint;
   }
 
   body:has(.image-menu-section) .image-menu-panel,
@@ -65,10 +64,6 @@
   body:has(.image-menu-section) .section-tabs,
   body:has(.image-menu-section) .preview-zoom-control {
     display: none !important;
-  }
-
-  @page {
-    size: A4 landscape;
-    margin: 0;
+    visibility: hidden !important;
   }
 }
