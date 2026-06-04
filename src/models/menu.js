@@ -1,9 +1,10 @@
-const APP_SECTION_VALUES = ['content', 'layoutPrint', 'imageMenu'];
+const APP_SECTION_VALUES = ['content', 'layoutPrint', 'imageMenu', 'tvPromo'];
 
 export const APP_SECTIONS = Object.freeze({
   CONTENT: 'content',
   LAYOUT_PRINT: 'layoutPrint',
   IMAGE_MENU: 'imageMenu',
+  TV_PROMO: 'tvPromo',
   includes: (section) => APP_SECTION_VALUES.includes(section),
 });
 
