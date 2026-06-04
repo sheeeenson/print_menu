@@ -68,14 +68,9 @@ export function MainNavigation({ snapshot, actions }) {
           Image Menu
         </button>
       </div>
-      {isLayout ? (
-        <div className="print-top-actions" aria-label="Print actions">
-          <button className="primary-action compact" type="button" onClick={() => window.print()}>Print</button>
-          <button className="secondary-action compact" type="button" onClick={handleSaveAsPdf}>Save as PDF</button>
-        </div>
-      ) : null}
       <div className="project-actions" aria-label="Project actions">
-        <button type="button" onClick={actions.saveProjectManually}>Save project</button>
+        {isLayout ? <button className="primary-action compact" type="button" onClick={() => window.print()}>Print</button> : null}
+        {isLayout ? <button className="secondary-action compact" type="button" onClick={handleSaveAsPdf}>Save as PDF</button> : null}
         <button type="button" onClick={() => downloadProjectJson(project)}>Export project</button>
         <button type="button" onClick={handleImportClick}>Import project</button>
         <button type="button" onClick={handleResetDemoData}>Reset demo data</button>
