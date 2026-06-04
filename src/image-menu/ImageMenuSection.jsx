@@ -13,7 +13,6 @@ const FONT_OPTIONS = [
 ];
 
 const clampSelected = (ids, gridVariant) => ids.slice(0, Number(gridVariant));
-const clampZoom = (value) => Math.min(1.5, Math.max(0.5, value));
 
 function RangeControl({ label, value, min, max, step = 1, onChange, suffix = '' }) {
   return (
@@ -39,7 +38,6 @@ export function ImageMenuSection({ project }) {
   const dishes = useMemo(() => project.dishes.filter((dish) => dish.visible !== false), [project.dishes]);
   const [imageProject, setImageProject] = useState(() => loadImageMenuProject(dishes));
   const [openCategoryIds, setOpenCategoryIds] = useState(() => new Set(project.categories.map((category) => category.id)));
-  const [previewZoom, setPreviewZoom] = useState(1);
   const selectedPage = imageProject.pages.find((page) => page.id === imageProject.selectedPageId) ?? imageProject.pages[0];
   const sourcePage = project.pages?.find((page) => page.id === project.selectedPageId) ?? project.pages?.[0];
   const selectedContentCategoryIds = sourcePage?.selectedCategoryIds?.length ? new Set(sourcePage.selectedCategoryIds) : null;
@@ -234,19 +232,11 @@ export function ImageMenuSection({ project }) {
         <div className="preview-toolbar image-menu-toolbar">
           <div><p className="eyebrow">A4 Landscape</p><h1>{selectedPage.name}</h1></div>
           <div className="image-menu-toolbar-actions">
-            <div className="preview-zoom-control" aria-label="Preview zoom">
-              <button type="button" onClick={() => setPreviewZoom((zoom) => clampZoom(Number((zoom - 0.1).toFixed(2))))}>−</button>
-              <span>{Math.round(previewZoom * 100)}%</span>
-              <button type="button" onClick={() => setPreviewZoom((zoom) => clampZoom(Number((zoom + 0.1).toFixed(2))))}>＋</button>
-              <button type="button" onClick={() => setPreviewZoom(1)}>100%</button>
-            </div>
             <button className="primary-action compact" type="button" onClick={() => window.print()}>🖨 Print Image Menu</button>
             <button className="secondary-action compact" type="button" onClick={() => alert('PNG export can be blocked by external image CORS. Use print/PDF if the image host does not allow canvas export.')}>⇩ Export PNG</button>
           </div>
         </div>
-        <div className="image-menu-preview-zoom-frame" style={{ '--image-menu-preview-zoom': previewZoom }}>
-          <ImageMenuPreview page={selectedPage} dishes={dishes} />
-        </div>
+        <ImageMenuPreview page={selectedPage} dishes={dishes} />
       </div>
     </section>
   );
