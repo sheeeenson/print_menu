@@ -35,20 +35,21 @@ function FontSelect({ label, value, onChange }) {
 }
 
 export function ImageMenuSection({ project }) {
-  const dishes = useMemo(() => project.dishes.filter((dish) => dish.visible !== false), [project.dishes]);
-  const [imageProject, setImageProject] = useState(() => loadImageMenuProject(dishes));
-  const [openCategoryIds, setOpenCategoryIds] = useState(() => new Set(project.categories.map((category) => category.id)));
+  const contentCategories = useMemo(() => project.categories ?? [], [project.categories]);
+  const contentDishes = useMemo(() => project.dishes ?? [], [project.dishes]);
+  const visibleDishes = useMemo(() => contentDishes.filter((dish) => dish.visible !== false), [contentDishes]);
+  const [imageProject, setImageProject] = useState(() => loadImageMenuProject(visibleDishes));
+  const [openCategoryIds, setOpenCategoryIds] = useState(() => new Set(contentCategories.map((category) => category.id)));
   const selectedPage = imageProject.pages.find((page) => page.id === imageProject.selectedPageId) ?? imageProject.pages[0];
 
-  const categoryGroups = useMemo(() => project.categories
-    .map((category) => ({
-      category,
-      dishes: dishes.filter((dish) => dish.categoryId === category.id),
-    })), [project.categories, dishes]);
+  const categoryGroups = useMemo(() => contentCategories.map((category) => ({
+    category,
+    dishes: visibleDishes.filter((dish) => dish.categoryId === category.id),
+  })), [contentCategories, visibleDishes]);
 
   useEffect(() => {
-    setImageProject((current) => loadImageMenuProject(dishes.length ? dishes : project.dishes));
-  }, [project.dishes]);
+    setImageProject((current) => loadImageMenuProject(visibleDishes.length ? visibleDishes : contentDishes));
+  }, [contentDishes, visibleDishes]);
 
   useEffect(() => {
     saveImageMenuProject(imageProject);
@@ -57,10 +58,10 @@ export function ImageMenuSection({ project }) {
   useEffect(() => {
     setOpenCategoryIds((current) => {
       const next = new Set(current);
-      project.categories.forEach((category) => next.add(category.id));
+      contentCategories.forEach((category) => next.add(category.id));
       return next;
     });
-  }, [project.categories]);
+  }, [contentCategories]);
 
   const updateImageProject = (updater) => setImageProject((current) => updater(current));
   const updateSelectedPage = (updater) => updateImageProject((current) => ({
@@ -70,7 +71,7 @@ export function ImageMenuSection({ project }) {
   const updateSettings = (changes) => updateSelectedPage((page) => ({ ...page, settings: { ...page.settings, ...changes } }));
 
   const addPage = () => {
-    const page = createImageMenuPage(dishes, `Image Page ${imageProject.pages.length + 1}`);
+    const page = createImageMenuPage(visibleDishes, `Image Page ${imageProject.pages.length + 1}`);
     updateImageProject((current) => ({ ...current, pages: [...current.pages, page], selectedPageId: page.id }));
   };
 
@@ -145,10 +146,14 @@ export function ImageMenuSection({ project }) {
 
         <div className="panel-section image-menu-select-section">
           <div className="image-menu-section-heading">
-            <h2>Select dishes</h2>
+            <div>
+              <h2>Select dishes</h2>
+              <small>{contentCategories.length} content categories</small>
+            </div>
             <small>{selectedPage.selectedDishIds.length}/{selectedPage.gridVariant} selected</small>
           </div>
           <div className="image-menu-category-picker">
+            {categoryGroups.length === 0 ? <p className="muted-text">No categories in Content yet.</p> : null}
             {categoryGroups.map(({ category, dishes: categoryDishes }) => {
               const isOpen = openCategoryIds.has(category.id);
               const selectedCount = categoryDishes.filter((dish) => selectedPage.selectedDishIds.includes(dish.id)).length;
@@ -233,7 +238,7 @@ export function ImageMenuSection({ project }) {
             <button className="secondary-action compact" type="button" onClick={() => alert('PNG export can be blocked by external image CORS. Use print/PDF if the image host does not allow canvas export.')}>⇩ Export PNG</button>
           </div>
         </div>
-        <ImageMenuPreview page={selectedPage} dishes={dishes} />
+        <ImageMenuPreview page={selectedPage} dishes={visibleDishes} />
       </div>
     </section>
   );
