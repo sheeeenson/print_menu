@@ -134,6 +134,10 @@ function ImageMenuCard({ dish, settings, index }) {
     left: `${settings.textPaddingLeft}px`,
     right: `${settings.textPaddingRight}px`,
   };
+  const priceStyle = {
+    gap: `${settings.priceGap}px`,
+    transform: `translateY(${settings.priceYOffset ?? 0}px)`,
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -178,7 +182,7 @@ function ImageMenuCard({ dish, settings, index }) {
           </div>
         ) : null}
         {(oldPrice || salePrice) ? (
-          <div className="image-menu-prices" style={{ gap: `${settings.priceGap}px` }}>
+          <div className="image-menu-prices" style={priceStyle}>
             {oldPrice ? <span className="image-menu-old-price" style={{ color: settings.oldPriceColor, fontSize: `${settings.oldPriceSize}px` }}>{oldPrice}</span> : null}
             {salePrice ? <strong className="image-menu-sale-price" style={{ color: settings.salePriceColor, fontSize: `${settings.salePriceSize}px` }}>{salePrice}</strong> : null}
           </div>
