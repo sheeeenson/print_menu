@@ -36,25 +36,25 @@ export function DesignControls({ page, actions }) {
   }, [page.designSettings.imageToTitleGap, page.designSettings.imageTitleGap, page.designSettings.uniformCardHeight, page.designSettings.priceBottomOffset]);
 
   return (
-    <details className="panel-section collapsible-panel" open>
-      <summary>
-        <span>
-          <span className="eyebrow">Design</span>
-          <strong>Visual design settings</strong>
-        </span>
-      </summary>
-      <ColorControls page={page} actions={actions} />
-      <TypographyControls page={page} actions={actions} />
-      <div className="design-subpanel">
-        <h3 className="panel-subtitle">Spacing & typography</h3>
-        <p className="muted-text">Card gap controls both horizontal and vertical spacing. Price bottom offset moves the shared price line for regular dishes and pizza size prices together.</p>
+    <div className="advanced-controls-stack">
+      <section className="advanced-control-card advanced-colors-card">
+        <div className="advanced-card-title"><span aria-hidden="true">◐</span><div><p className="eyebrow">Palette</p><h3>Colors</h3></div></div>
+        <ColorControls page={page} actions={actions} />
+      </section>
+      <section className="advanced-control-card">
+        <div className="advanced-card-title"><span aria-hidden="true">Aa</span><div><p className="eyebrow">Type</p><h3>Typography</h3></div></div>
+        <TypographyControls page={page} actions={actions} />
+      </section>
+      <section className="advanced-control-card">
+        <div className="advanced-card-title"><span aria-hidden="true">↔</span><div><p className="eyebrow">Layout</p><h3>Spacing & sizes</h3></div></div>
+        <p className="muted-text">Card gap controls both horizontal and vertical spacing. Price bottom offset moves the shared price line.</p>
         <div className="design-control-list">
           {controls.map(([field, label, min, max, step, fallback]) => (
             <DesignSlider key={field} page={page} field={field} label={label} min={min} max={max} step={step} fallback={fallback} actions={actions} />
           ))}
         </div>
-      </div>
-    </details>
+      </section>
+    </div>
   );
 }
 
@@ -65,8 +65,7 @@ function TypographyControls({ page, actions }) {
   };
 
   return (
-    <div className="design-subpanel">
-      <h3 className="panel-subtitle">Font system</h3>
+    <div className="design-subpanel typography-subpanel">
       <FontPairControl label="Category" familyField="categoryFontFamily" weightField="categoryFontWeight" settings={settings} onChange={custom} />
       <FontPairControl label="Dish title" familyField="dishTitleFontFamily" weightField="dishTitleFontWeight" settings={settings} onChange={custom} />
       <FontPairControl label="Description" familyField="descriptionFontFamily" weightField="descriptionFontWeight" settings={settings} onChange={custom} />
@@ -76,14 +75,8 @@ function TypographyControls({ page, actions }) {
       <LetterSpacingControl label="Category spacing" field="categoryLetterSpacing" settings={settings} onChange={custom} />
       <LetterSpacingControl label="Dish title spacing" field="dishTitleLetterSpacing" settings={settings} onChange={custom} />
       <LetterSpacingControl label="Price spacing" field="priceLetterSpacing" settings={settings} onChange={custom} />
-      <label className="toggle-label">
-        <input type="checkbox" checked={settings.categoryUppercase} onChange={(event) => custom('categoryUppercase', event.target.checked)} />
-        Uppercase category titles
-      </label>
-      <label className="toggle-label">
-        <input type="checkbox" checked={settings.dishTitleUppercase} onChange={(event) => custom('dishTitleUppercase', event.target.checked)} />
-        Uppercase dish titles
-      </label>
+      <label className="toggle-label"><input type="checkbox" checked={settings.categoryUppercase} onChange={(event) => custom('categoryUppercase', event.target.checked)} />Uppercase category titles</label>
+      <label className="toggle-label"><input type="checkbox" checked={settings.dishTitleUppercase} onChange={(event) => custom('dishTitleUppercase', event.target.checked)} />Uppercase dish titles</label>
     </div>
   );
 }
@@ -99,12 +92,7 @@ function SelectControl({ label, value, onChange, options }) {
 }
 
 function FontPairControl({ label, familyField, weightField, settings, onChange }) {
-  return (
-    <div className="font-pair-control">
-      <FontFamilyControl label={`${label} font`} field={familyField} settings={settings} onChange={onChange} />
-      <WeightControl label={`${label} weight`} field={weightField} settings={settings} onChange={onChange} />
-    </div>
-  );
+  return <div className="font-pair-control"><FontFamilyControl label={`${label} font`} field={familyField} settings={settings} onChange={onChange} /><WeightControl label={`${label} weight`} field={weightField} settings={settings} onChange={onChange} /></div>;
 }
 
 function FontFamilyControl({ label, field, settings, onChange }) {
@@ -117,27 +105,10 @@ function WeightControl({ label, field, settings, onChange }) {
 
 function LetterSpacingControl({ label, field, settings, onChange }) {
   const value = Number(settings[field] ?? 0);
-  return (
-    <label className="slider-label">
-      <span>{label}<strong>{value.toFixed(2)}em</strong></span>
-      <input type="range" min="-0.06" max="0.12" step="0.01" value={value} onChange={(event) => onChange(field, Number(event.target.value))} />
-    </label>
-  );
+  return <label className="slider-label"><span>{label}<strong>{value.toFixed(2)}em</strong></span><input type="range" min="-0.06" max="0.12" step="0.01" value={value} onChange={(event) => onChange(field, Number(event.target.value))} /></label>;
 }
 
 function DesignSlider({ page, field, label, min, max, step, fallback = 0, actions }) {
   const value = page.designSettings[field] ?? fallback;
-  return (
-    <label className="slider-label">
-      <span>{label}<strong>{value}px</strong></span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(event) => actions.updateSelectedPageDesign(field, Number(event.target.value))}
-      />
-    </label>
-  );
+  return <label className="slider-label"><span>{label}<strong>{value}px</strong></span><input type="range" min={min} max={max} step={step} value={value} onChange={(event) => actions.updateSelectedPageDesign(field, Number(event.target.value))} /></label>;
 }
