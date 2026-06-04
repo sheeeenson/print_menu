@@ -11,7 +11,6 @@ import { calculateFitAllLayout, paperDimensions } from '../utils/fitAll.js';
 export function LayoutPrintSection({ project, actions }) {
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [selectedPreviewDishId, setSelectedPreviewDishId] = useState('');
-  const [isAdminCollapsed, setIsAdminCollapsed] = useState(false);
   const selectedPage = project.pages.find((page) => page.id === project.selectedPageId) ?? project.pages[0];
   const previewProject = selectedPage ? projectWithPageOrder(project, selectedPage) : project;
   const fitWarning = selectedPage ? getFitWarning(previewProject, selectedPage) : '';
@@ -28,17 +27,8 @@ export function LayoutPrintSection({ project, actions }) {
   };
 
   return (
-    <section className={`layout-print-section ${isAdminCollapsed ? 'admin-collapsed' : ''}`} aria-label="Layout workspace">
-      <button
-        className="admin-panel-toggle"
-        type="button"
-        onClick={() => setIsAdminCollapsed((value) => !value)}
-        aria-expanded={!isAdminCollapsed}
-      >
-        {isAdminCollapsed ? 'Show settings' : 'Hide settings'}
-      </button>
-      {isAdminCollapsed ? <CollapsedPageSwitcher project={project} actions={actions} /> : null}
-      <aside className="layout-admin-panel layout-sidebar" aria-hidden={isAdminCollapsed}>
+    <section className="layout-print-section" aria-label="Layout workspace">
+      <aside className="layout-admin-panel layout-sidebar">
         {fitWarning ? <div className="panel-fit-warning" role="alert">{fitWarning}</div> : null}
         <PageList project={project} actions={actions} onSelectPage={selectPageFromList} />
         {selectedPage ? <PageSettingsPanel page={selectedPage} actions={actions} /> : null}
@@ -57,36 +47,22 @@ export function LayoutPrintSection({ project, actions }) {
       </aside>
       {selectedPage ? <PagePreview project={previewProject} page={selectedPage} selectedPreviewDishId={selectedPreviewDishId} onSelectPreviewDish={setSelectedPreviewDishId} onResizePreviewDish={actions.updateSelectedPageItemPlacement} /> : <div className="empty-state">Add a page to preview your menu.</div>}
       {selectedPage ? (
-        <aside className="advanced-admin-panel" aria-hidden={isAdminCollapsed}>
-          <details className="panel-section advanced-layout-section" open>
-            <summary>Advanced layout controls</summary>
+        <aside className="advanced-admin-panel">
+          <section className="panel-section advanced-layout-section">
+            <div className="advanced-panel-header">
+              <span className="advanced-panel-icon" aria-hidden="true">☷</span>
+              <div>
+                <p className="eyebrow">Advanced</p>
+                <h2>Advanced layout controls</h2>
+              </div>
+            </div>
             <p className="muted-text">Fine visual controls, typography, spacing, colors, and technical layout tuning.</p>
             <DesignControls page={selectedPage} actions={actions} />
-          </details>
+          </section>
         </aside>
       ) : null}
       {isPdfModalOpen ? <SavePdfModal onCancel={() => setIsPdfModalOpen(false)} onConfirm={confirmSaveAsPdf} /> : null}
     </section>
-  );
-}
-
-function CollapsedPageSwitcher({ project, actions }) {
-  return (
-    <div className="collapsed-page-switcher" aria-label="Page switcher">
-      <div className="collapsed-page-strip">
-        {project.pages.map((page, index) => (
-          <button
-            key={page.id}
-            className={`collapsed-page-pill ${page.id === project.selectedPageId ? 'selected' : ''}`}
-            type="button"
-            onClick={() => actions.selectPage(page.id)}
-          >
-            <span>{page.name || `Page ${index + 1}`}</span>
-            <small>{page.paperSize} · {page.orientation}</small>
-          </button>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -131,9 +107,9 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
       <p className="eyebrow">Layout</p>
       <h2>Layout</h2>
       <div className="print-action-row" aria-label="Print and demo actions">
-        <button className="primary-action compact" type="button" onClick={onPrint}>Print</button>
-        <button className="secondary-action compact" type="button" onClick={onSaveAsPdf}>Save as PDF</button>
-        <button className="secondary-action compact" type="button" onClick={actions.resetDemoData}>Reset demo data</button>
+        <button className="primary-action compact" type="button" onClick={onPrint}>🖨️ Print</button>
+        <button className="secondary-action compact" type="button" onClick={onSaveAsPdf}>📄 Save as PDF</button>
+        <button className="secondary-action compact" type="button" onClick={actions.resetDemoData}>↻ Reset demo data</button>
       </div>
 
       <label className="field-label">Layout mode
@@ -195,8 +171,8 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
         <SelectedCardControls page={page} actions={actions} selectedDish={selectedDish} placement={selectedPlacement} />
       ) : null}
 
-      <details className="inline-advanced-controls settings-block badge-settings-block" open>
-        <summary>Badge style</summary>
+      <section className="inline-advanced-controls settings-block badge-settings-block">
+        <h3>Badge style</h3>
         <label className="field-label">Badge position
           <select value={settings.badgePosition} onChange={update('badgePosition')}>
             <option value="topLeft">Top left</option>
@@ -211,15 +187,15 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
         <label className="slider-label"><span>Badge border width<strong>{settings.badgeStyle.borderWidth}px</strong></span><input type="range" min="0" max="8" value={settings.badgeStyle.borderWidth} onChange={(event) => actions.updateSelectedPageDesign('badgeStyle', { ...settings.badgeStyle, borderWidth: Number(event.target.value) })} /></label>
         <label className="slider-label"><span>Badge opacity<strong>{settings.badgeStyle.opacity}%</strong></span><input type="range" min="0" max="100" value={settings.badgeStyle.opacity} onChange={(event) => actions.updateSelectedPageDesign('badgeStyle', { ...settings.badgeStyle, opacity: Number(event.target.value) })} /></label>
         <label className="field-label">Badge shape<select value={settings.badgeStyle.shape} onChange={(event) => actions.updateSelectedPageDesign('badgeStyle', { ...settings.badgeStyle, shape: event.target.value })}><option value="pill">Pill</option><option value="rounded">Rounded</option><option value="square">Square</option><option value="circle">Circle</option><option value="ribbon">Ribbon</option></select></label>
-      </details>
+      </section>
 
-      <details className="inline-advanced-controls settings-block">
-        <summary>Card border</summary>
+      <section className="inline-advanced-controls settings-block">
+        <h3>Card border</h3>
         <label className="toggle-label"><input type="checkbox" checked={settings.cardBorderEnabled} onChange={update('cardBorderEnabled')} /> Border enabled</label>
         <label className="color-label">Card border color<span><input type="color" value={settings.cardBorderColor} onChange={update('cardBorderColor')} disabled={!settings.cardBorderEnabled} /><input value={settings.cardBorderColor} onChange={update('cardBorderColor')} disabled={!settings.cardBorderEnabled} /></span></label>
         <label className="slider-label"><span>Card border width<strong>{settings.cardBorderWidth}px</strong></span><input type="range" min="0" max="12" step="1" value={settings.cardBorderWidth} disabled={!settings.cardBorderEnabled} onChange={updateNumber('cardBorderWidth')} /></label>
         <label className="slider-label"><span>Card border opacity<strong>{settings.cardBorderOpacity}%</strong></span><input type="range" min="0" max="100" step="1" value={settings.cardBorderOpacity} disabled={!settings.cardBorderEnabled} onChange={updateNumber('cardBorderOpacity')} /></label>
-      </details>
+      </section>
     </div>
   );
 }
