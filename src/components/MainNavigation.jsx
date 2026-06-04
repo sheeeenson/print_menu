@@ -71,8 +71,8 @@ export function MainNavigation({ snapshot, actions }) {
       <div className="project-actions" aria-label="Project actions">
         {isLayout ? <button className="primary-action compact" type="button" onClick={() => window.print()}>Print</button> : null}
         {isLayout ? <button className="secondary-action compact" type="button" onClick={handleSaveAsPdf}>Save as PDF</button> : null}
-        <button type="button" onClick={() => downloadProjectJson(project)}>Export project</button>
         <button type="button" onClick={handleImportClick}>Import project</button>
+        <button type="button" onClick={() => downloadProjectJson(project)}>Export project</button>
         <button type="button" onClick={handleResetDemoData}>Reset demo data</button>
         <input
           ref={importInputRef}
