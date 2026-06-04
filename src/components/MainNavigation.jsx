@@ -8,6 +8,7 @@ export function MainNavigation({ snapshot, actions }) {
   const saveStatusClass = saveStatus === 'Unsaved' || saveStatus === 'Saving' ? 'unsaved' : saveStatus.startsWith('Could not import') ? 'error' : 'saved';
   const isLayout = project.selectedSection === APP_SECTIONS.LAYOUT_PRINT;
   const isImageMenu = project.selectedSection === APP_SECTIONS.IMAGE_MENU;
+  const canPrint = isLayout || isImageMenu;
 
   const handleImportClick = () => {
     importInputRef.current?.click();
@@ -69,7 +70,7 @@ export function MainNavigation({ snapshot, actions }) {
         </button>
       </div>
       <div className="project-actions" aria-label="Project actions">
-        {isLayout ? <button className="primary-action compact" type="button" onClick={() => window.print()}>Print</button> : null}
+        {canPrint ? <button className="primary-action compact" type="button" onClick={() => window.print()}>Print</button> : null}
         {isLayout ? <button className="secondary-action compact" type="button" onClick={handleSaveAsPdf}>Save as PDF</button> : null}
         <button type="button" onClick={handleImportClick}>Import project</button>
         <button type="button" onClick={() => downloadProjectJson(project)}>Export project</button>
