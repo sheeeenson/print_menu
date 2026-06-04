@@ -37,7 +37,15 @@ function FontSelect({ label, value, onChange }) {
 export function ImageMenuSection({ project }) {
   const dishes = useMemo(() => project.dishes.filter((dish) => dish.visible !== false), [project.dishes]);
   const [imageProject, setImageProject] = useState(() => loadImageMenuProject(dishes));
+  const [openCategoryIds, setOpenCategoryIds] = useState(() => new Set(project.categories.map((category) => category.id)));
   const selectedPage = imageProject.pages.find((page) => page.id === imageProject.selectedPageId) ?? imageProject.pages[0];
+
+  const categoryGroups = useMemo(() => project.categories
+    .map((category) => ({
+      category,
+      dishes: dishes.filter((dish) => dish.categoryId === category.id),
+    }))
+    .filter((group) => group.dishes.length > 0), [project.categories, dishes]);
 
   useEffect(() => {
     setImageProject((current) => loadImageMenuProject(dishes.length ? dishes : project.dishes));
@@ -46,6 +54,14 @@ export function ImageMenuSection({ project }) {
   useEffect(() => {
     saveImageMenuProject(imageProject);
   }, [imageProject]);
+
+  useEffect(() => {
+    setOpenCategoryIds((current) => {
+      const next = new Set(current);
+      project.categories.forEach((category) => next.add(category.id));
+      return next;
+    });
+  }, [project.categories]);
 
   const updateImageProject = (updater) => setImageProject((current) => updater(current));
   const updateSelectedPage = (updater) => updateImageProject((current) => ({
@@ -70,6 +86,15 @@ export function ImageMenuSection({ project }) {
     return { ...current, pages, selectedPageId: pages[0].id };
   });
 
+  const toggleCategoryOpen = (categoryId) => {
+    setOpenCategoryIds((current) => {
+      const next = new Set(current);
+      if (next.has(categoryId)) next.delete(categoryId);
+      else next.add(categoryId);
+      return next;
+    });
+  };
+
   const toggleDish = (dishId) => updateSelectedPage((page) => {
     const exists = page.selectedDishIds.includes(dishId);
     const nextIds = exists ? page.selectedDishIds.filter((id) => id !== dishId) : [...page.selectedDishIds, dishId];
@@ -92,7 +117,7 @@ export function ImageMenuSection({ project }) {
       <aside className="image-menu-panel">
         <div className="panel-title-row">
           <div><p className="eyebrow">Image Menu</p><h1>Pages</h1></div>
-          <button type="button" className="primary-action compact" onClick={addPage}>Add Page</button>
+          <button type="button" className="primary-action compact" onClick={addPage}>＋ Add Page</button>
         </div>
 
         <div className="image-menu-page-list">
@@ -104,8 +129,8 @@ export function ImageMenuSection({ project }) {
         </div>
 
         <div className="action-row image-menu-page-actions">
-          <button type="button" onClick={duplicatePage}>Duplicate</button>
-          <button type="button" className="danger" onClick={deletePage}>Delete</button>
+          <button type="button" onClick={duplicatePage}>⧉ Duplicate</button>
+          <button type="button" className="danger" onClick={deletePage}>🗑 Delete</button>
         </div>
 
         <div className="panel-section">
@@ -117,16 +142,36 @@ export function ImageMenuSection({ project }) {
           </div>
         </div>
 
-        <div className="panel-section">
-          <h2>Select dishes</h2>
-          <div className="image-menu-dish-picker">
-            {dishes.map((dish) => {
-              const selected = selectedPage.selectedDishIds.includes(dish.id);
+        <div className="panel-section image-menu-select-section">
+          <div className="image-menu-section-heading">
+            <h2>Select dishes</h2>
+            <small>{selectedPage.selectedDishIds.length}/{selectedPage.gridVariant} selected</small>
+          </div>
+          <div className="image-menu-category-picker">
+            {categoryGroups.map(({ category, dishes: categoryDishes }) => {
+              const isOpen = openCategoryIds.has(category.id);
+              const selectedCount = categoryDishes.filter((dish) => selectedPage.selectedDishIds.includes(dish.id)).length;
               return (
-                <div key={dish.id} className={selected ? 'selected' : ''}>
-                  <label><input type="checkbox" checked={selected} disabled={!selected && selectedPage.selectedDishIds.length >= selectedPage.gridVariant} onChange={() => toggleDish(dish.id)} />{dish.imageUrl ? <img src={dish.imageUrl} alt="" /> : <span className="image-menu-mini-placeholder" />}<span><strong>{dish.nameEn}</strong><small>{dish.nameGe}</small></span></label>
-                  {selected ? <div className="image-menu-order"><button type="button" onClick={() => moveDish(dish.id, -1)}>↑</button><button type="button" onClick={() => moveDish(dish.id, 1)}>↓</button></div> : null}
-                </div>
+                <section key={category.id} className="image-menu-category-group">
+                  <button className="image-menu-category-toggle" type="button" onClick={() => toggleCategoryOpen(category.id)} aria-expanded={isOpen}>
+                    <span>{isOpen ? '▾' : '▸'}</span>
+                    <strong>{category.nameEn || 'Untitled category'}</strong>
+                    <small>{selectedCount}/{categoryDishes.length}</small>
+                  </button>
+                  {isOpen ? (
+                    <div className="image-menu-dish-picker">
+                      {categoryDishes.map((dish) => {
+                        const selected = selectedPage.selectedDishIds.includes(dish.id);
+                        return (
+                          <div key={dish.id} className={selected ? 'selected' : ''}>
+                            <label><input type="checkbox" checked={selected} disabled={!selected && selectedPage.selectedDishIds.length >= selectedPage.gridVariant} onChange={() => toggleDish(dish.id)} />{dish.imageUrl ? <img src={dish.imageUrl} alt="" /> : <span className="image-menu-mini-placeholder" />}<span><strong>{dish.nameEn}</strong><small>{dish.nameGe}</small></span></label>
+                            {selected ? <div className="image-menu-order"><button type="button" onClick={() => moveDish(dish.id, -1)}>↑</button><button type="button" onClick={() => moveDish(dish.id, 1)}>↓</button></div> : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </section>
               );
             })}
           </div>
@@ -164,7 +209,7 @@ export function ImageMenuSection({ project }) {
       </aside>
 
       <div className="image-menu-preview-stage">
-        <div className="preview-toolbar image-menu-toolbar"><div><p className="eyebrow">A4 Landscape</p><h1>{selectedPage.name}</h1></div><div><button className="primary-action compact" type="button" onClick={() => window.print()}>Print Image Menu</button><button className="secondary-action compact" type="button" onClick={() => alert('PNG export can be blocked by external image CORS. Use print/PDF if the image host does not allow canvas export.')}>Export PNG</button></div></div>
+        <div className="preview-toolbar image-menu-toolbar"><div><p className="eyebrow">A4 Landscape</p><h1>{selectedPage.name}</h1></div><div><button className="primary-action compact" type="button" onClick={() => window.print()}>🖨 Print Image Menu</button><button className="secondary-action compact" type="button" onClick={() => alert('PNG export can be blocked by external image CORS. Use print/PDF if the image host does not allow canvas export.')}>⇩ Export PNG</button></div></div>
         <ImageMenuPreview page={selectedPage} dishes={dishes} />
       </div>
     </section>
