@@ -214,7 +214,8 @@ export function ImageMenuSection({ project }) {
           <RangeControl label="Description size" value={selectedPage.settings.descriptionSize} min={8} max={30} onChange={(descriptionSize) => updateSettings({ descriptionSize })} />
           <RangeControl label="EN/GE title gap" value={selectedPage.settings.titleLanguageGap} min={0} max={48} onChange={(titleLanguageGap) => updateSettings({ titleLanguageGap })} />
           <RangeControl label="Title/description gap" value={selectedPage.settings.titleDescriptionGap} min={0} max={64} onChange={(titleDescriptionGap) => updateSettings({ titleDescriptionGap })} />
-          <RangeControl label="Price gap" value={selectedPage.settings.priceGap} min={0} max={80} onChange={(priceGap) => updateSettings({ priceGap })} />
+          <RangeControl label="Description/price gap" value={selectedPage.settings.priceGap} min={0} max={80} onChange={(priceGap) => updateSettings({ priceGap })} />
+          <RangeControl label="Price vertical offset" value={selectedPage.settings.priceYOffset ?? 0} min={-80} max={80} onChange={(priceYOffset) => updateSettings({ priceYOffset })} />
           <RangeControl label="Text bottom offset" value={selectedPage.settings.textBottomOffset} min={0} max={150} onChange={(textBottomOffset) => updateSettings({ textBottomOffset })} />
           <FontSelect label="EN title font" value={selectedPage.settings.enTitleFont} onChange={(enTitleFont) => updateSettings({ enTitleFont })} />
           <FontSelect label="GE title font" value={selectedPage.settings.geTitleFont} onChange={(geTitleFont) => updateSettings({ geTitleFont })} />
