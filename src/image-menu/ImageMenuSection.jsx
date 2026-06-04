@@ -39,13 +39,16 @@ export function ImageMenuSection({ project }) {
   const [imageProject, setImageProject] = useState(() => loadImageMenuProject(dishes));
   const [openCategoryIds, setOpenCategoryIds] = useState(() => new Set(project.categories.map((category) => category.id)));
   const selectedPage = imageProject.pages.find((page) => page.id === imageProject.selectedPageId) ?? imageProject.pages[0];
+  const sourcePage = project.pages?.find((page) => page.id === project.selectedPageId) ?? project.pages?.[0];
+  const selectedContentCategoryIds = sourcePage?.selectedCategoryIds?.length ? new Set(sourcePage.selectedCategoryIds) : null;
 
   const categoryGroups = useMemo(() => project.categories
+    .filter((category) => !selectedContentCategoryIds || selectedContentCategoryIds.has(category.id))
     .map((category) => ({
       category,
       dishes: dishes.filter((dish) => dish.categoryId === category.id),
     }))
-    .filter((group) => group.dishes.length > 0), [project.categories, dishes]);
+    .filter((group) => group.dishes.length > 0), [project.categories, dishes, selectedContentCategoryIds]);
 
   useEffect(() => {
     setImageProject((current) => loadImageMenuProject(dishes.length ? dishes : project.dishes));
@@ -99,6 +102,17 @@ export function ImageMenuSection({ project }) {
     const exists = page.selectedDishIds.includes(dishId);
     const nextIds = exists ? page.selectedDishIds.filter((id) => id !== dishId) : [...page.selectedDishIds, dishId];
     return { ...page, selectedDishIds: clampSelected(nextIds, page.gridVariant) };
+  });
+
+  const selectCategoryDishes = (categoryDishes) => updateSelectedPage((page) => {
+    const existing = page.selectedDishIds.filter((id) => !categoryDishes.some((dish) => dish.id === id));
+    const nextIds = clampSelected([...existing, ...categoryDishes.map((dish) => dish.id)], page.gridVariant);
+    return { ...page, selectedDishIds: nextIds };
+  });
+
+  const clearCategoryDishes = (categoryDishes) => updateSelectedPage((page) => {
+    const categoryIds = new Set(categoryDishes.map((dish) => dish.id));
+    return { ...page, selectedDishIds: page.selectedDishIds.filter((id) => !categoryIds.has(id)) };
   });
 
   const moveDish = (dishId, direction) => updateSelectedPage((page) => {
@@ -159,16 +173,22 @@ export function ImageMenuSection({ project }) {
                     <small>{selectedCount}/{categoryDishes.length}</small>
                   </button>
                   {isOpen ? (
-                    <div className="image-menu-dish-picker">
-                      {categoryDishes.map((dish) => {
-                        const selected = selectedPage.selectedDishIds.includes(dish.id);
-                        return (
-                          <div key={dish.id} className={selected ? 'selected' : ''}>
-                            <label><input type="checkbox" checked={selected} disabled={!selected && selectedPage.selectedDishIds.length >= selectedPage.gridVariant} onChange={() => toggleDish(dish.id)} />{dish.imageUrl ? <img src={dish.imageUrl} alt="" /> : <span className="image-menu-mini-placeholder" />}<span><strong>{dish.nameEn}</strong><small>{dish.nameGe}</small></span></label>
-                            {selected ? <div className="image-menu-order"><button type="button" onClick={() => moveDish(dish.id, -1)}>↑</button><button type="button" onClick={() => moveDish(dish.id, 1)}>↓</button></div> : null}
-                          </div>
-                        );
-                      })}
+                    <div className="image-menu-category-body">
+                      <div className="image-menu-category-actions">
+                        <button type="button" onClick={() => selectCategoryDishes(categoryDishes)} disabled={selectedPage.selectedDishIds.length >= selectedPage.gridVariant && selectedCount === 0}>Select all</button>
+                        <button type="button" onClick={() => clearCategoryDishes(categoryDishes)} disabled={selectedCount === 0}>Clear</button>
+                      </div>
+                      <div className="image-menu-dish-picker">
+                        {categoryDishes.map((dish) => {
+                          const selected = selectedPage.selectedDishIds.includes(dish.id);
+                          return (
+                            <div key={dish.id} className={selected ? 'selected' : ''}>
+                              <label><input type="checkbox" checked={selected} disabled={!selected && selectedPage.selectedDishIds.length >= selectedPage.gridVariant} onChange={() => toggleDish(dish.id)} />{dish.imageUrl ? <img src={dish.imageUrl} alt="" /> : <span className="image-menu-mini-placeholder" />}<span><strong>{dish.nameEn}</strong><small>{dish.nameGe}</small></span></label>
+                              {selected ? <div className="image-menu-order"><button type="button" onClick={() => moveDish(dish.id, -1)}>↑</button><button type="button" onClick={() => moveDish(dish.id, 1)}>↓</button></div> : null}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   ) : null}
                 </section>
