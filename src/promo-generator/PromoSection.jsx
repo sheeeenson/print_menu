@@ -49,16 +49,32 @@ function ToggleField({ checked, label, onChange }) {
 }
 
 export function PromoSection({ project }) {
-  const dishesWithImages = useMemo(() => project.dishes.filter((dish) => dish.visible !== false && dish.imageUrl), [project.dishes]);
+  const contentCategories = useMemo(() => project.categories ?? [], [project.categories]);
+  const contentDishes = useMemo(() => project.dishes ?? [], [project.dishes]);
+  const visibleDishes = useMemo(() => contentDishes.filter((dish) => dish.visible !== false), [contentDishes]);
+  const dishesWithImages = useMemo(() => visibleDishes.filter((dish) => dish.imageUrl), [visibleDishes]);
+  const categoryGroups = useMemo(() => contentCategories.map((category) => ({
+    category,
+    dishes: dishesWithImages.filter((dish) => dish.categoryId === category.id),
+  })), [contentCategories, dishesWithImages]);
+  const [openCategoryIds, setOpenCategoryIds] = useState(() => new Set(contentCategories.map((category) => category.id)));
   const [settings, setSettings] = useState(() => loadPromoProject(dishesWithImages));
 
   useEffect(() => {
-    setSettings((current) => ({ ...loadPromoProject(dishesWithImages.length ? dishesWithImages : project.dishes), ...current }));
-  }, [dishesWithImages, project.dishes]);
+    setSettings((current) => ({ ...loadPromoProject(dishesWithImages.length ? dishesWithImages : contentDishes), ...current }));
+  }, [contentDishes, dishesWithImages]);
 
   useEffect(() => {
     savePromoProject(settings);
   }, [settings]);
+
+  useEffect(() => {
+    setOpenCategoryIds((current) => {
+      const next = new Set(current);
+      contentCategories.forEach((category) => next.add(category.id));
+      return next;
+    });
+  }, [contentCategories]);
 
   const selectedDish = dishesWithImages.find((dish) => dish.id === settings.selectedDishId) ?? dishesWithImages[0] ?? null;
   const selectedIndex = Math.max(0, dishesWithImages.findIndex((dish) => dish.id === selectedDish?.id));
@@ -74,6 +90,15 @@ export function PromoSection({ project }) {
     }));
   };
 
+  const toggleCategoryOpen = (categoryId) => {
+    setOpenCategoryIds((current) => {
+      const next = new Set(current);
+      if (next.has(categoryId)) next.delete(categoryId);
+      else next.add(categoryId);
+      return next;
+    });
+  };
+
   return (
     <section className="promo-generator-section">
       <aside className="promo-generator-panel">
@@ -83,20 +108,50 @@ export function PromoSection({ project }) {
           <span>1920 x 1080 Full HD scenes from existing dish photos.</span>
         </header>
 
-        <PromoControlGroup title="Dish">
-          <label className="image-menu-control">
-            <span>Dish with image</span>
-            <select
-              value={selectedDish?.id ?? ''}
-              onChange={(event) => updateSettings({ selectedDishId: event.target.value })}
-              disabled={!dishesWithImages.length}
-            >
-              {dishesWithImages.length ? dishesWithImages.map((dish) => (
-                <option key={dish.id} value={dish.id}>{getDishTitle(dish)}</option>
-              )) : <option value="">No dishes with images</option>}
-            </select>
-          </label>
-        </PromoControlGroup>
+        <div className="panel-section promo-select-section">
+          <div className="image-menu-section-heading">
+            <div>
+              <h2>Select dish</h2>
+              <small>{contentCategories.length} content categories</small>
+            </div>
+            <small>{selectedDish ? '1/1 selected' : '0/1 selected'}</small>
+          </div>
+          <div className="image-menu-category-picker promo-category-picker">
+            {categoryGroups.length === 0 ? <p className="muted-text">No categories in Content yet.</p> : null}
+            {categoryGroups.map(({ category, dishes: categoryDishes }) => {
+              const isOpen = openCategoryIds.has(category.id);
+              const selectedCount = categoryDishes.some((dish) => dish.id === selectedDish?.id) ? 1 : 0;
+              return (
+                <section key={category.id} className="image-menu-category-group">
+                  <button className="image-menu-category-toggle" type="button" onClick={() => toggleCategoryOpen(category.id)} aria-expanded={isOpen}>
+                    <span>{isOpen ? '▾' : '▸'}</span>
+                    <strong>{category.nameEn || category.nameGe || 'Untitled category'}</strong>
+                    <small>{selectedCount}/{categoryDishes.length}</small>
+                  </button>
+                  {isOpen ? (
+                    <div className="image-menu-category-body">
+                      <div className="image-menu-dish-picker promo-dish-picker">
+                        {categoryDishes.length === 0 ? <p className="muted-text">No dishes with images in this category.</p> : null}
+                        {categoryDishes.map((dish) => {
+                          const selected = dish.id === selectedDish?.id;
+                          return (
+                            <div key={dish.id} className={selected ? 'selected' : ''}>
+                              <label>
+                                <input type="radio" name="tv-promo-dish" checked={selected} onChange={() => updateSettings({ selectedDishId: dish.id })} />
+                                {dish.imageUrl ? <img src={dish.imageUrl} alt="" /> : <span className="image-menu-mini-placeholder" />}
+                                <span><strong>{dish.nameEn}</strong><small>{dish.nameGe}</small></span>
+                              </label>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
+                </section>
+              );
+            })}
+          </div>
+        </div>
 
         <PromoControlGroup title="Duration">
           <div className="promo-duration-buttons">
