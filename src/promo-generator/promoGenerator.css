@@ -1,0 +1,57 @@
+.promo-generator-section { display: grid; grid-template-columns: 390px minmax(0, 1fr); min-height: calc(100vh - 76px); background: #f1ebe2; }
+.promo-generator-panel { border-right: 1px solid #dfd6c9; background: #fffaf2; padding: 22px; overflow-y: auto; max-height: calc(100vh - 76px); }
+.promo-panel-header { display: grid; gap: 5px; margin-bottom: 18px; }
+.promo-panel-header p, .promo-generator-toolbar p { margin: 0; color: #9b1c31; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.72rem; font-weight: 950; }
+.promo-panel-header h2, .promo-generator-toolbar h2 { margin: 0; color: #231f20; letter-spacing: -0.045em; line-height: 1; }
+.promo-panel-header span { color: #7c7065; font-size: 0.88rem; line-height: 1.35; }
+.promo-panel-group { border-top: 1px solid #eadfce; padding-top: 16px; margin-top: 16px; display: grid; gap: 11px; }
+.promo-panel-group h3 { margin: 0; color: #231f20; font-size: 0.86rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.promo-panel-group select, .promo-panel-group input[type='text'], .promo-panel-group input:not([type]) { width: 100%; border: 1px solid #ded1c1; border-radius: 14px; background: #fff; color: #231f20; padding: 11px 12px; font: inherit; font-weight: 750; box-sizing: border-box; }
+.promo-duration-buttons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.promo-duration-buttons button { border: 1px solid #ded1c1; border-radius: 14px; background: #fff; color: #574d45; padding: 10px 8px; font-weight: 900; }
+.promo-duration-buttons button.active { background: #231f20; color: #fffaf2; border-color: #231f20; }
+.promo-toggle-list { display: grid; gap: 8px; }
+.promo-toggle-field { border: 1px solid #e2d7c8; border-radius: 14px; background: #fff; padding: 10px 12px; display: flex; align-items: center; gap: 10px; color: #574d45; font-weight: 850; cursor: pointer; }
+.promo-toggle-field input { width: 18px; height: 18px; accent-color: #9b1c31; }
+.promo-generator-preview-stage { min-width: 0; padding: 28px; overflow: hidden; display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.promo-generator-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
+.promo-output-pill { border: 1px solid #ded1c1; border-radius: 999px; background: #fffaf2; color: #231f20; padding: 9px 14px; font-weight: 950; box-shadow: 0 10px 25px rgba(35,31,32,0.06); }
+.promo-preview-shell { overflow: auto; padding: 22px 26px 44px; display: grid; justify-items: center; align-items: start; min-height: 0; border-radius: 28px; background: radial-gradient(circle at top, rgba(255,250,242,0.95), rgba(223,214,201,0.42)); }
+.promo-canvas-wrap { width: min(100%, 1180px); aspect-ratio: 16 / 9; position: relative; box-shadow: 0 30px 70px rgba(35,31,32,0.18); border-radius: 28px; overflow: hidden; background: #231f20; }
+.promo-scene { width: 1920px; height: 1080px; position: absolute; left: 0; top: 0; transform: scale(calc(min(1180px, 100vw - 500px) / 1920)); transform-origin: top left; overflow: hidden; background: var(--promo-bg); color: #fffaf2; isolation: isolate; font-family: inherit; }
+.promo-background { position: absolute; inset: 0; background: var(--promo-bg); z-index: 0; }
+.promo-background::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 78% 24%, rgba(255,255,255,0.26), transparent 26%), linear-gradient(120deg, rgba(0,0,0,0.22), transparent 48%, rgba(0,0,0,0.32)); }
+.promo-dish-glow { position: absolute; width: 760px; height: 520px; right: 225px; top: 265px; z-index: 1; border-radius: 50%; background: var(--promo-glow); filter: blur(62px); opacity: 0.78; animation: promoGlowPulse var(--promo-duration) ease-in-out infinite; }
+.promo-light-sweep { position: absolute; inset: -20% -70%; z-index: 6; pointer-events: none; background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.28) 48%, transparent 61%); transform: translateX(-45%) rotate(4deg); animation: promoLightSweep var(--promo-duration) ease-in-out infinite; mix-blend-mode: screen; }
+.promo-copy-block { position: absolute; left: 112px; top: 116px; width: 690px; z-index: 5; display: grid; gap: 16px; text-shadow: 0 18px 38px rgba(0,0,0,0.28); }
+.promo-eyebrow { justify-self: start; margin: 0; border-radius: 999px; background: rgba(255,250,242,0.92); color: #231f20; padding: 14px 24px; font-size: 34px; line-height: 1; font-weight: 950; letter-spacing: -0.04em; }
+.promo-copy-block h2 { margin: 0; font-size: 112px; line-height: 0.88; letter-spacing: -0.08em; max-width: 780px; }
+.promo-copy-block h3 { margin: 0; font-size: 54px; line-height: 1; letter-spacing: -0.04em; opacity: 0.92; }
+.promo-description { margin: 0; max-width: 570px; color: rgba(255,250,242,0.82); font-size: 30px; line-height: 1.18; font-weight: 700; }
+.promo-dish-stage { position: absolute; right: 95px; bottom: 86px; width: 1030px; height: 780px; z-index: 4; display: grid; place-items: center; }
+.promo-dish-image { max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 38px 54px rgba(0,0,0,0.32)); animation: promoFloat var(--promo-duration) ease-in-out infinite; }
+.promo-dish-placeholder { width: 620px; height: 360px; border-radius: 34px; display: grid; place-items: center; background: rgba(255,255,255,0.18); color: rgba(255,250,242,0.82); font-size: 48px; font-weight: 950; }
+.promo-price-card { position: absolute; right: 120px; bottom: 100px; z-index: 7; display: grid; justify-items: end; gap: 10px; line-height: 1; text-shadow: 0 20px 44px rgba(0,0,0,0.28); }
+.promo-price-card strong { font-size: 132px; letter-spacing: -0.08em; color: #fffaf2; }
+.promo-old-price { position: relative; border-radius: 18px; background: rgba(35,31,32,0.42); color: rgba(255,250,242,0.82); padding: 13px 18px; font-size: 46px; font-weight: 900; }
+.promo-old-price::after { content: ''; position: absolute; left: 12px; right: 12px; top: 50%; height: 4px; background: currentColor; transform: rotate(-8deg); }
+.promo-cta { position: absolute; left: 112px; bottom: 100px; z-index: 7; color: #fffaf2; font-size: 36px; font-weight: 950; letter-spacing: 0.12em; text-transform: uppercase; }
+.promo-gif-overlay { position: absolute; z-index: 8; object-fit: contain; filter: drop-shadow(0 22px 28px rgba(0,0,0,0.28)); }
+.promo-gif-top-left { left: 86px; top: 80px; }
+.promo-gif-top-right { right: 86px; top: 80px; }
+.promo-gif-bottom-left { left: 86px; bottom: 80px; }
+.promo-gif-bottom-right { right: 86px; bottom: 80px; }
+.promo-preview-size { margin-top: 12px; color: #7c7065; font-weight: 850; }
+.promo-effect-slow-zoom .promo-background { animation: promoBackgroundZoom var(--promo-duration) ease-in-out infinite; }
+.promo-effect-fast-entrance .promo-dish-image { animation-name: promoFastEntrance, promoFloat; animation-duration: 900ms, var(--promo-duration); animation-delay: 0ms, 900ms; animation-timing-function: cubic-bezier(.16,1,.3,1), ease-in-out; animation-iteration-count: 1, infinite; }
+.promo-effect-stop-motion .promo-dish-stage { animation: promoStopMotion 1.15s steps(5, end) infinite; }
+.promo-effect-price-punch .promo-price-card { animation: promoPricePunch var(--promo-duration) cubic-bezier(.16,1,.3,1) infinite; }
+@keyframes promoBackgroundZoom { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.055); } }
+@keyframes promoGlowPulse { 0%, 100% { opacity: 0.52; transform: scale(0.92); } 50% { opacity: 0.9; transform: scale(1.08); } }
+@keyframes promoLightSweep { 0%, 34% { transform: translateX(-45%) rotate(4deg); opacity: 0; } 48% { opacity: 1; } 68%, 100% { transform: translateX(45%) rotate(4deg); opacity: 0; } }
+@keyframes promoFloat { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(0, -22px, 0) scale(1.025); } }
+@keyframes promoFastEntrance { 0% { opacity: 0; transform: translate3d(180px, 80px, 0) rotate(5deg) scale(0.82); } 100% { opacity: 1; transform: translate3d(0, 0, 0) rotate(0deg) scale(1); } }
+@keyframes promoStopMotion { 0% { transform: translate(0, 0) rotate(0deg); } 25% { transform: translate(7px, -5px) rotate(0.7deg); } 50% { transform: translate(-6px, 4px) rotate(-0.65deg); } 75% { transform: translate(4px, 6px) rotate(0.45deg); } 100% { transform: translate(0, 0) rotate(0deg); } }
+@keyframes promoPricePunch { 0%, 58%, 100% { transform: scale(1); } 64% { transform: scale(1.18) rotate(-1deg); } 72% { transform: scale(0.96) rotate(0.8deg); } 80% { transform: scale(1.04); } }
+@media (max-width: 1180px) { .promo-generator-section { grid-template-columns: 350px minmax(0, 1fr); } .promo-scene { transform: scale(calc((100vw - 430px) / 1920)); } }
+@media print { .promo-generator-section { display: none; } }
