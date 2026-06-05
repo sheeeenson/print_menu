@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { PromoPreview } from './PromoPreview.jsx';
-import { DEFAULT_PROMO_EFFECTS, loadPromoProject, PROMO_DURATIONS, PROMO_FONT_OPTIONS, savePromoProject } from './promoStorage.js';
+import { DEFAULT_PROMO_EFFECTS, getPromoFormat, loadPromoProject, PROMO_DURATIONS, PROMO_FONT_OPTIONS, PROMO_FORMATS, savePromoProject } from './promoStorage.js';
 import './promoGenerator.css';
 
 const EFFECT_GROUPS = [
@@ -118,6 +118,7 @@ export function PromoSection({ project }) {
 
   const selectedDish = dishesWithImages.find((dish) => dish.id === settings.selectedDishId) ?? dishesWithImages[0] ?? null;
   const selectedIndex = Math.max(0, dishesWithImages.findIndex((dish) => dish.id === selectedDish?.id));
+  const activeFormat = getPromoFormat(settings.formatId);
 
   const updateSettings = (changes) => {
     setSettings((current) => ({ ...current, ...changes }));
@@ -145,8 +146,24 @@ export function PromoSection({ project }) {
         <header className="promo-panel-header">
           <p>TV Promo</p>
           <h2>Promo Generator</h2>
-          <span>1920 x 1080 Full HD scenes from existing dish photos.</span>
+          <span>{activeFormat.width} x {activeFormat.height} {activeFormat.name} scene.</span>
         </header>
+
+        <PromoControlGroup title="Format">
+          <div className="promo-format-buttons">
+            {PROMO_FORMATS.map((format) => (
+              <button
+                key={format.id}
+                className={settings.formatId === format.id ? 'active' : ''}
+                type="button"
+                onClick={() => updateSettings({ formatId: format.id })}
+              >
+                <strong>{format.label}</strong>
+                <small>{format.width}×{format.height}</small>
+              </button>
+            ))}
+          </div>
+        </PromoControlGroup>
 
         <div className="panel-section promo-select-section">
           <div className="image-menu-section-heading">
@@ -285,7 +302,7 @@ export function PromoSection({ project }) {
             <p>Preview</p>
             <h2>{selectedDish ? getDishTitle(selectedDish) : 'Select dish'}</h2>
           </div>
-          <div className="promo-output-pill">1920 x 1080</div>
+          <div className="promo-output-pill">{activeFormat.label} · {activeFormat.width} × {activeFormat.height}</div>
         </div>
         <PromoPreview dish={selectedDish} settings={settings} index={selectedIndex} />
       </main>

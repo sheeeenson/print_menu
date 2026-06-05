@@ -2,6 +2,15 @@ const STORAGE_KEY = 'restaurant-menu-studio:tv-promo-generator:v1';
 
 export const PROMO_DURATIONS = Object.freeze([6, 8, 12, 16]);
 
+export const PROMO_FORMATS = Object.freeze([
+  { id: 'landscape', label: '16:9', name: 'Full HD', width: 1920, height: 1080, previewWidth: 1180 },
+  { id: 'square', label: '1:1', name: 'Square', width: 1080, height: 1080, previewWidth: 720 },
+  { id: 'portrait', label: '4:5', name: 'Feed', width: 1080, height: 1350, previewWidth: 620 },
+  { id: 'story', label: '9:16', name: 'Story/Reels', width: 1080, height: 1920, previewWidth: 460 },
+]);
+
+export const getPromoFormat = (formatId) => PROMO_FORMATS.find((format) => format.id === formatId) ?? PROMO_FORMATS[0];
+
 export const PROMO_FONT_OPTIONS = Object.freeze([
   'Inter, Arial, sans-serif',
   'Arial, sans-serif',
@@ -22,6 +31,7 @@ export const DEFAULT_PROMO_EFFECTS = Object.freeze({
 
 export const DEFAULT_PROMO_SETTINGS = Object.freeze({
   selectedDishId: '',
+  formatId: 'landscape',
   duration: 8,
   headline: '',
   offerText: '',
@@ -60,6 +70,7 @@ export const DEFAULT_PROMO_SETTINGS = Object.freeze({
 });
 
 const normalizeDuration = (value) => PROMO_DURATIONS.includes(Number(value)) ? Number(value) : DEFAULT_PROMO_SETTINGS.duration;
+const normalizeFormatId = (value) => PROMO_FORMATS.some((format) => format.id === value) ? value : DEFAULT_PROMO_SETTINGS.formatId;
 const normalizeGifPosition = (value) => ['textLeft', 'topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(value) ? value : DEFAULT_PROMO_SETTINGS.gifPosition;
 const normalizeFont = (value, fallback) => PROMO_FONT_OPTIONS.includes(value) ? value : fallback;
 const normalizeColor = (value, fallback) => /^#[0-9a-f]{6}$/i.test(String(value || '')) ? value : fallback;
@@ -89,6 +100,7 @@ export const normalizePromoProject = (project = {}, dishes = []) => {
     ...DEFAULT_PROMO_SETTINGS,
     ...project,
     selectedDishId,
+    formatId: normalizeFormatId(project.formatId),
     duration: normalizeDuration(project.duration),
     headline: project.headline || '',
     offerText: project.offerText || project.discountText || '',
