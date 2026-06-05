@@ -225,7 +225,7 @@ export function PromoSection({ project }) {
 
         <PromoControlGroup title="Appearance">
           <RangeControl label="Background tone" value={settings.backgroundTone} min={-40} max={40} onChange={(backgroundTone) => updateSettings({ backgroundTone })} />
-          <RangeControl label="Dish size" value={settings.dishSize} min={45} max={160} onChange={(dishSize) => updateSettings({ dishSize })} suffix="%" />
+          <RangeControl label="Dish size" value={settings.dishSize} min={100} max={650} onChange={(dishSize) => updateSettings({ dishSize })} suffix="px" />
           <ToggleField label="Show description" checked={Boolean(settings.showDescription)} onChange={(showDescription) => updateSettings({ showDescription })} />
         </PromoControlGroup>
 
@@ -261,6 +261,7 @@ export function PromoSection({ project }) {
             <label className="image-menu-control">
               <span>Position</span>
               <select value={settings.gifPosition} onChange={(event) => updateSettings({ gifPosition: event.target.value })}>
+                <option value="textLeft">Text left</option>
                 <option value="topLeft">Top left</option>
                 <option value="topRight">Top right</option>
                 <option value="bottomLeft">Bottom left</option>
