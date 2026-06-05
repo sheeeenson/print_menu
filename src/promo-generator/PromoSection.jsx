@@ -209,6 +209,7 @@ export function PromoSection({ project }) {
         </PromoControlGroup>
 
         <PromoControlGroup title="Offer">
+          <ToggleField label="Show offer text" checked={Boolean(settings.showOffer)} onChange={(showOffer) => updateSettings({ showOffer })} />
           <label className="image-menu-control">
             <span>Headline</span>
             <input value={settings.headline} placeholder={selectedDish ? getDishTitle(selectedDish) : 'Promo headline'} onChange={(event) => updateSettings({ headline: event.target.value })} />
@@ -217,6 +218,7 @@ export function PromoSection({ project }) {
             <span>Offer text</span>
             <input value={settings.offerText} placeholder="New, Today only, -20%" onChange={(event) => updateSettings({ offerText: event.target.value })} />
           </label>
+          <ToggleField label="Show CTA" checked={Boolean(settings.showCta)} onChange={(showCta) => updateSettings({ showCta })} />
           <label className="image-menu-control">
             <span>CTA</span>
             <input value={settings.ctaText} placeholder="ORDER NOW" onChange={(event) => updateSettings({ ctaText: event.target.value })} />
@@ -227,6 +229,7 @@ export function PromoSection({ project }) {
           <RangeControl label="Background tone" value={settings.backgroundTone} min={-40} max={40} onChange={(backgroundTone) => updateSettings({ backgroundTone })} />
           <RangeControl label="Dish size" value={settings.dishSize} min={100} max={650} onChange={(dishSize) => updateSettings({ dishSize })} suffix="px" />
           <ToggleField label="Show description" checked={Boolean(settings.showDescription)} onChange={(showDescription) => updateSettings({ showDescription })} />
+          <RangeControl label="Description vertical offset" value={settings.descriptionOffsetY} min={-180} max={180} onChange={(descriptionOffsetY) => updateSettings({ descriptionOffsetY })} suffix="px" />
         </PromoControlGroup>
 
         <PromoControlGroup title="Text styles">
@@ -261,10 +264,10 @@ export function PromoSection({ project }) {
             <label className="image-menu-control">
               <span>Position</span>
               <select value={settings.gifPosition} onChange={(event) => updateSettings({ gifPosition: event.target.value })}>
-                <option value="textLeft">Text left</option>
-                <option value="topLeft">Top left</option>
-                <option value="topRight">Top right</option>
-                <option value="bottomLeft">Bottom left</option>
+                <option value="textLeft">Headline left</option>
+                <option value="topLeft">Headline left / top</option>
+                <option value="topRight">Price right / top</option>
+                <option value="bottomLeft">CTA left / bottom</option>
                 <option value="bottomRight">Bottom right</option>
               </select>
             </label>
