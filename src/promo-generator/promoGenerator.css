@@ -20,9 +20,9 @@
 .promo-canvas-wrap { width: 1180px; max-width: 100%; aspect-ratio: 16 / 9; position: relative; box-shadow: 0 30px 70px rgba(35,31,32,0.18); border-radius: 28px; overflow: hidden; background: #231f20; }
 .promo-scene { width: 1920px; height: 1080px; position: absolute; left: 0; top: 0; transform: scale(0.614583); transform-origin: top left; overflow: hidden; background: var(--promo-edge-color); color: #fffaf2; isolation: isolate; font-family: inherit; }
 .promo-background { position: absolute; inset: 0; background: var(--promo-edge-color); z-index: 0; }
-.promo-background::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 67% 42%, rgba(255,255,255,0.18), transparent 34%), radial-gradient(circle at 20% 15%, rgba(255,255,255,0.08), transparent 32%); pointer-events: none; }
+.promo-background::after { content: none; }
 .promo-dish-glow { display: none; }
-.promo-light-sweep { position: absolute; inset: -20% -70%; z-index: 6; pointer-events: none; background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.22) 48%, transparent 61%); transform: translateX(-45%) rotate(4deg); animation: promoLightSweep var(--promo-duration) ease-in-out infinite; mix-blend-mode: screen; }
+.promo-light-sweep { position: absolute; inset: -20% -70%; z-index: 6; pointer-events: none; background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.12) 48%, transparent 61%); transform: translateX(-45%) rotate(4deg); animation: promoLightSweep var(--promo-duration) ease-in-out infinite; mix-blend-mode: screen; }
 .promo-copy-block { position: absolute; left: 112px; top: 116px; width: 690px; z-index: 5; display: grid; gap: 16px; text-shadow: 0 18px 38px rgba(0,0,0,0.28); }
 .promo-eyebrow { justify-self: start; margin: 0; border-radius: 999px; background: rgba(255,250,242,0.92); color: #231f20; padding: 14px 24px; font-size: 34px; line-height: 1; font-weight: 950; letter-spacing: -0.04em; }
 .promo-copy-block h2 { margin: 0; font-size: 112px; line-height: 0.88; letter-spacing: -0.08em; max-width: 780px; }
