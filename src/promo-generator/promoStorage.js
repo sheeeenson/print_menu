@@ -29,6 +29,19 @@ export const DEFAULT_PROMO_EFFECTS = Object.freeze({
   gifOverlay: false,
 });
 
+export const DEFAULT_PROMO_LAYOUT_OFFSETS = Object.freeze({
+  copyX: 0,
+  copyY: 0,
+  dishX: 0,
+  dishY: 0,
+  priceX: 0,
+  priceY: 0,
+  ctaX: 0,
+  ctaY: 0,
+  gifX: 0,
+  gifY: 0,
+});
+
 export const DEFAULT_PROMO_FORMAT_SETTINGS = Object.freeze({
   duration: 8,
   headline: '',
@@ -64,6 +77,7 @@ export const DEFAULT_PROMO_FORMAT_SETTINGS = Object.freeze({
   gifUrl: '',
   gifPosition: 'textLeft',
   gifSize: 18,
+  layoutOffsets: { ...DEFAULT_PROMO_LAYOUT_OFFSETS },
   effects: { ...DEFAULT_PROMO_EFFECTS },
 });
 
@@ -89,6 +103,10 @@ const normalizeNumber = (value, fallback, min, max) => {
 
 const normalizeEffects = (effects = {}) => Object.fromEntries(
   Object.entries(DEFAULT_PROMO_EFFECTS).map(([key, fallback]) => [key, effects[key] === undefined ? fallback : Boolean(effects[key])]),
+);
+
+const normalizeLayoutOffsets = (layoutOffsets = {}) => Object.fromEntries(
+  Object.entries(DEFAULT_PROMO_LAYOUT_OFFSETS).map(([key, fallback]) => [key, normalizeNumber(layoutOffsets[key], fallback, -600, 600)]),
 );
 
 const normalizeDishSize = (value) => {
@@ -140,6 +158,7 @@ const normalizePromoFormatSettings = (project = {}) => ({
   gifUrl: project.gifUrl || project.stickerUrl || '',
   gifPosition: normalizeGifPosition(project.gifPosition || project.stickerPosition),
   gifSize: normalizeNumber(project.gifSize ?? project.stickerSize, DEFAULT_PROMO_FORMAT_SETTINGS.gifSize, 6, 42),
+  layoutOffsets: normalizeLayoutOffsets(project.layoutOffsets),
   effects: normalizeEffects(project.effects),
 });
 
