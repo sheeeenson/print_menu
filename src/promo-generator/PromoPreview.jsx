@@ -39,11 +39,12 @@ const colorWithTone = (baseHex, tone = 0) => {
 };
 
 const positionClass = (position) => ({
-  topLeft: 'promo-gif-top-left',
-  topRight: 'promo-gif-top-right',
-  bottomLeft: 'promo-gif-bottom-left',
+  textLeft: 'promo-gif-text-left',
+  topLeft: 'promo-gif-text-left',
+  bottomLeft: 'promo-gif-bottom-text-left',
+  topRight: 'promo-gif-price-right',
   bottomRight: 'promo-gif-bottom-right',
-}[position] ?? 'promo-gif-top-right');
+}[position] ?? 'promo-gif-text-left');
 
 export function PromoPreview({ dish, settings, index = 0 }) {
   const [sampledColor, setSampledColor] = useState('');
@@ -110,7 +111,7 @@ export function PromoPreview({ dish, settings, index = 0 }) {
             ) : null}
           </div>
 
-          <div className="promo-dish-stage" style={{ transform: `scale(${(settings.dishSize || 100) / 100})` }}>
+          <div className="promo-dish-stage" style={{ transform: `scale(${(settings.dishSize || 650) / 650})` }}>
             {dish?.imageUrl ? (
               <img className="promo-dish-image" src={dish.imageUrl} alt={dish.nameEn || dish.nameGe || 'Dish'} crossOrigin="anonymous" />
             ) : (
