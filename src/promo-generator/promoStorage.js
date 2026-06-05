@@ -28,7 +28,7 @@ export const DEFAULT_PROMO_SETTINGS = Object.freeze({
   ctaText: 'ORDER NOW',
   showDescription: true,
   backgroundTone: 0,
-  dishSize: 100,
+  dishSize: 650,
   offerColor: '#231f20',
   offerFont: PROMO_FONT_OPTIONS[0],
   offerSize: 34,
@@ -51,13 +51,13 @@ export const DEFAULT_PROMO_SETTINGS = Object.freeze({
   salePriceFont: PROMO_FONT_OPTIONS[0],
   salePriceSize: 132,
   gifUrl: '',
-  gifPosition: 'topRight',
+  gifPosition: 'textLeft',
   gifSize: 18,
   effects: { ...DEFAULT_PROMO_EFFECTS },
 });
 
 const normalizeDuration = (value) => PROMO_DURATIONS.includes(Number(value)) ? Number(value) : DEFAULT_PROMO_SETTINGS.duration;
-const normalizeGifPosition = (value) => ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(value) ? value : DEFAULT_PROMO_SETTINGS.gifPosition;
+const normalizeGifPosition = (value) => ['textLeft', 'topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(value) ? value : DEFAULT_PROMO_SETTINGS.gifPosition;
 const normalizeFont = (value, fallback) => PROMO_FONT_OPTIONS.includes(value) ? value : fallback;
 const normalizeColor = (value, fallback) => /^#[0-9a-f]{6}$/i.test(String(value || '')) ? value : fallback;
 const normalizeNumber = (value, fallback, min, max) => {
@@ -69,6 +69,13 @@ const normalizeNumber = (value, fallback, min, max) => {
 const normalizeEffects = (effects = {}) => Object.fromEntries(
   Object.entries(DEFAULT_PROMO_EFFECTS).map(([key, fallback]) => [key, effects[key] === undefined ? fallback : Boolean(effects[key])]),
 );
+
+const normalizeDishSize = (value) => {
+  const raw = Number(value ?? DEFAULT_PROMO_SETTINGS.dishSize);
+  if (!Number.isFinite(raw)) return DEFAULT_PROMO_SETTINGS.dishSize;
+  const migratedFromPercent = raw <= 180 ? Math.round((raw / 100) * 650) : raw;
+  return normalizeNumber(migratedFromPercent, DEFAULT_PROMO_SETTINGS.dishSize, 100, 650);
+};
 
 export const normalizePromoProject = (project = {}, dishes = []) => {
   const availableDishIds = new Set(dishes.filter((dish) => dish.visible !== false && dish.imageUrl).map((dish) => dish.id));
@@ -85,7 +92,7 @@ export const normalizePromoProject = (project = {}, dishes = []) => {
     ctaText: project.ctaText || DEFAULT_PROMO_SETTINGS.ctaText,
     showDescription: project.showDescription === undefined ? DEFAULT_PROMO_SETTINGS.showDescription : Boolean(project.showDescription),
     backgroundTone: normalizeNumber(project.backgroundTone, DEFAULT_PROMO_SETTINGS.backgroundTone, -40, 40),
-    dishSize: normalizeNumber(project.dishSize, DEFAULT_PROMO_SETTINGS.dishSize, 45, 160),
+    dishSize: normalizeDishSize(project.dishSize),
     offerColor: normalizeColor(project.offerColor, DEFAULT_PROMO_SETTINGS.offerColor),
     offerFont: normalizeFont(project.offerFont, DEFAULT_PROMO_SETTINGS.offerFont),
     offerSize: normalizeNumber(project.offerSize, DEFAULT_PROMO_SETTINGS.offerSize, 16, 76),
