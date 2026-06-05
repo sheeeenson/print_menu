@@ -19,28 +19,23 @@ const hexToRgb = (hex) => {
   return { r: (number >> 16) & 255, g: (number >> 8) & 255, b: number & 255 };
 };
 
-const mixRgb = (color, target, amount) => ({
-  r: Math.round(color.r + (target.r - color.r) * amount),
-  g: Math.round(color.g + (target.g - color.g) * amount),
-  b: Math.round(color.b + (target.b - color.b) * amount),
-});
+const clamp = (value, min, max) => Math.min(max, Math.max(min, Number(value)));
+
+const adjustRgb = (color, amount) => {
+  const target = amount >= 0 ? { r: 255, g: 255, b: 255 } : { r: 0, g: 0, b: 0 };
+  const ratio = Math.abs(clamp(amount, -40, 40)) / 100;
+  return {
+    r: Math.round(color.r + (target.r - color.r) * ratio),
+    g: Math.round(color.g + (target.g - color.g) * ratio),
+    b: Math.round(color.b + (target.b - color.b) * ratio),
+  };
+};
 
 const rgbToCss = ({ r, g, b }, alpha = 1) => `rgba(${r}, ${g}, ${b}, ${alpha})`;
 
-const buildPalette = (baseHex) => {
+const colorWithTone = (baseHex, tone = 0) => {
   const base = hexToRgb(baseHex);
-  const light = mixRgb(base, { r: 255, g: 255, b: 255 }, 0.24);
-  const dark = mixRgb(base, { r: 10, g: 8, b: 7 }, 0.34);
-  const glow = mixRgb(base, { r: 255, g: 255, b: 255 }, 0.18);
-
-  return {
-    baseHex,
-    base: rgbToCss(base),
-    light: rgbToCss(light),
-    dark: rgbToCss(dark),
-    glow: rgbToCss(glow, 0.72),
-    gradient: `radial-gradient(circle at 62% 42%, ${rgbToCss(light, 0.72)} 0%, ${rgbToCss(base, 0.95)} 44%, ${rgbToCss(dark, 0.76)} 100%)`,
-  };
+  return rgbToCss(adjustRgb(base, tone));
 };
 
 const positionClass = (position) => ({
@@ -54,7 +49,7 @@ export function PromoPreview({ dish, settings, index = 0 }) {
   const [sampledColor, setSampledColor] = useState('');
   const fallbackColor = getFallbackImageBackground(index);
   const edgeColor = sampledColor || fallbackColor;
-  const palette = useMemo(() => buildPalette(edgeColor), [edgeColor]);
+  const tunedBackground = useMemo(() => colorWithTone(edgeColor, settings.backgroundTone), [edgeColor, settings.backgroundTone]);
   const effects = settings.effects ?? {};
   const oldPrice = getPrice(dish?.oldPrice);
   const salePrice = getPrice(dish?.newPrice);
@@ -95,26 +90,27 @@ export function PromoPreview({ dish, settings, index = 0 }) {
           className={sceneClass}
           style={{
             '--promo-duration': `${settings.duration || 8}s`,
-            '--promo-edge-color': edgeColor,
-            '--promo-bg': palette.gradient,
-            '--promo-base': palette.base,
-            '--promo-light': palette.light,
-            '--promo-dark': palette.dark,
-            '--promo-glow': palette.glow,
+            '--promo-edge-color': tunedBackground,
           }}
         >
           <div className="promo-background" />
-          {effects.glow ? <div className="promo-dish-glow" aria-hidden="true" /> : null}
           {effects.lightSweep ? <div className="promo-light-sweep" aria-hidden="true" /> : null}
 
           <div className="promo-copy-block">
-            <p className="promo-eyebrow">{offerText}</p>
-            <h2>{headline}</h2>
-            {dish?.nameGe ? <h3>{dish.nameGe}</h3> : null}
-            {dish?.descriptionEn ? <p className="promo-description">{dish.descriptionEn}</p> : null}
+            <p
+              className="promo-eyebrow"
+              style={{ color: settings.offerColor, fontFamily: settings.offerFont, fontSize: `${settings.offerSize}px` }}
+            >
+              {offerText}
+            </p>
+            <h2 style={{ color: settings.headlineColor, fontFamily: settings.headlineFont, fontSize: `${settings.headlineSize}px` }}>{headline}</h2>
+            {dish?.nameGe ? <h3 style={{ color: settings.geTitleColor, fontFamily: settings.geTitleFont, fontSize: `${settings.geTitleSize}px` }}>{dish.nameGe}</h3> : null}
+            {settings.showDescription && dish?.descriptionEn ? (
+              <p className="promo-description" style={{ color: settings.descriptionColor, fontFamily: settings.descriptionFont, fontSize: `${settings.descriptionSize}px` }}>{dish.descriptionEn}</p>
+            ) : null}
           </div>
 
-          <div className="promo-dish-stage">
+          <div className="promo-dish-stage" style={{ transform: `scale(${(settings.dishSize || 100) / 100})` }}>
             {dish?.imageUrl ? (
               <img className="promo-dish-image" src={dish.imageUrl} alt={dish.nameEn || dish.nameGe || 'Dish'} crossOrigin="anonymous" />
             ) : (
@@ -124,12 +120,12 @@ export function PromoPreview({ dish, settings, index = 0 }) {
 
           {hasPrice ? (
             <div className="promo-price-card">
-              {oldPrice ? <span className="promo-old-price">{oldPrice}</span> : null}
-              {salePrice ? <strong>{salePrice}</strong> : null}
+              {oldPrice ? <span className="promo-old-price" style={{ color: settings.oldPriceColor, fontFamily: settings.oldPriceFont, fontSize: `${settings.oldPriceSize}px` }}>{oldPrice}</span> : null}
+              {salePrice ? <strong style={{ color: settings.salePriceColor, fontFamily: settings.salePriceFont, fontSize: `${settings.salePriceSize}px` }}>{salePrice}</strong> : null}
             </div>
           ) : null}
 
-          <div className="promo-cta">{settings.ctaText || 'ORDER NOW'}</div>
+          <div className="promo-cta" style={{ color: settings.ctaColor, fontFamily: settings.ctaFont, fontSize: `${settings.ctaSize}px` }}>{settings.ctaText || 'ORDER NOW'}</div>
 
           {effects.gifOverlay && settings.gifUrl ? (
             <img
