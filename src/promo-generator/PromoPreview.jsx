@@ -39,12 +39,12 @@ const colorWithTone = (baseHex, tone = 0) => {
 };
 
 const positionClass = (position) => ({
-  textLeft: 'promo-gif-text-left',
-  topLeft: 'promo-gif-text-left',
+  textLeft: 'promo-gif-headline-left',
+  topLeft: 'promo-gif-headline-left',
   bottomLeft: 'promo-gif-bottom-text-left',
   topRight: 'promo-gif-price-right',
   bottomRight: 'promo-gif-bottom-right',
-}[position] ?? 'promo-gif-text-left');
+}[position] ?? 'promo-gif-headline-left');
 
 export function PromoPreview({ dish, settings, index = 0 }) {
   const [sampledColor, setSampledColor] = useState('');
@@ -57,6 +57,7 @@ export function PromoPreview({ dish, settings, index = 0 }) {
   const hasPrice = Boolean(oldPrice || salePrice);
   const headline = settings.headline || dish?.nameEn || 'TV Promo';
   const offerText = settings.offerText || (dish?.badges?.[0]?.label ?? dish?.badges?.[0]?.name ?? 'Fresh today');
+  const descriptionLines = [dish?.descriptionEn, dish?.descriptionGe].filter(Boolean);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,16 +99,22 @@ export function PromoPreview({ dish, settings, index = 0 }) {
           {effects.lightSweep ? <div className="promo-light-sweep" aria-hidden="true" /> : null}
 
           <div className="promo-copy-block">
-            <p
-              className="promo-eyebrow"
-              style={{ color: settings.offerColor, fontFamily: settings.offerFont, fontSize: `${settings.offerSize}px` }}
-            >
-              {offerText}
-            </p>
+            {settings.showOffer ? (
+              <p
+                className="promo-eyebrow"
+                style={{ color: settings.offerColor, fontFamily: settings.offerFont, fontSize: `${settings.offerSize}px` }}
+              >
+                {offerText}
+              </p>
+            ) : null}
             <h2 style={{ color: settings.headlineColor, fontFamily: settings.headlineFont, fontSize: `${settings.headlineSize}px` }}>{headline}</h2>
             {dish?.nameGe ? <h3 style={{ color: settings.geTitleColor, fontFamily: settings.geTitleFont, fontSize: `${settings.geTitleSize}px` }}>{dish.nameGe}</h3> : null}
-            {settings.showDescription && dish?.descriptionEn ? (
-              <p className="promo-description" style={{ color: settings.descriptionColor, fontFamily: settings.descriptionFont, fontSize: `${settings.descriptionSize}px` }}>{dish.descriptionEn}</p>
+            {settings.showDescription && descriptionLines.length ? (
+              <div className="promo-description-stack" style={{ transform: `translateY(${settings.descriptionOffsetY || 0}px)` }}>
+                {descriptionLines.map((line, lineIndex) => (
+                  <p key={`${line}-${lineIndex}`} className="promo-description" style={{ color: settings.descriptionColor, fontFamily: settings.descriptionFont, fontSize: `${settings.descriptionSize}px` }}>{line}</p>
+                ))}
+              </div>
             ) : null}
           </div>
 
@@ -126,7 +133,7 @@ export function PromoPreview({ dish, settings, index = 0 }) {
             </div>
           ) : null}
 
-          <div className="promo-cta" style={{ color: settings.ctaColor, fontFamily: settings.ctaFont, fontSize: `${settings.ctaSize}px` }}>{settings.ctaText || 'ORDER NOW'}</div>
+          {settings.showCta ? <div className="promo-cta" style={{ color: settings.ctaColor, fontFamily: settings.ctaFont, fontSize: `${settings.ctaSize}px` }}>{settings.ctaText || 'ORDER NOW'}</div> : null}
 
           {effects.gifOverlay && settings.gifUrl ? (
             <img
