@@ -29,8 +29,8 @@ const rgbToCss = ({ r, g, b }, alpha = 1) => `rgba(${r}, ${g}, ${b}, ${alpha})`;
 
 const buildPalette = (baseHex) => {
   const base = hexToRgb(baseHex);
-  const light = mixRgb(base, { r: 255, g: 255, b: 255 }, 0.28);
-  const dark = mixRgb(base, { r: 10, g: 8, b: 7 }, 0.38);
+  const light = mixRgb(base, { r: 255, g: 255, b: 255 }, 0.24);
+  const dark = mixRgb(base, { r: 10, g: 8, b: 7 }, 0.34);
   const glow = mixRgb(base, { r: 255, g: 255, b: 255 }, 0.18);
 
   return {
@@ -39,7 +39,7 @@ const buildPalette = (baseHex) => {
     light: rgbToCss(light),
     dark: rgbToCss(dark),
     glow: rgbToCss(glow, 0.72),
-    gradient: `radial-gradient(circle at 62% 42%, ${rgbToCss(light, 0.88)} 0%, ${rgbToCss(base, 0.98)} 44%, ${rgbToCss(dark, 0.92)} 100%)`,
+    gradient: `radial-gradient(circle at 62% 42%, ${rgbToCss(light, 0.72)} 0%, ${rgbToCss(base, 0.95)} 44%, ${rgbToCss(dark, 0.76)} 100%)`,
   };
 };
 
@@ -80,7 +80,6 @@ export function PromoPreview({ dish, settings, index = 0 }) {
 
   const sceneClass = [
     'promo-scene',
-    dish?.imageUrl ? 'promo-has-source-image' : '',
     effects.slowZoom ? 'promo-effect-slow-zoom' : '',
     effects.fastEntrance ? 'promo-effect-fast-entrance' : '',
     effects.stopMotion ? 'promo-effect-stop-motion' : '',
@@ -102,11 +101,9 @@ export function PromoPreview({ dish, settings, index = 0 }) {
             '--promo-light': palette.light,
             '--promo-dark': palette.dark,
             '--promo-glow': palette.glow,
-            '--promo-source-image': dish?.imageUrl ? `url("${dish.imageUrl}")` : 'none',
           }}
         >
           <div className="promo-background" />
-          {dish?.imageUrl ? <div className="promo-photo-fill" aria-hidden="true" /> : null}
           {effects.glow ? <div className="promo-dish-glow" aria-hidden="true" /> : null}
           {effects.lightSweep ? <div className="promo-light-sweep" aria-hidden="true" /> : null}
 
