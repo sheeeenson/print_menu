@@ -38,13 +38,16 @@ const colorWithTone = (baseHex, tone = 0) => {
   return rgbToCss(adjustRgb(base, tone));
 };
 
-const positionClass = (position) => ({
-  textLeft: 'promo-gif-headline-left',
-  topLeft: 'promo-gif-headline-left',
-  bottomLeft: 'promo-gif-bottom-text-left',
-  topRight: 'promo-gif-price-right',
-  bottomRight: 'promo-gif-bottom-right',
-}[position] ?? 'promo-gif-headline-left');
+const getGifPositionClass = (position, showCta) => {
+  if (position === 'bottomLeft') return showCta ? 'promo-gif-bottom-text-left' : 'promo-gif-cta-left';
+
+  return ({
+    textLeft: 'promo-gif-headline-left',
+    topLeft: 'promo-gif-headline-left',
+    topRight: 'promo-gif-price-right',
+    bottomRight: 'promo-gif-bottom-right',
+  }[position] ?? 'promo-gif-headline-left');
+};
 
 export function PromoPreview({ dish, settings, index = 0 }) {
   const [sampledColor, setSampledColor] = useState('');
@@ -137,7 +140,7 @@ export function PromoPreview({ dish, settings, index = 0 }) {
 
           {effects.gifOverlay && settings.gifUrl ? (
             <img
-              className={`promo-gif-overlay ${positionClass(settings.gifPosition)}`}
+              className={`promo-gif-overlay ${getGifPositionClass(settings.gifPosition, settings.showCta)}`}
               src={settings.gifUrl}
               alt=""
               aria-hidden="true"
