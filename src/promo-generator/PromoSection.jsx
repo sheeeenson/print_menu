@@ -30,6 +30,8 @@ const EFFECT_GROUPS = [
 
 const getDishTitle = (dish) => dish?.nameEn || dish?.nameGe || 'Untitled dish';
 
+const getActiveFormatSettings = (settings, formatId = settings.formatId) => settings.formats?.[formatId] ?? {};
+
 function PromoControlGroup({ title, children }) {
   return (
     <section className="promo-panel-group">
@@ -121,14 +123,40 @@ export function PromoSection({ project }) {
   const activeFormat = getPromoFormat(settings.formatId);
 
   const updateSettings = (changes) => {
-    setSettings((current) => ({ ...current, ...changes }));
+    setSettings((current) => {
+      const activeFormatSettings = getActiveFormatSettings(current);
+      const nextFormatSettings = { ...activeFormatSettings, ...changes };
+      return {
+        ...current,
+        ...changes,
+        formats: {
+          ...(current.formats ?? {}),
+          [current.formatId]: nextFormatSettings,
+        },
+      };
+    });
+  };
+
+  const switchFormat = (formatId) => {
+    setSettings((current) => {
+      const currentFormatSettings = getActiveFormatSettings(current);
+      const nextFormatSettings = getActiveFormatSettings(current, formatId);
+      return {
+        ...current,
+        ...nextFormatSettings,
+        formatId,
+        formats: {
+          ...(current.formats ?? {}),
+          [current.formatId]: currentFormatSettings,
+        },
+      };
+    });
   };
 
   const updateEffect = (key, value) => {
-    setSettings((current) => ({
-      ...current,
-      effects: { ...DEFAULT_PROMO_EFFECTS, ...(current.effects ?? {}), [key]: value },
-    }));
+    updateSettings({
+      effects: { ...DEFAULT_PROMO_EFFECTS, ...(settings.effects ?? {}), [key]: value },
+    });
   };
 
   const toggleCategoryOpen = (categoryId) => {
@@ -156,7 +184,7 @@ export function PromoSection({ project }) {
                 key={format.id}
                 className={settings.formatId === format.id ? 'active' : ''}
                 type="button"
-                onClick={() => updateSettings({ formatId: format.id })}
+                onClick={() => switchFormat(format.id)}
               >
                 <strong>{format.label}</strong>
                 <small>{format.width}×{format.height}</small>
@@ -194,7 +222,7 @@ export function PromoSection({ project }) {
                           return (
                             <div key={dish.id} className={selected ? 'selected' : ''}>
                               <label>
-                                <input type="radio" name="tv-promo-dish" checked={selected} onChange={() => updateSettings({ selectedDishId: dish.id })} />
+                                <input type="radio" name="tv-promo-dish" checked={selected} onChange={() => setSettings((current) => ({ ...current, selectedDishId: dish.id }))} />
                                 {dish.imageUrl ? <img src={dish.imageUrl} alt="" /> : <span className="image-menu-mini-placeholder" />}
                                 <span><strong>{dish.nameEn}</strong><small>{dish.nameGe}</small></span>
                               </label>
