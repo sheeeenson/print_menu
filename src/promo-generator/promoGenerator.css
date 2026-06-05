@@ -17,8 +17,8 @@
 .promo-generator-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
 .promo-output-pill { border: 1px solid #ded1c1; border-radius: 999px; background: #fffaf2; color: #231f20; padding: 9px 14px; font-weight: 950; box-shadow: 0 10px 25px rgba(35,31,32,0.06); }
 .promo-preview-shell { overflow: auto; padding: 22px 26px 44px; display: grid; justify-items: center; align-items: start; min-height: 0; border-radius: 28px; background: radial-gradient(circle at top, rgba(255,250,242,0.95), rgba(223,214,201,0.42)); }
-.promo-canvas-wrap { width: min(100%, 1180px); aspect-ratio: 16 / 9; position: relative; box-shadow: 0 30px 70px rgba(35,31,32,0.18); border-radius: 28px; overflow: hidden; background: #231f20; }
-.promo-scene { width: 1920px; height: 1080px; position: absolute; left: 0; top: 0; transform: scale(calc(min(1180px, 100vw - 500px) / 1920)); transform-origin: top left; overflow: hidden; background: var(--promo-bg); color: #fffaf2; isolation: isolate; font-family: inherit; }
+.promo-canvas-wrap { width: 1180px; max-width: 100%; aspect-ratio: 16 / 9; position: relative; box-shadow: 0 30px 70px rgba(35,31,32,0.18); border-radius: 28px; overflow: hidden; background: #231f20; }
+.promo-scene { width: 1920px; height: 1080px; position: absolute; left: 0; top: 0; transform: scale(0.614583); transform-origin: top left; overflow: hidden; background: var(--promo-bg); color: #fffaf2; isolation: isolate; font-family: inherit; }
 .promo-background { position: absolute; inset: 0; background: var(--promo-bg); z-index: 0; }
 .promo-background::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 78% 24%, rgba(255,255,255,0.26), transparent 26%), linear-gradient(120deg, rgba(0,0,0,0.22), transparent 48%, rgba(0,0,0,0.32)); }
 .promo-dish-glow { position: absolute; width: 760px; height: 520px; right: 225px; top: 265px; z-index: 1; border-radius: 50%; background: var(--promo-glow); filter: blur(62px); opacity: 0.78; animation: promoGlowPulse var(--promo-duration) ease-in-out infinite; }
@@ -53,5 +53,6 @@
 @keyframes promoFastEntrance { 0% { opacity: 0; transform: translate3d(180px, 80px, 0) rotate(5deg) scale(0.82); } 100% { opacity: 1; transform: translate3d(0, 0, 0) rotate(0deg) scale(1); } }
 @keyframes promoStopMotion { 0% { transform: translate(0, 0) rotate(0deg); } 25% { transform: translate(7px, -5px) rotate(0.7deg); } 50% { transform: translate(-6px, 4px) rotate(-0.65deg); } 75% { transform: translate(4px, 6px) rotate(0.45deg); } 100% { transform: translate(0, 0) rotate(0deg); } }
 @keyframes promoPricePunch { 0%, 58%, 100% { transform: scale(1); } 64% { transform: scale(1.18) rotate(-1deg); } 72% { transform: scale(0.96) rotate(0.8deg); } 80% { transform: scale(1.04); } }
-@media (max-width: 1180px) { .promo-generator-section { grid-template-columns: 350px minmax(0, 1fr); } .promo-scene { transform: scale(calc((100vw - 430px) / 1920)); } }
+@media (max-width: 1180px) { .promo-generator-section { grid-template-columns: 350px minmax(0, 1fr); } .promo-canvas-wrap { width: 960px; } .promo-scene { transform: scale(0.5); } }
+@media (max-width: 900px) { .promo-generator-section { grid-template-columns: 1fr; } .promo-generator-panel { max-height: none; border-right: 0; border-bottom: 1px solid #dfd6c9; } .promo-canvas-wrap { width: 720px; } .promo-scene { transform: scale(0.375); } }
 @media print { .promo-generator-section { display: none; } }
