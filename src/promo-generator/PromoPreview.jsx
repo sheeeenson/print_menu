@@ -29,9 +29,9 @@ const rgbToCss = ({ r, g, b }, alpha = 1) => `rgba(${r}, ${g}, ${b}, ${alpha})`;
 
 const buildPalette = (baseHex) => {
   const base = hexToRgb(baseHex);
-  const light = mixRgb(base, { r: 255, g: 255, b: 255 }, 0.42);
-  const dark = mixRgb(base, { r: 15, g: 12, b: 10 }, 0.44);
-  const glow = mixRgb(base, { r: 255, g: 255, b: 255 }, 0.22);
+  const light = mixRgb(base, { r: 255, g: 255, b: 255 }, 0.24);
+  const dark = mixRgb(base, { r: 10, g: 8, b: 7 }, 0.34);
+  const glow = mixRgb(base, { r: 255, g: 255, b: 255 }, 0.18);
 
   return {
     baseHex,
@@ -39,7 +39,7 @@ const buildPalette = (baseHex) => {
     light: rgbToCss(light),
     dark: rgbToCss(dark),
     glow: rgbToCss(glow, 0.72),
-    gradient: `radial-gradient(circle at 58% 42%, ${rgbToCss(light)} 0%, ${rgbToCss(base)} 43%, ${rgbToCss(dark)} 100%)`,
+    gradient: `radial-gradient(circle at 62% 42%, ${rgbToCss(light, 0.72)} 0%, ${rgbToCss(base, 0.95)} 44%, ${rgbToCss(dark, 0.76)} 100%)`,
   };
 };
 
@@ -53,7 +53,8 @@ const positionClass = (position) => ({
 export function PromoPreview({ dish, settings, index = 0 }) {
   const [sampledColor, setSampledColor] = useState('');
   const fallbackColor = getFallbackImageBackground(index);
-  const palette = useMemo(() => buildPalette(sampledColor || fallbackColor), [fallbackColor, sampledColor]);
+  const edgeColor = sampledColor || fallbackColor;
+  const palette = useMemo(() => buildPalette(edgeColor), [edgeColor]);
   const effects = settings.effects ?? {};
   const oldPrice = getPrice(dish?.oldPrice);
   const salePrice = getPrice(dish?.newPrice);
@@ -94,6 +95,7 @@ export function PromoPreview({ dish, settings, index = 0 }) {
           className={sceneClass}
           style={{
             '--promo-duration': `${settings.duration || 8}s`,
+            '--promo-edge-color': edgeColor,
             '--promo-bg': palette.gradient,
             '--promo-base': palette.base,
             '--promo-light': palette.light,
