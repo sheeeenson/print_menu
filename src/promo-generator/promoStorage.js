@@ -29,9 +29,7 @@ export const DEFAULT_PROMO_EFFECTS = Object.freeze({
   gifOverlay: false,
 });
 
-export const DEFAULT_PROMO_SETTINGS = Object.freeze({
-  selectedDishId: '',
-  formatId: 'landscape',
+export const DEFAULT_PROMO_FORMAT_SETTINGS = Object.freeze({
   duration: 8,
   headline: '',
   offerText: '',
@@ -69,9 +67,18 @@ export const DEFAULT_PROMO_SETTINGS = Object.freeze({
   effects: { ...DEFAULT_PROMO_EFFECTS },
 });
 
-const normalizeDuration = (value) => PROMO_DURATIONS.includes(Number(value)) ? Number(value) : DEFAULT_PROMO_SETTINGS.duration;
+export const DEFAULT_PROMO_SETTINGS = Object.freeze({
+  selectedDishId: '',
+  formatId: 'landscape',
+  ...DEFAULT_PROMO_FORMAT_SETTINGS,
+  formats: {},
+});
+
+export const PROMO_FORMAT_SETTING_KEYS = Object.freeze(Object.keys(DEFAULT_PROMO_FORMAT_SETTINGS));
+
+const normalizeDuration = (value) => PROMO_DURATIONS.includes(Number(value)) ? Number(value) : DEFAULT_PROMO_FORMAT_SETTINGS.duration;
 const normalizeFormatId = (value) => PROMO_FORMATS.some((format) => format.id === value) ? value : DEFAULT_PROMO_SETTINGS.formatId;
-const normalizeGifPosition = (value) => ['textLeft', 'topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(value) ? value : DEFAULT_PROMO_SETTINGS.gifPosition;
+const normalizeGifPosition = (value) => ['textLeft', 'topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(value) ? value : DEFAULT_PROMO_FORMAT_SETTINGS.gifPosition;
 const normalizeFont = (value, fallback) => PROMO_FONT_OPTIONS.includes(value) ? value : fallback;
 const normalizeColor = (value, fallback) => /^#[0-9a-f]{6}$/i.test(String(value || '')) ? value : fallback;
 const normalizeNumber = (value, fallback, min, max) => {
@@ -85,57 +92,80 @@ const normalizeEffects = (effects = {}) => Object.fromEntries(
 );
 
 const normalizeDishSize = (value) => {
-  const raw = Number(value ?? DEFAULT_PROMO_SETTINGS.dishSize);
-  if (!Number.isFinite(raw)) return DEFAULT_PROMO_SETTINGS.dishSize;
+  const raw = Number(value ?? DEFAULT_PROMO_FORMAT_SETTINGS.dishSize);
+  if (!Number.isFinite(raw)) return DEFAULT_PROMO_FORMAT_SETTINGS.dishSize;
   const migratedFromPercent = raw <= 180 ? Math.round((raw / 100) * 650) : raw;
-  return normalizeNumber(migratedFromPercent, DEFAULT_PROMO_SETTINGS.dishSize, 100, 650);
+  return normalizeNumber(migratedFromPercent, DEFAULT_PROMO_FORMAT_SETTINGS.dishSize, 100, 650);
 };
+
+const pickFormatSettings = (project = {}) => Object.fromEntries(
+  PROMO_FORMAT_SETTING_KEYS
+    .filter((key) => project[key] !== undefined)
+    .map((key) => [key, project[key]]),
+);
+
+const normalizePromoFormatSettings = (project = {}) => ({
+  ...DEFAULT_PROMO_FORMAT_SETTINGS,
+  duration: normalizeDuration(project.duration),
+  headline: project.headline || '',
+  offerText: project.offerText || project.discountText || '',
+  ctaText: project.ctaText || DEFAULT_PROMO_FORMAT_SETTINGS.ctaText,
+  showOffer: project.showOffer === undefined ? DEFAULT_PROMO_FORMAT_SETTINGS.showOffer : Boolean(project.showOffer),
+  showDescription: project.showDescription === undefined ? DEFAULT_PROMO_FORMAT_SETTINGS.showDescription : Boolean(project.showDescription),
+  showCta: project.showCta === undefined ? DEFAULT_PROMO_FORMAT_SETTINGS.showCta : Boolean(project.showCta),
+  descriptionOffsetY: normalizeNumber(project.descriptionOffsetY, DEFAULT_PROMO_FORMAT_SETTINGS.descriptionOffsetY, -180, 180),
+  backgroundTone: normalizeNumber(project.backgroundTone, DEFAULT_PROMO_FORMAT_SETTINGS.backgroundTone, -40, 40),
+  dishSize: normalizeDishSize(project.dishSize),
+  offerColor: normalizeColor(project.offerColor, DEFAULT_PROMO_FORMAT_SETTINGS.offerColor),
+  offerFont: normalizeFont(project.offerFont, DEFAULT_PROMO_FORMAT_SETTINGS.offerFont),
+  offerSize: normalizeNumber(project.offerSize, DEFAULT_PROMO_FORMAT_SETTINGS.offerSize, 16, 76),
+  headlineColor: normalizeColor(project.headlineColor, DEFAULT_PROMO_FORMAT_SETTINGS.headlineColor),
+  headlineFont: normalizeFont(project.headlineFont, DEFAULT_PROMO_FORMAT_SETTINGS.headlineFont),
+  headlineSize: normalizeNumber(project.headlineSize, DEFAULT_PROMO_FORMAT_SETTINGS.headlineSize, 42, 170),
+  geTitleColor: normalizeColor(project.geTitleColor, DEFAULT_PROMO_FORMAT_SETTINGS.geTitleColor),
+  geTitleFont: normalizeFont(project.geTitleFont, DEFAULT_PROMO_FORMAT_SETTINGS.geTitleFont),
+  geTitleSize: normalizeNumber(project.geTitleSize, DEFAULT_PROMO_FORMAT_SETTINGS.geTitleSize, 24, 96),
+  descriptionColor: normalizeColor(project.descriptionColor, DEFAULT_PROMO_FORMAT_SETTINGS.descriptionColor),
+  descriptionFont: normalizeFont(project.descriptionFont, DEFAULT_PROMO_FORMAT_SETTINGS.descriptionFont),
+  descriptionSize: normalizeNumber(project.descriptionSize, DEFAULT_PROMO_FORMAT_SETTINGS.descriptionSize, 14, 60),
+  ctaColor: normalizeColor(project.ctaColor, DEFAULT_PROMO_FORMAT_SETTINGS.ctaColor),
+  ctaFont: normalizeFont(project.ctaFont, DEFAULT_PROMO_FORMAT_SETTINGS.ctaFont),
+  ctaSize: normalizeNumber(project.ctaSize, DEFAULT_PROMO_FORMAT_SETTINGS.ctaSize, 18, 72),
+  oldPriceColor: normalizeColor(project.oldPriceColor, DEFAULT_PROMO_FORMAT_SETTINGS.oldPriceColor),
+  oldPriceFont: normalizeFont(project.oldPriceFont, DEFAULT_PROMO_FORMAT_SETTINGS.oldPriceFont),
+  oldPriceSize: normalizeNumber(project.oldPriceSize, DEFAULT_PROMO_FORMAT_SETTINGS.oldPriceSize, 18, 88),
+  salePriceColor: normalizeColor(project.salePriceColor, DEFAULT_PROMO_FORMAT_SETTINGS.salePriceColor),
+  salePriceFont: normalizeFont(project.salePriceFont, DEFAULT_PROMO_FORMAT_SETTINGS.salePriceFont),
+  salePriceSize: normalizeNumber(project.salePriceSize, DEFAULT_PROMO_FORMAT_SETTINGS.salePriceSize, 42, 190),
+  gifUrl: project.gifUrl || project.stickerUrl || '',
+  gifPosition: normalizeGifPosition(project.gifPosition || project.stickerPosition),
+  gifSize: normalizeNumber(project.gifSize ?? project.stickerSize, DEFAULT_PROMO_FORMAT_SETTINGS.gifSize, 6, 42),
+  effects: normalizeEffects(project.effects),
+});
 
 export const normalizePromoProject = (project = {}, dishes = []) => {
   const availableDishIds = new Set(dishes.filter((dish) => dish.visible !== false && dish.imageUrl).map((dish) => dish.id));
   const firstDishId = [...availableDishIds][0] ?? '';
   const selectedDishId = availableDishIds.has(project.selectedDishId) ? project.selectedDishId : firstDishId;
+  const formatId = normalizeFormatId(project.formatId);
+  const legacyFormatSettings = pickFormatSettings(project);
+
+  const formats = Object.fromEntries(PROMO_FORMATS.map((format) => {
+    const source = {
+      ...DEFAULT_PROMO_FORMAT_SETTINGS,
+      ...(project.formats?.[format.id] ?? {}),
+      ...(format.id === formatId ? legacyFormatSettings : {}),
+    };
+    return [format.id, normalizePromoFormatSettings(source)];
+  }));
+  const activeFormatSettings = formats[formatId] ?? normalizePromoFormatSettings(legacyFormatSettings);
 
   return {
     ...DEFAULT_PROMO_SETTINGS,
-    ...project,
+    ...activeFormatSettings,
     selectedDishId,
-    formatId: normalizeFormatId(project.formatId),
-    duration: normalizeDuration(project.duration),
-    headline: project.headline || '',
-    offerText: project.offerText || project.discountText || '',
-    ctaText: project.ctaText || DEFAULT_PROMO_SETTINGS.ctaText,
-    showOffer: project.showOffer === undefined ? DEFAULT_PROMO_SETTINGS.showOffer : Boolean(project.showOffer),
-    showDescription: project.showDescription === undefined ? DEFAULT_PROMO_SETTINGS.showDescription : Boolean(project.showDescription),
-    showCta: project.showCta === undefined ? DEFAULT_PROMO_SETTINGS.showCta : Boolean(project.showCta),
-    descriptionOffsetY: normalizeNumber(project.descriptionOffsetY, DEFAULT_PROMO_SETTINGS.descriptionOffsetY, -180, 180),
-    backgroundTone: normalizeNumber(project.backgroundTone, DEFAULT_PROMO_SETTINGS.backgroundTone, -40, 40),
-    dishSize: normalizeDishSize(project.dishSize),
-    offerColor: normalizeColor(project.offerColor, DEFAULT_PROMO_SETTINGS.offerColor),
-    offerFont: normalizeFont(project.offerFont, DEFAULT_PROMO_SETTINGS.offerFont),
-    offerSize: normalizeNumber(project.offerSize, DEFAULT_PROMO_SETTINGS.offerSize, 16, 76),
-    headlineColor: normalizeColor(project.headlineColor, DEFAULT_PROMO_SETTINGS.headlineColor),
-    headlineFont: normalizeFont(project.headlineFont, DEFAULT_PROMO_SETTINGS.headlineFont),
-    headlineSize: normalizeNumber(project.headlineSize, DEFAULT_PROMO_SETTINGS.headlineSize, 42, 170),
-    geTitleColor: normalizeColor(project.geTitleColor, DEFAULT_PROMO_SETTINGS.geTitleColor),
-    geTitleFont: normalizeFont(project.geTitleFont, DEFAULT_PROMO_SETTINGS.geTitleFont),
-    geTitleSize: normalizeNumber(project.geTitleSize, DEFAULT_PROMO_SETTINGS.geTitleSize, 24, 96),
-    descriptionColor: normalizeColor(project.descriptionColor, DEFAULT_PROMO_SETTINGS.descriptionColor),
-    descriptionFont: normalizeFont(project.descriptionFont, DEFAULT_PROMO_SETTINGS.descriptionFont),
-    descriptionSize: normalizeNumber(project.descriptionSize, DEFAULT_PROMO_SETTINGS.descriptionSize, 14, 60),
-    ctaColor: normalizeColor(project.ctaColor, DEFAULT_PROMO_SETTINGS.ctaColor),
-    ctaFont: normalizeFont(project.ctaFont, DEFAULT_PROMO_SETTINGS.ctaFont),
-    ctaSize: normalizeNumber(project.ctaSize, DEFAULT_PROMO_SETTINGS.ctaSize, 18, 72),
-    oldPriceColor: normalizeColor(project.oldPriceColor, DEFAULT_PROMO_SETTINGS.oldPriceColor),
-    oldPriceFont: normalizeFont(project.oldPriceFont, DEFAULT_PROMO_SETTINGS.oldPriceFont),
-    oldPriceSize: normalizeNumber(project.oldPriceSize, DEFAULT_PROMO_SETTINGS.oldPriceSize, 18, 88),
-    salePriceColor: normalizeColor(project.salePriceColor, DEFAULT_PROMO_SETTINGS.salePriceColor),
-    salePriceFont: normalizeFont(project.salePriceFont, DEFAULT_PROMO_SETTINGS.salePriceFont),
-    salePriceSize: normalizeNumber(project.salePriceSize, DEFAULT_PROMO_SETTINGS.salePriceSize, 42, 190),
-    gifUrl: project.gifUrl || project.stickerUrl || '',
-    gifPosition: normalizeGifPosition(project.gifPosition || project.stickerPosition),
-    gifSize: normalizeNumber(project.gifSize ?? project.stickerSize, DEFAULT_PROMO_SETTINGS.gifSize, 6, 42),
-    effects: normalizeEffects(project.effects),
+    formatId,
+    formats,
   };
 };
 
