@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { PromoPreview } from './PromoPreview.jsx';
-import { DEFAULT_PROMO_EFFECTS, getPromoFormat, loadPromoProject, PROMO_DURATIONS, PROMO_FONT_OPTIONS, PROMO_FORMATS, savePromoProject } from './promoStorage.js';
+import { DEFAULT_PROMO_EFFECTS, DEFAULT_PROMO_LAYOUT_OFFSETS, getPromoFormat, loadPromoProject, PROMO_DURATIONS, PROMO_FONT_OPTIONS, PROMO_FORMATS, savePromoProject } from './promoStorage.js';
 import './promoGenerator.css';
 
 const EFFECT_GROUPS = [
@@ -26,6 +26,14 @@ const EFFECT_GROUPS = [
       ['gifOverlay', 'GIF Overlay'],
     ],
   },
+];
+
+const LAYOUT_CONTROL_GROUPS = [
+  { title: 'Text block', x: 'copyX', y: 'copyY' },
+  { title: 'Dish photo', x: 'dishX', y: 'dishY' },
+  { title: 'Price', x: 'priceX', y: 'priceY' },
+  { title: 'CTA', x: 'ctaX', y: 'ctaY' },
+  { title: 'GIF', x: 'gifX', y: 'gifY' },
 ];
 
 const getDishTitle = (dish) => dish?.nameEn || dish?.nameGe || 'Untitled dish';
@@ -164,6 +172,22 @@ function TextStyleControls({ title, prefix, settings, updateSettings, sizeMin = 
   );
 }
 
+function LayoutOffsetControls({ settings, updateLayoutOffset, resetLayoutOffsets }) {
+  const offsets = settings.layoutOffsets ?? DEFAULT_PROMO_LAYOUT_OFFSETS;
+  return (
+    <div className="promo-style-block">
+      <button className="secondary-button" type="button" onClick={resetLayoutOffsets}>Reset Layout</button>
+      {LAYOUT_CONTROL_GROUPS.map((group) => (
+        <div key={group.title} className="promo-style-block">
+          <h4>{group.title}</h4>
+          <RangeControl label="X" value={offsets[group.x] ?? 0} min={-600} max={600} onChange={(value) => updateLayoutOffset(group.x, value)} suffix="px" />
+          <RangeControl label="Y" value={offsets[group.y] ?? 0} min={-600} max={600} onChange={(value) => updateLayoutOffset(group.y, value)} suffix="px" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function PromoSection({ project }) {
   const contentCategories = useMemo(() => project.categories ?? [], [project.categories]);
   const contentDishes = useMemo(() => project.dishes ?? [], [project.dishes]);
@@ -210,6 +234,20 @@ export function PromoSection({ project }) {
         },
       };
     });
+  };
+
+  const updateLayoutOffset = (key, value) => {
+    updateSettings({
+      layoutOffsets: {
+        ...DEFAULT_PROMO_LAYOUT_OFFSETS,
+        ...(settings.layoutOffsets ?? {}),
+        [key]: value,
+      },
+    });
+  };
+
+  const resetLayoutOffsets = () => {
+    updateSettings({ layoutOffsets: { ...DEFAULT_PROMO_LAYOUT_OFFSETS } });
   };
 
   const switchFormat = (formatId) => {
@@ -373,6 +411,10 @@ export function PromoSection({ project }) {
           <RangeControl label="Dish size" value={settings.dishSize} min={100} max={650} onChange={(dishSize) => updateSettings({ dishSize })} suffix="px" />
           <ToggleField label="Show description" checked={Boolean(settings.showDescription)} onChange={(showDescription) => updateSettings({ showDescription })} />
           <RangeControl label="Description vertical offset" value={settings.descriptionOffsetY} min={-180} max={180} onChange={(descriptionOffsetY) => updateSettings({ descriptionOffsetY })} suffix="px" />
+        </PromoControlGroup>
+
+        <PromoControlGroup title="Layout">
+          <LayoutOffsetControls settings={settings} updateLayoutOffset={updateLayoutOffset} resetLayoutOffsets={resetLayoutOffsets} />
         </PromoControlGroup>
 
         <PromoControlGroup title="Text styles">
