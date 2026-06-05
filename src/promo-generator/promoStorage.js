@@ -1,31 +1,40 @@
 const STORAGE_KEY = 'restaurant-menu-studio:tv-promo-generator:v1';
 
 export const PROMO_DURATIONS = Object.freeze([6, 8, 12, 16]);
-export const PROMO_STYLES = Object.freeze(['juicyReveal', 'pricePunch', 'stopMotion']);
-export const FUN_LEVELS = Object.freeze(['clean', 'normal', 'funny', 'crazy']);
+
+export const DEFAULT_PROMO_EFFECTS = Object.freeze({
+  slowZoom: true,
+  fastEntrance: false,
+  stopMotion: false,
+  pricePunch: true,
+  glow: true,
+  lightSweep: true,
+  gifOverlay: false,
+});
 
 export const DEFAULT_PROMO_SETTINGS = Object.freeze({
   selectedDishId: '',
   duration: 8,
-  style: 'juicyReveal',
   headline: '',
-  discountText: '-20%',
-  showSticker: false,
-  stickerUrl: '',
-  stickerPosition: 'topRight',
-  stickerSize: 18,
-  funLevel: 'normal',
+  offerText: '',
+  ctaText: 'ORDER NOW',
+  gifUrl: '',
+  gifPosition: 'topRight',
+  gifSize: 18,
+  effects: { ...DEFAULT_PROMO_EFFECTS },
 });
 
 const normalizeDuration = (value) => PROMO_DURATIONS.includes(Number(value)) ? Number(value) : DEFAULT_PROMO_SETTINGS.duration;
-const normalizeStyle = (value) => PROMO_STYLES.includes(value) ? value : DEFAULT_PROMO_SETTINGS.style;
-const normalizeFunLevel = (value) => FUN_LEVELS.includes(value) ? value : DEFAULT_PROMO_SETTINGS.funLevel;
-const normalizeStickerPosition = (value) => ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(value) ? value : DEFAULT_PROMO_SETTINGS.stickerPosition;
+const normalizeGifPosition = (value) => ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(value) ? value : DEFAULT_PROMO_SETTINGS.gifPosition;
 const normalizeNumber = (value, fallback, min, max) => {
   const number = Number(value ?? fallback);
   if (!Number.isFinite(number)) return fallback;
   return Math.min(max, Math.max(min, number));
 };
+
+const normalizeEffects = (effects = {}) => Object.fromEntries(
+  Object.entries(DEFAULT_PROMO_EFFECTS).map(([key, fallback]) => [key, effects[key] === undefined ? fallback : Boolean(effects[key])]),
+);
 
 export const normalizePromoProject = (project = {}, dishes = []) => {
   const availableDishIds = new Set(dishes.filter((dish) => dish.visible !== false && dish.imageUrl).map((dish) => dish.id));
@@ -37,14 +46,13 @@ export const normalizePromoProject = (project = {}, dishes = []) => {
     ...project,
     selectedDishId,
     duration: normalizeDuration(project.duration),
-    style: normalizeStyle(project.style),
     headline: project.headline || '',
-    discountText: project.discountText || DEFAULT_PROMO_SETTINGS.discountText,
-    showSticker: Boolean(project.showSticker),
-    stickerUrl: project.stickerUrl || '',
-    stickerPosition: normalizeStickerPosition(project.stickerPosition),
-    stickerSize: normalizeNumber(project.stickerSize, DEFAULT_PROMO_SETTINGS.stickerSize, 6, 42),
-    funLevel: normalizeFunLevel(project.funLevel),
+    offerText: project.offerText || project.discountText || '',
+    ctaText: project.ctaText || DEFAULT_PROMO_SETTINGS.ctaText,
+    gifUrl: project.gifUrl || project.stickerUrl || '',
+    gifPosition: normalizeGifPosition(project.gifPosition || project.stickerPosition),
+    gifSize: normalizeNumber(project.gifSize ?? project.stickerSize, DEFAULT_PROMO_SETTINGS.gifSize, 6, 42),
+    effects: normalizeEffects(project.effects),
   };
 };
 
