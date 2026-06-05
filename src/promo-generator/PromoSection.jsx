@@ -29,8 +29,82 @@ const EFFECT_GROUPS = [
 ];
 
 const getDishTitle = (dish) => dish?.nameEn || dish?.nameGe || 'Untitled dish';
-
 const getActiveFormatSettings = (settings, formatId = settings.formatId) => settings.formats?.[formatId] ?? {};
+const getSafeFilename = (value) => String(value || 'promo').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'promo';
+
+const getDocumentCss = () => Array.from(document.styleSheets)
+  .map((sheet) => {
+    try {
+      return Array.from(sheet.cssRules ?? []).map((rule) => rule.cssText).join('\n');
+    } catch (error) {
+      return '';
+    }
+  })
+  .filter(Boolean)
+  .join('\n');
+
+const downloadUrl = (url, filename) => {
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+};
+
+async function downloadPromoPng(format, selectedDish) {
+  const scene = document.querySelector('.promo-scene');
+  if (!scene) return;
+
+  const clone = scene.cloneNode(true);
+  clone.style.transform = 'none';
+  clone.style.transformOrigin = 'top left';
+  clone.style.position = 'relative';
+  clone.style.left = '0';
+  clone.style.top = '0';
+
+  const html = `
+    <style>${getDocumentCss()}</style>
+    ${clone.outerHTML}
+  `;
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${format.width}" height="${format.height}" viewBox="0 0 ${format.width} ${format.height}">
+      <foreignObject width="100%" height="100%">
+        <div xmlns="http://www.w3.org/1999/xhtml">${html}</div>
+      </foreignObject>
+    </svg>
+  `;
+  const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+  const svgUrl = URL.createObjectURL(svgBlob);
+
+  await new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = format.width;
+      canvas.height = format.height;
+      const context = canvas.getContext('2d');
+      context.drawImage(image, 0, 0, format.width, format.height);
+      URL.revokeObjectURL(svgUrl);
+      const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-${format.label.replace(':', 'x')}.png`;
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error('Could not create PNG file.'));
+          return;
+        }
+        const pngUrl = URL.createObjectURL(blob);
+        downloadUrl(pngUrl, filename);
+        setTimeout(() => URL.revokeObjectURL(pngUrl), 1000);
+        resolve();
+      }, 'image/png');
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(svgUrl);
+      reject(new Error('Could not render the promo preview as PNG.'));
+    };
+    image.src = svgUrl;
+  });
+}
 
 function PromoControlGroup({ title, children }) {
   return (
@@ -101,6 +175,7 @@ export function PromoSection({ project }) {
   })), [contentCategories, dishesWithImages]);
   const [openCategoryIds, setOpenCategoryIds] = useState(() => new Set(contentCategories.map((category) => category.id)));
   const [settings, setSettings] = useState(() => loadPromoProject(dishesWithImages));
+  const [exportStatus, setExportStatus] = useState('');
 
   useEffect(() => {
     setSettings((current) => ({ ...loadPromoProject(dishesWithImages.length ? dishesWithImages : contentDishes), ...current }));
@@ -159,6 +234,21 @@ export function PromoSection({ project }) {
     });
   };
 
+  const handleDownloadPng = async () => {
+    try {
+      setExportStatus('Preparing PNG...');
+      await downloadPromoPng(activeFormat, selectedDish);
+      setExportStatus('PNG downloaded.');
+    } catch (error) {
+      console.error(error);
+      setExportStatus('PNG export failed. Try again after images finish loading.');
+    }
+  };
+
+  const handleDownloadMp4 = () => {
+    setExportStatus('MP4 export needs the renderer service. This button is ready for the next backend step.');
+  };
+
   const toggleCategoryOpen = (categoryId) => {
     setOpenCategoryIds((current) => {
       const next = new Set(current);
@@ -176,6 +266,14 @@ export function PromoSection({ project }) {
           <h2>Promo Generator</h2>
           <span>{activeFormat.width} x {activeFormat.height} {activeFormat.name} scene.</span>
         </header>
+
+        <PromoControlGroup title="Export">
+          <div className="promo-duration-buttons">
+            <button type="button" onClick={handleDownloadPng}>Download PNG</button>
+            <button type="button" onClick={handleDownloadMp4}>Download MP4</button>
+          </div>
+          {exportStatus ? <small className="promo-preview-size">{exportStatus}</small> : null}
+        </PromoControlGroup>
 
         <PromoControlGroup title="Format">
           <div className="promo-format-buttons">
