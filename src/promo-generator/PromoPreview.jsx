@@ -81,6 +81,18 @@ const getGifLayout = (layout, position, showCta) => {
 };
 
 const layoutStyle = (layout = {}) => Object.fromEntries(Object.entries(layout).filter(([, value]) => value !== undefined));
+const layoutPositionStyle = (layout = {}) => Object.fromEntries(Object.entries(layout).filter(([key, value]) => key !== 'scale' && value !== undefined));
+
+const offsetPosition = (position = {}, offsetX = 0, offsetY = 0) => {
+  const next = { ...position };
+  if (next.left !== undefined) next.left += offsetX;
+  else if (next.right !== undefined) next.right -= offsetX;
+
+  if (next.top !== undefined) next.top += offsetY;
+  else if (next.bottom !== undefined) next.bottom -= offsetY;
+
+  return next;
+};
 
 export function PromoPreview({ dish, settings, index = 0 }) {
   const [sampledColor, setSampledColor] = useState('');
@@ -89,6 +101,7 @@ export function PromoPreview({ dish, settings, index = 0 }) {
   const tunedBackground = useMemo(() => colorWithTone(edgeColor, settings.backgroundTone), [edgeColor, settings.backgroundTone]);
   const format = getPromoFormat(settings.formatId);
   const layout = FORMAT_LAYOUTS[format.id] ?? FORMAT_LAYOUTS.landscape;
+  const offsets = settings.layoutOffsets ?? {};
   const previewScale = format.previewWidth / format.width;
   const effects = settings.effects ?? {};
   const oldPrice = getPrice(dish?.oldPrice);
@@ -98,7 +111,11 @@ export function PromoPreview({ dish, settings, index = 0 }) {
   const offerText = settings.offerText || (dish?.badges?.[0]?.label ?? dish?.badges?.[0]?.name ?? 'Fresh today');
   const descriptionLines = [dish?.descriptionEn, dish?.descriptionGe].filter(Boolean);
   const dishScale = ((settings.dishSize || 650) / 650) * (layout.dish.scale || 1);
-  const gifLayout = getGifLayout(layout, settings.gifPosition, settings.showCta);
+  const copyLayout = offsetPosition(layout.copy, offsets.copyX, offsets.copyY);
+  const dishLayout = offsetPosition(layout.dish, offsets.dishX, offsets.dishY);
+  const priceLayout = offsetPosition(layout.price, offsets.priceX, offsets.priceY);
+  const ctaLayout = offsetPosition(layout.cta, offsets.ctaX, offsets.ctaY);
+  const gifLayout = offsetPosition(getGifLayout(layout, settings.gifPosition, settings.showCta), offsets.gifX, offsets.gifY);
 
   useEffect(() => {
     let cancelled = false;
@@ -148,7 +165,7 @@ export function PromoPreview({ dish, settings, index = 0 }) {
           <div className="promo-background" />
           {effects.lightSweep ? <div className="promo-light-sweep" aria-hidden="true" /> : null}
 
-          <div className="promo-copy-block" style={layoutStyle(layout.copy)}>
+          <div className="promo-copy-block" style={layoutStyle(copyLayout)}>
             {settings.showOffer ? (
               <p
                 className="promo-eyebrow"
@@ -168,7 +185,7 @@ export function PromoPreview({ dish, settings, index = 0 }) {
             ) : null}
           </div>
 
-          <div className="promo-dish-stage" style={{ ...layoutStyle(layout.dish), transform: `scale(${dishScale})` }}>
+          <div className="promo-dish-stage" style={{ ...layoutPositionStyle(dishLayout), transform: `scale(${dishScale})` }}>
             {dish?.imageUrl ? (
               <img className="promo-dish-image" src={dish.imageUrl} alt={dish.nameEn || dish.nameGe || 'Dish'} crossOrigin="anonymous" />
             ) : (
@@ -177,13 +194,13 @@ export function PromoPreview({ dish, settings, index = 0 }) {
           </div>
 
           {hasPrice ? (
-            <div className="promo-price-card" style={layoutStyle(layout.price)}>
+            <div className="promo-price-card" style={layoutStyle(priceLayout)}>
               {oldPrice ? <span className="promo-old-price" style={{ color: settings.oldPriceColor, fontFamily: settings.oldPriceFont, fontSize: `${settings.oldPriceSize}px` }}>{oldPrice}</span> : null}
               {salePrice ? <strong style={{ color: settings.salePriceColor, fontFamily: settings.salePriceFont, fontSize: `${settings.salePriceSize}px` }}>{salePrice}</strong> : null}
             </div>
           ) : null}
 
-          {settings.showCta ? <div className="promo-cta" style={{ ...layoutStyle(layout.cta), color: settings.ctaColor, fontFamily: settings.ctaFont, fontSize: `${settings.ctaSize}px` }}>{settings.ctaText || 'ORDER NOW'}</div> : null}
+          {settings.showCta ? <div className="promo-cta" style={{ ...layoutStyle(ctaLayout), color: settings.ctaColor, fontFamily: settings.ctaFont, fontSize: `${settings.ctaSize}px` }}>{settings.ctaText || 'ORDER NOW'}</div> : null}
 
           {effects.gifOverlay && settings.gifUrl ? (
             <img
