@@ -5,6 +5,37 @@ import { getFallbackImageBackground, sampleImageColor } from '../utils/imageColo
 export const TV_PROMO_WIDTH = 1920;
 export const TV_PROMO_HEIGHT = 1080;
 
+const FORMAT_LAYOUTS = Object.freeze({
+  landscape: {
+    copy: { left: 112, top: 116, width: 690, textAlign: 'left', justifyItems: 'start' },
+    dish: { right: 95, bottom: 86, width: 1030, height: 780, scale: 1 },
+    price: { right: 120, bottom: 100, justifyItems: 'end', textAlign: 'right' },
+    cta: { left: 112, bottom: 100, textAlign: 'left' },
+    gif: { headlineLeft: { left: 112, top: 78 }, priceRight: { right: 120, top: 78 }, bottomLeft: { left: 112, bottom: 150 }, ctaLeft: { left: 112, bottom: 100 }, bottomRight: { right: 120, bottom: 100 } },
+  },
+  square: {
+    copy: { left: 80, top: 78, width: 920, textAlign: 'center', justifyItems: 'center' },
+    dish: { left: 90, top: 330, width: 900, height: 560, scale: 0.92 },
+    price: { right: 74, bottom: 70, justifyItems: 'end', textAlign: 'right' },
+    cta: { left: 80, bottom: 88, textAlign: 'left' },
+    gif: { headlineLeft: { left: 80, top: 42 }, priceRight: { right: 74, top: 48 }, bottomLeft: { left: 80, bottom: 140 }, ctaLeft: { left: 80, bottom: 88 }, bottomRight: { right: 74, bottom: 70 } },
+  },
+  portrait: {
+    copy: { left: 74, top: 88, width: 932, textAlign: 'center', justifyItems: 'center' },
+    dish: { left: 42, top: 410, width: 996, height: 650, scale: 1.05 },
+    price: { right: 70, bottom: 88, justifyItems: 'end', textAlign: 'right' },
+    cta: { left: 74, bottom: 112, textAlign: 'left' },
+    gif: { headlineLeft: { left: 74, top: 50 }, priceRight: { right: 70, top: 62 }, bottomLeft: { left: 74, bottom: 168 }, ctaLeft: { left: 74, bottom: 112 }, bottomRight: { right: 70, bottom: 88 } },
+  },
+  story: {
+    copy: { left: 70, top: 110, width: 940, textAlign: 'center', justifyItems: 'center' },
+    dish: { left: 34, top: 590, width: 1012, height: 820, scale: 1.14 },
+    price: { right: 70, bottom: 190, justifyItems: 'end', textAlign: 'right' },
+    cta: { left: 70, bottom: 120, textAlign: 'left' },
+    gif: { headlineLeft: { left: 70, top: 62 }, priceRight: { right: 70, top: 76 }, bottomLeft: { left: 70, bottom: 184 }, ctaLeft: { left: 70, bottom: 120 }, bottomRight: { right: 70, bottom: 120 } },
+  },
+});
+
 const getPrice = (value) => {
   const number = Number(value);
   if (!Number.isFinite(number) || number <= 0) return '';
@@ -39,16 +70,17 @@ const colorWithTone = (baseHex, tone = 0) => {
   return rgbToCss(adjustRgb(base, tone));
 };
 
-const getGifPositionClass = (position, showCta) => {
-  if (position === 'bottomLeft') return showCta ? 'promo-gif-bottom-text-left' : 'promo-gif-cta-left';
-
+const getGifLayout = (layout, position, showCta) => {
+  if (position === 'bottomLeft') return showCta ? layout.gif.bottomLeft : layout.gif.ctaLeft;
   return ({
-    textLeft: 'promo-gif-headline-left',
-    topLeft: 'promo-gif-headline-left',
-    topRight: 'promo-gif-price-right',
-    bottomRight: 'promo-gif-bottom-right',
-  }[position] ?? 'promo-gif-headline-left');
+    textLeft: layout.gif.headlineLeft,
+    topLeft: layout.gif.headlineLeft,
+    topRight: layout.gif.priceRight,
+    bottomRight: layout.gif.bottomRight,
+  }[position] ?? layout.gif.headlineLeft);
 };
+
+const layoutStyle = (layout = {}) => Object.fromEntries(Object.entries(layout).filter(([, value]) => value !== undefined));
 
 export function PromoPreview({ dish, settings, index = 0 }) {
   const [sampledColor, setSampledColor] = useState('');
@@ -56,6 +88,7 @@ export function PromoPreview({ dish, settings, index = 0 }) {
   const edgeColor = sampledColor || fallbackColor;
   const tunedBackground = useMemo(() => colorWithTone(edgeColor, settings.backgroundTone), [edgeColor, settings.backgroundTone]);
   const format = getPromoFormat(settings.formatId);
+  const layout = FORMAT_LAYOUTS[format.id] ?? FORMAT_LAYOUTS.landscape;
   const previewScale = format.previewWidth / format.width;
   const effects = settings.effects ?? {};
   const oldPrice = getPrice(dish?.oldPrice);
@@ -64,6 +97,8 @@ export function PromoPreview({ dish, settings, index = 0 }) {
   const headline = settings.headline || dish?.nameEn || 'TV Promo';
   const offerText = settings.offerText || (dish?.badges?.[0]?.label ?? dish?.badges?.[0]?.name ?? 'Fresh today');
   const descriptionLines = [dish?.descriptionEn, dish?.descriptionGe].filter(Boolean);
+  const dishScale = ((settings.dishSize || 650) / 650) * (layout.dish.scale || 1);
+  const gifLayout = getGifLayout(layout, settings.gifPosition, settings.showCta);
 
   useEffect(() => {
     let cancelled = false;
@@ -113,7 +148,7 @@ export function PromoPreview({ dish, settings, index = 0 }) {
           <div className="promo-background" />
           {effects.lightSweep ? <div className="promo-light-sweep" aria-hidden="true" /> : null}
 
-          <div className="promo-copy-block">
+          <div className="promo-copy-block" style={layoutStyle(layout.copy)}>
             {settings.showOffer ? (
               <p
                 className="promo-eyebrow"
@@ -133,7 +168,7 @@ export function PromoPreview({ dish, settings, index = 0 }) {
             ) : null}
           </div>
 
-          <div className="promo-dish-stage" style={{ transform: `scale(${(settings.dishSize || 650) / 650})` }}>
+          <div className="promo-dish-stage" style={{ ...layoutStyle(layout.dish), transform: `scale(${dishScale})` }}>
             {dish?.imageUrl ? (
               <img className="promo-dish-image" src={dish.imageUrl} alt={dish.nameEn || dish.nameGe || 'Dish'} crossOrigin="anonymous" />
             ) : (
@@ -142,21 +177,21 @@ export function PromoPreview({ dish, settings, index = 0 }) {
           </div>
 
           {hasPrice ? (
-            <div className="promo-price-card">
+            <div className="promo-price-card" style={layoutStyle(layout.price)}>
               {oldPrice ? <span className="promo-old-price" style={{ color: settings.oldPriceColor, fontFamily: settings.oldPriceFont, fontSize: `${settings.oldPriceSize}px` }}>{oldPrice}</span> : null}
               {salePrice ? <strong style={{ color: settings.salePriceColor, fontFamily: settings.salePriceFont, fontSize: `${settings.salePriceSize}px` }}>{salePrice}</strong> : null}
             </div>
           ) : null}
 
-          {settings.showCta ? <div className="promo-cta" style={{ color: settings.ctaColor, fontFamily: settings.ctaFont, fontSize: `${settings.ctaSize}px` }}>{settings.ctaText || 'ORDER NOW'}</div> : null}
+          {settings.showCta ? <div className="promo-cta" style={{ ...layoutStyle(layout.cta), color: settings.ctaColor, fontFamily: settings.ctaFont, fontSize: `${settings.ctaSize}px` }}>{settings.ctaText || 'ORDER NOW'}</div> : null}
 
           {effects.gifOverlay && settings.gifUrl ? (
             <img
-              className={`promo-gif-overlay ${getGifPositionClass(settings.gifPosition, settings.showCta)}`}
+              className="promo-gif-overlay"
               src={settings.gifUrl}
               alt=""
               aria-hidden="true"
-              style={{ width: `${settings.gifSize || 18}%` }}
+              style={{ ...layoutStyle(gifLayout), width: `${settings.gifSize || 18}%` }}
             />
           ) : null}
         </article>
