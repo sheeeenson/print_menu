@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { getPromoFormat } from './promoStorage.js';
 import { getFallbackImageBackground, sampleImageColor } from '../utils/imageColor.js';
 
 export const TV_PROMO_WIDTH = 1920;
@@ -54,6 +55,8 @@ export function PromoPreview({ dish, settings, index = 0 }) {
   const fallbackColor = getFallbackImageBackground(index);
   const edgeColor = sampledColor || fallbackColor;
   const tunedBackground = useMemo(() => colorWithTone(edgeColor, settings.backgroundTone), [edgeColor, settings.backgroundTone]);
+  const format = getPromoFormat(settings.formatId);
+  const previewScale = format.previewWidth / format.width;
   const effects = settings.effects ?? {};
   const oldPrice = getPrice(dish?.oldPrice);
   const salePrice = getPrice(dish?.newPrice);
@@ -89,11 +92,20 @@ export function PromoPreview({ dish, settings, index = 0 }) {
   ].filter(Boolean).join(' ');
 
   return (
-    <section className="promo-preview-shell" aria-label="TV Promo 1920 by 1080 preview">
-      <div className="promo-canvas-wrap">
+    <section className="promo-preview-shell" aria-label={`TV Promo ${format.width} by ${format.height} preview`}>
+      <div
+        className="promo-canvas-wrap"
+        style={{
+          width: `${format.previewWidth}px`,
+          aspectRatio: `${format.width} / ${format.height}`,
+        }}
+      >
         <article
           className={sceneClass}
           style={{
+            width: `${format.width}px`,
+            height: `${format.height}px`,
+            transform: `scale(${previewScale})`,
             '--promo-duration': `${settings.duration || 8}s`,
             '--promo-edge-color': tunedBackground,
           }}
@@ -149,7 +161,7 @@ export function PromoPreview({ dish, settings, index = 0 }) {
           ) : null}
         </article>
       </div>
-      <small className="promo-preview-size">Output canvas: {TV_PROMO_WIDTH} × {TV_PROMO_HEIGHT}px</small>
+      <small className="promo-preview-size">Output canvas: {format.width} × {format.height}px</small>
     </section>
   );
 }
