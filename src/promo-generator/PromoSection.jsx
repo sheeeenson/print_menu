@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { PromoPreview } from './PromoPreview.jsx';
-import { DEFAULT_PROMO_EFFECTS, loadPromoProject, PROMO_DURATIONS, savePromoProject } from './promoStorage.js';
+import { DEFAULT_PROMO_EFFECTS, loadPromoProject, PROMO_DURATIONS, PROMO_FONT_OPTIONS, savePromoProject } from './promoStorage.js';
 import './promoGenerator.css';
 
 const EFFECT_GROUPS = [
@@ -45,6 +45,46 @@ function ToggleField({ checked, label, onChange }) {
       <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
       <span>{label}</span>
     </label>
+  );
+}
+
+function RangeControl({ label, value, min, max, step = 1, suffix = '', onChange }) {
+  return (
+    <label className="image-menu-control">
+      <span>{label} <strong>{value}{suffix}</strong></span>
+      <input type="range" min={min} max={max} step={step} value={value} onChange={(event) => onChange(Number(event.target.value))} />
+    </label>
+  );
+}
+
+function ColorControl({ label, value, onChange }) {
+  return (
+    <label className="field-label image-menu-field">
+      {label}
+      <input type="color" value={value} onChange={(event) => onChange(event.target.value)} />
+    </label>
+  );
+}
+
+function FontControl({ label, value, onChange }) {
+  return (
+    <label className="field-label image-menu-field">
+      {label}
+      <select value={value} onChange={(event) => onChange(event.target.value)}>
+        {PROMO_FONT_OPTIONS.map((font) => <option key={font} value={font}>{font.split(',')[0]}</option>)}
+      </select>
+    </label>
+  );
+}
+
+function TextStyleControls({ title, prefix, settings, updateSettings, sizeMin = 12, sizeMax = 160 }) {
+  return (
+    <div className="promo-style-block">
+      <h4>{title}</h4>
+      <ColorControl label="Color" value={settings[`${prefix}Color`]} onChange={(value) => updateSettings({ [`${prefix}Color`]: value })} />
+      <FontControl label="Font" value={settings[`${prefix}Font`]} onChange={(value) => updateSettings({ [`${prefix}Font`]: value })} />
+      <RangeControl label="Size" value={settings[`${prefix}Size`]} min={sizeMin} max={sizeMax} onChange={(value) => updateSettings({ [`${prefix}Size`]: value })} suffix="px" />
+    </div>
   );
 }
 
@@ -181,6 +221,25 @@ export function PromoSection({ project }) {
             <span>CTA</span>
             <input value={settings.ctaText} placeholder="ORDER NOW" onChange={(event) => updateSettings({ ctaText: event.target.value })} />
           </label>
+        </PromoControlGroup>
+
+        <PromoControlGroup title="Appearance">
+          <RangeControl label="Background tone" value={settings.backgroundTone} min={-40} max={40} onChange={(backgroundTone) => updateSettings({ backgroundTone })} />
+          <RangeControl label="Dish size" value={settings.dishSize} min={45} max={160} onChange={(dishSize) => updateSettings({ dishSize })} suffix="%" />
+          <ToggleField label="Show description" checked={Boolean(settings.showDescription)} onChange={(showDescription) => updateSettings({ showDescription })} />
+        </PromoControlGroup>
+
+        <PromoControlGroup title="Text styles">
+          <TextStyleControls title="Offer label" prefix="offer" settings={settings} updateSettings={updateSettings} sizeMin={16} sizeMax={76} />
+          <TextStyleControls title="Headline" prefix="headline" settings={settings} updateSettings={updateSettings} sizeMin={42} sizeMax={170} />
+          <TextStyleControls title="Georgian title" prefix="geTitle" settings={settings} updateSettings={updateSettings} sizeMin={24} sizeMax={96} />
+          <TextStyleControls title="Description" prefix="description" settings={settings} updateSettings={updateSettings} sizeMin={14} sizeMax={60} />
+          <TextStyleControls title="CTA" prefix="cta" settings={settings} updateSettings={updateSettings} sizeMin={18} sizeMax={72} />
+        </PromoControlGroup>
+
+        <PromoControlGroup title="Prices">
+          <TextStyleControls title="Old price" prefix="oldPrice" settings={settings} updateSettings={updateSettings} sizeMin={18} sizeMax={88} />
+          <TextStyleControls title="Sale price" prefix="salePrice" settings={settings} updateSettings={updateSettings} sizeMin={42} sizeMax={190} />
         </PromoControlGroup>
 
         {EFFECT_GROUPS.map((group) => (
