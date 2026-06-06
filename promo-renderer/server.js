@@ -9,6 +9,7 @@ const app = express();
 const PORT = Number(process.env.PORT || 3000);
 const MAX_BODY_SIZE = process.env.MAX_BODY_SIZE || '25mb';
 const DEFAULT_CHROMIUM_PATH = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium';
+const IMAGE_WAIT_MS = Number(process.env.IMAGE_WAIT_MS || 10000);
 
 app.use(express.json({ limit: MAX_BODY_SIZE }));
 
@@ -22,6 +23,8 @@ const getNumber = (value, fallback, min, max) => {
   if (!Number.isFinite(number)) return fallback;
   return Math.min(max, Math.max(min, number));
 };
+
+const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 const buildDocument = ({ html, width, height, duration }) => `<!doctype html>
 <html>
@@ -67,6 +70,30 @@ const runFfmpeg = (args) => new Promise((resolve, reject) => {
   });
 });
 
+const waitForImages = async (page) => {
+  try {
+    await Promise.race([
+      page.evaluate(async () => {
+        const images = Array.from(document.images || []);
+        await Promise.all(images.map(async (image) => {
+          if (image.complete && image.naturalWidth > 0) return;
+          if (typeof image.decode === 'function') {
+            await image.decode().catch(() => undefined);
+            return;
+          }
+          await new Promise((resolve) => {
+            image.addEventListener('load', resolve, { once: true });
+            image.addEventListener('error', resolve, { once: true });
+          });
+        }));
+      }),
+      wait(IMAGE_WAIT_MS),
+    ]);
+  } catch (error) {
+    console.warn('Image wait skipped:', error instanceof Error ? error.message : String(error));
+  }
+};
+
 app.get('/health', (request, response) => {
   response.json({ ok: true });
 });
@@ -108,8 +135,11 @@ app.post('/render', async (request, response) => {
     });
 
     const page = await browser.newPage();
+    page.setDefaultNavigationTimeout(0);
+    page.setDefaultTimeout(0);
     await page.setViewport({ width, height, deviceScaleFactor: 1 });
-    await page.setContent(buildDocument({ html, width, height, duration }), { waitUntil: 'networkidle0' });
+    await page.setContent(buildDocument({ html, width, height, duration }), { waitUntil: 'domcontentloaded', timeout: 0 });
+    await waitForImages(page);
     await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
 
     const frameCount = Math.max(1, Math.round(duration * fps));
