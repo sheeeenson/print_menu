@@ -27,7 +27,12 @@ const getNumber = (value, fallback, min, max) => {
 
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
-const buildDocument = ({ html, width, height, duration }) => `<!doctype html>
+const isFullHtmlDocument = (html) => /<!doctype\s+html|<html[\s>]/i.test(html);
+
+const buildDocument = ({ html, width, height, duration }) => {
+  if (isFullHtmlDocument(html)) return html;
+
+  return `<!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
@@ -55,6 +60,7 @@ const buildDocument = ({ html, width, height, duration }) => `<!doctype html>
   </head>
   <body>${html}</body>
 </html>`;
+};
 
 const runFfmpeg = (args) => new Promise((resolve, reject) => {
   const ffmpeg = spawn('ffmpeg', args, { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -234,7 +240,7 @@ app.get('/health', (request, response) => {
   response.json({ ok: true });
 });
 
-app.post('/render', async (request, response) => {
+const handleRender = async (request, response) => {
   const payload = request.body || {};
   const format = payload.format || {};
   const width = getNumber(format.width, 1920, 320, 3840);
@@ -244,10 +250,10 @@ app.post('/render', async (request, response) => {
   const output = payload.output === 'png' ? 'png' : 'mp4';
   const fallbackName = output === 'png' ? 'promo.png' : 'promo.mp4';
   const filename = sanitizeFilename(payload.filename || fallbackName).replace(/\.[^.]+$/, `.${output}`);
-  const html = String(payload.html || '');
+  const html = String(payload.html || '').trim();
 
-  if (!html.includes('promo-scene')) {
-    response.status(400).json({ error: 'Invalid render payload.', detail: 'Missing promo-scene HTML.' });
+  if (!html) {
+    response.status(400).json({ error: 'Invalid render payload.', detail: 'Missing HTML.' });
     return;
   }
 
@@ -314,6 +320,12 @@ app.post('/render', async (request, response) => {
     if (browser) await browser.close().catch(() => {});
     await rm(workdir, { recursive: true, force: true }).catch(() => {});
   }
+};
+
+app.post('/render', handleRender);
+app.post('/html-to-mp4', (request, response) => {
+  request.body = { ...(request.body || {}), output: 'mp4' };
+  return handleRender(request, response);
 });
 
 app.listen(PORT, () => {
