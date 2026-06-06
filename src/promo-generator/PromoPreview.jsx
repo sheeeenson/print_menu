@@ -53,12 +53,12 @@ const hexToRgb = (hex) => {
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, Number(value)));
 const adjustRgb = (color, amount) => {
-  const target = amount >= 0 ? { r: 255, g: 255, b: 255 } : { r: 0, g: 0, b: 0 };
+  const target = amount >= 0 ? { r: 255, g: 255, b: 255 } : { r: 0, g: 0 };
   const ratio = Math.abs(clamp(amount, -40, 40)) / 100;
   return {
     r: Math.round(color.r + (target.r - color.r) * ratio),
     g: Math.round(color.g + (target.g - color.g) * ratio),
-    b: Math.round(color.b + (target.b - color.b) * ratio),
+    b: Math.round(color.b + ((target.b ?? 0) - color.b) * ratio),
   };
 };
 const rgbToCss = ({ r, g, b }, alpha = 1) => `rgba(${r}, ${g}, ${b}, ${alpha})`;
@@ -178,7 +178,7 @@ export function PromoPreview({ dish, settings, index = 0 }) {
           ) : null}
 
           {settings.showCta ? <div className="promo-cta" style={{ ...layoutStyle(ctaLayout), color: settings.ctaColor, fontFamily: settings.ctaFont, fontSize: `${settings.ctaSize}px`, textShadow }}>{settings.ctaText || 'ORDER NOW'}</div> : null}
-          {effects.gifOverlay && settings.gifUrl ? <img className="promo-gif-overlay" src={settings.gifUrl} alt="" aria-hidden="true" style={{ ...layoutStyle(gifLayout), width: `${settings.gifSize || 18}%` }} /> : null}
+          {effects.gifOverlay && settings.gifUrl ? <img className="promo-gif-overlay" src={settings.gifUrl} alt="" aria-hidden="true" style={{ ...layoutStyle(gifLayout), width: `${settings.gifSize || 18}%`, borderRadius: `${settings.gifBorderRadius || 0}px` }} /> : null}
         </article>
       </div>
       <small className="promo-preview-size">Output format: {format.label}</small>
