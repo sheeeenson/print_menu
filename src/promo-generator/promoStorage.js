@@ -19,6 +19,16 @@ export const PROMO_FONT_OPTIONS = Object.freeze([
   'Times New Roman, serif',
 ]);
 
+export const PROMO_GIF_SHAPES = Object.freeze([
+  { id: 'rectangle', label: 'Rectangle' },
+  { id: 'rounded', label: 'Rounded' },
+  { id: 'circle', label: 'Circle' },
+  { id: 'star', label: 'Star' },
+  { id: 'hexagon', label: 'Hexagon' },
+  { id: 'diamond', label: 'Diamond' },
+  { id: 'blob', label: 'Blob' },
+]);
+
 export const DEFAULT_PROMO_EFFECTS = Object.freeze({
   slowZoom: true,
   fastEntrance: false,
@@ -92,6 +102,7 @@ export const DEFAULT_PROMO_GLOBAL_SETTINGS = Object.freeze({
   gifPosition: 'textLeft',
   gifSize: 18,
   gifBorderRadius: 0,
+  gifShape: 'rectangle',
   gifLibrary: [],
 });
 
@@ -108,6 +119,7 @@ export const PROMO_FORMAT_SETTING_KEYS = Object.freeze(Object.keys(DEFAULT_PROMO
 const normalizeDuration = (value) => PROMO_DURATIONS.includes(Number(value)) ? Number(value) : DEFAULT_PROMO_FORMAT_SETTINGS.duration;
 const normalizeFormatId = (value) => PROMO_FORMATS.some((format) => format.id === value) ? value : DEFAULT_PROMO_SETTINGS.formatId;
 const normalizeGifPosition = (value) => ['textLeft', 'topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(value) ? value : DEFAULT_PROMO_GLOBAL_SETTINGS.gifPosition;
+const normalizeGifShape = (value) => PROMO_GIF_SHAPES.some((shape) => shape.id === value) ? value : DEFAULT_PROMO_GLOBAL_SETTINGS.gifShape;
 const normalizeFont = (value, fallback) => PROMO_FONT_OPTIONS.includes(value) ? value : fallback;
 const normalizeColor = (value, fallback) => /^#[0-9a-f]{6}$/i.test(String(value || '')) ? value : fallback;
 const normalizeUrl = (value) => String(value || '').trim();
@@ -222,7 +234,8 @@ export const normalizePromoProject = (project = {}, dishes = []) => {
     gifUrl: legacyGifUrl,
     gifPosition: normalizeGifPosition(project.gifPosition || project.stickerPosition || project.formats?.[formatId]?.gifPosition),
     gifSize: normalizeNumber(project.gifSize ?? project.stickerSize ?? project.formats?.[formatId]?.gifSize, DEFAULT_PROMO_GLOBAL_SETTINGS.gifSize, 6, 42),
-    gifBorderRadius: normalizeNumber(project.gifBorderRadius ?? project.formats?.[formatId]?.gifBorderRadius, DEFAULT_PROMO_GLOBAL_SETTINGS.gifBorderRadius, 0, 160),
+    gifBorderRadius: normalizeNumber(project.gifBorderRadius ?? project.formats?.[formatId]?.gifBorderRadius, DEFAULT_PROMO_GLOBAL_SETTINGS.gifBorderRadius, 0, 500),
+    gifShape: normalizeGifShape(project.gifShape || project.formats?.[formatId]?.gifShape),
     gifLibrary: legacyGifUrl && !gifLibrary.some((item) => item.url === legacyGifUrl)
       ? [{ id: `gif_${Date.now()}`, name: 'Current GIF', url: legacyGifUrl }, ...gifLibrary]
       : gifLibrary,
