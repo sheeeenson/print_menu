@@ -26,6 +26,11 @@ export const DEFAULT_PROMO_EFFECTS = Object.freeze({
   pricePunch: true,
   glow: true,
   lightSweep: true,
+  textRise: false,
+  dishPulse: false,
+  priceShake: false,
+  backgroundOrbit: false,
+  spotlightPulse: false,
   gifOverlay: false,
 });
 
@@ -50,6 +55,10 @@ export const DEFAULT_PROMO_FORMAT_SETTINGS = Object.freeze({
   showOffer: true,
   showDescription: true,
   showCta: true,
+  showTextShadow: true,
+  textShadowColor: '#000000',
+  textShadowOpacity: 34,
+  textShadowBlur: 38,
   descriptionOffsetY: 0,
   backgroundTone: 0,
   dishSize: 650,
@@ -74,17 +83,22 @@ export const DEFAULT_PROMO_FORMAT_SETTINGS = Object.freeze({
   salePriceColor: '#fffaf2',
   salePriceFont: PROMO_FONT_OPTIONS[0],
   salePriceSize: 132,
+  layoutOffsets: { ...DEFAULT_PROMO_LAYOUT_OFFSETS },
+  effects: { ...DEFAULT_PROMO_EFFECTS },
+});
+
+export const DEFAULT_PROMO_GLOBAL_SETTINGS = Object.freeze({
   gifUrl: '',
   gifPosition: 'textLeft',
   gifSize: 18,
-  layoutOffsets: { ...DEFAULT_PROMO_LAYOUT_OFFSETS },
-  effects: { ...DEFAULT_PROMO_EFFECTS },
+  gifLibrary: [],
 });
 
 export const DEFAULT_PROMO_SETTINGS = Object.freeze({
   selectedDishId: '',
   formatId: 'landscape',
   ...DEFAULT_PROMO_FORMAT_SETTINGS,
+  ...DEFAULT_PROMO_GLOBAL_SETTINGS,
   formats: {},
 });
 
@@ -92,13 +106,30 @@ export const PROMO_FORMAT_SETTING_KEYS = Object.freeze(Object.keys(DEFAULT_PROMO
 
 const normalizeDuration = (value) => PROMO_DURATIONS.includes(Number(value)) ? Number(value) : DEFAULT_PROMO_FORMAT_SETTINGS.duration;
 const normalizeFormatId = (value) => PROMO_FORMATS.some((format) => format.id === value) ? value : DEFAULT_PROMO_SETTINGS.formatId;
-const normalizeGifPosition = (value) => ['textLeft', 'topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(value) ? value : DEFAULT_PROMO_FORMAT_SETTINGS.gifPosition;
+const normalizeGifPosition = (value) => ['textLeft', 'topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(value) ? value : DEFAULT_PROMO_GLOBAL_SETTINGS.gifPosition;
 const normalizeFont = (value, fallback) => PROMO_FONT_OPTIONS.includes(value) ? value : fallback;
 const normalizeColor = (value, fallback) => /^#[0-9a-f]{6}$/i.test(String(value || '')) ? value : fallback;
+const normalizeUrl = (value) => String(value || '').trim();
 const normalizeNumber = (value, fallback, min, max) => {
   const number = Number(value ?? fallback);
   if (!Number.isFinite(number)) return fallback;
   return Math.min(max, Math.max(min, number));
+};
+
+const normalizeGifLibrary = (items = []) => {
+  const seen = new Set();
+  return (Array.isArray(items) ? items : [])
+    .map((item) => ({
+      id: String(item?.id || item?.url || `gif_${Math.random().toString(36).slice(2, 10)}`),
+      name: String(item?.name || 'Saved GIF').trim() || 'Saved GIF',
+      url: normalizeUrl(item?.url),
+    }))
+    .filter((item) => {
+      if (!item.url || seen.has(item.url)) return false;
+      seen.add(item.url);
+      return true;
+    })
+    .slice(0, 60);
 };
 
 const normalizeEffects = (effects = {}) => Object.fromEntries(
@@ -131,6 +162,10 @@ const normalizePromoFormatSettings = (project = {}) => ({
   showOffer: project.showOffer === undefined ? DEFAULT_PROMO_FORMAT_SETTINGS.showOffer : Boolean(project.showOffer),
   showDescription: project.showDescription === undefined ? DEFAULT_PROMO_FORMAT_SETTINGS.showDescription : Boolean(project.showDescription),
   showCta: project.showCta === undefined ? DEFAULT_PROMO_FORMAT_SETTINGS.showCta : Boolean(project.showCta),
+  showTextShadow: project.showTextShadow === undefined ? DEFAULT_PROMO_FORMAT_SETTINGS.showTextShadow : Boolean(project.showTextShadow),
+  textShadowColor: normalizeColor(project.textShadowColor, DEFAULT_PROMO_FORMAT_SETTINGS.textShadowColor),
+  textShadowOpacity: normalizeNumber(project.textShadowOpacity, DEFAULT_PROMO_FORMAT_SETTINGS.textShadowOpacity, 0, 100),
+  textShadowBlur: normalizeNumber(project.textShadowBlur, DEFAULT_PROMO_FORMAT_SETTINGS.textShadowBlur, 0, 90),
   descriptionOffsetY: normalizeNumber(project.descriptionOffsetY, DEFAULT_PROMO_FORMAT_SETTINGS.descriptionOffsetY, -180, 180),
   backgroundTone: normalizeNumber(project.backgroundTone, DEFAULT_PROMO_FORMAT_SETTINGS.backgroundTone, -40, 40),
   dishSize: normalizeDishSize(project.dishSize),
@@ -155,9 +190,6 @@ const normalizePromoFormatSettings = (project = {}) => ({
   salePriceColor: normalizeColor(project.salePriceColor, DEFAULT_PROMO_FORMAT_SETTINGS.salePriceColor),
   salePriceFont: normalizeFont(project.salePriceFont, DEFAULT_PROMO_FORMAT_SETTINGS.salePriceFont),
   salePriceSize: normalizeNumber(project.salePriceSize, DEFAULT_PROMO_FORMAT_SETTINGS.salePriceSize, 42, 190),
-  gifUrl: project.gifUrl || project.stickerUrl || '',
-  gifPosition: normalizeGifPosition(project.gifPosition || project.stickerPosition),
-  gifSize: normalizeNumber(project.gifSize ?? project.stickerSize, DEFAULT_PROMO_FORMAT_SETTINGS.gifSize, 6, 42),
   layoutOffsets: normalizeLayoutOffsets(project.layoutOffsets),
   effects: normalizeEffects(project.effects),
 });
@@ -168,6 +200,8 @@ export const normalizePromoProject = (project = {}, dishes = []) => {
   const selectedDishId = availableDishIds.has(project.selectedDishId) ? project.selectedDishId : firstDishId;
   const formatId = normalizeFormatId(project.formatId);
   const legacyFormatSettings = pickFormatSettings(project);
+  const legacyGifUrl = normalizeUrl(project.gifUrl || project.stickerUrl || project.formats?.[formatId]?.gifUrl || project.formats?.[formatId]?.stickerUrl);
+  const gifLibrary = normalizeGifLibrary(project.gifLibrary);
 
   const formats = Object.fromEntries(PROMO_FORMATS.map((format) => {
     const source = {
@@ -184,6 +218,12 @@ export const normalizePromoProject = (project = {}, dishes = []) => {
     ...activeFormatSettings,
     selectedDishId,
     formatId,
+    gifUrl: legacyGifUrl,
+    gifPosition: normalizeGifPosition(project.gifPosition || project.stickerPosition || project.formats?.[formatId]?.gifPosition),
+    gifSize: normalizeNumber(project.gifSize ?? project.stickerSize ?? project.formats?.[formatId]?.gifSize, DEFAULT_PROMO_GLOBAL_SETTINGS.gifSize, 6, 42),
+    gifLibrary: legacyGifUrl && !gifLibrary.some((item) => item.url === legacyGifUrl)
+      ? [{ id: `gif_${Date.now()}`, name: 'Current GIF', url: legacyGifUrl }, ...gifLibrary]
+      : gifLibrary,
     formats,
   };
 };
