@@ -1,6 +1,6 @@
 const DEFAULT_RENDERER_ENDPOINT = 'https://print-menu.onrender.com/render';
 const JOB_POLL_INTERVAL_MS = 1200;
-const JOB_TIMEOUT_MS = 120000;
+const JOB_TIMEOUT_MS = 300000;
 
 export const getSafeRenderFilename = (value, fallback = 'html-video') => String(value || fallback)
   .trim()
