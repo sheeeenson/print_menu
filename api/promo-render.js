@@ -1,4 +1,6 @@
-const getRendererUrl = () => process.env.PROMO_RENDERER_URL || process.env.REMOTION_RENDERER_URL || '';
+const DEFAULT_PROMO_RENDERER_URL = 'https://print-menu.onrender.com/render';
+
+const getRendererUrl = () => process.env.PROMO_RENDERER_URL || process.env.REMOTION_RENDERER_URL || DEFAULT_PROMO_RENDERER_URL;
 
 const json = (response, statusCode, payload) => {
   response.statusCode = statusCode;
@@ -49,7 +51,7 @@ export default async function handler(request, response) {
     const filename = request.body?.filename || 'promo.mp4';
     response.statusCode = 200;
     response.setHeader('Content-Type', rendererResponse.headers.get('Content-Type') || 'video/mp4');
-    response.setHeader('Content-Disposition', `attachment; filename="${filename.replace(/[^a-zA-Z0-9._-]/g, '-') }"`);
+    response.setHeader('Content-Disposition', `attachment; filename="${filename.replace(/[^a-zA-Z0-9._-]/g, '-')}"`);
     response.end(fileBuffer);
   } catch (error) {
     json(response, 500, {
