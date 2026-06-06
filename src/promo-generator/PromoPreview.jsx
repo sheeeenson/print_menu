@@ -52,7 +52,6 @@ const hexToRgb = (hex) => {
 };
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, Number(value)));
-
 const adjustRgb = (color, amount) => {
   const target = amount >= 0 ? { r: 255, g: 255, b: 255 } : { r: 0, g: 0, b: 0 };
   const ratio = Math.abs(clamp(amount, -40, 40)) / 100;
@@ -62,35 +61,28 @@ const adjustRgb = (color, amount) => {
     b: Math.round(color.b + (target.b - color.b) * ratio),
   };
 };
-
 const rgbToCss = ({ r, g, b }, alpha = 1) => `rgba(${r}, ${g}, ${b}, ${alpha})`;
-
-const colorWithTone = (baseHex, tone = 0) => {
-  const base = hexToRgb(baseHex);
-  return rgbToCss(adjustRgb(base, tone));
+const colorWithTone = (baseHex, tone = 0) => rgbToCss(adjustRgb(hexToRgb(baseHex), tone));
+const textShadowCss = (settings) => {
+  if (settings.showTextShadow === false) return 'none';
+  const rgb = hexToRgb(settings.textShadowColor || '#000000');
+  const alpha = clamp(settings.textShadowOpacity ?? 34, 0, 100) / 100;
+  const blur = clamp(settings.textShadowBlur ?? 38, 0, 90);
+  return `0 18px ${blur}px ${rgbToCss(rgb, alpha)}`;
 };
 
 const getGifLayout = (layout, position, showCta) => {
   if (position === 'bottomLeft') return showCta ? layout.gif.bottomLeft : layout.gif.ctaLeft;
-  return ({
-    textLeft: layout.gif.headlineLeft,
-    topLeft: layout.gif.headlineLeft,
-    topRight: layout.gif.priceRight,
-    bottomRight: layout.gif.bottomRight,
-  }[position] ?? layout.gif.headlineLeft);
+  return ({ textLeft: layout.gif.headlineLeft, topLeft: layout.gif.headlineLeft, topRight: layout.gif.priceRight, bottomRight: layout.gif.bottomRight }[position] ?? layout.gif.headlineLeft);
 };
-
 const layoutStyle = (layout = {}) => Object.fromEntries(Object.entries(layout).filter(([, value]) => value !== undefined));
 const layoutPositionStyle = (layout = {}) => Object.fromEntries(Object.entries(layout).filter(([key, value]) => key !== 'scale' && value !== undefined));
-
 const offsetPosition = (position = {}, offsetX = 0, offsetY = 0) => {
   const next = { ...position };
   if (next.left !== undefined) next.left += offsetX;
   else if (next.right !== undefined) next.right -= offsetX;
-
   if (next.top !== undefined) next.top += offsetY;
   else if (next.bottom !== undefined) next.bottom -= offsetY;
-
   return next;
 };
 
@@ -116,21 +108,18 @@ export function PromoPreview({ dish, settings, index = 0 }) {
   const priceLayout = offsetPosition(layout.price, offsets.priceX, offsets.priceY);
   const ctaLayout = offsetPosition(layout.cta, offsets.ctaX, offsets.ctaY);
   const gifLayout = offsetPosition(getGifLayout(layout, settings.gifPosition, settings.showCta), offsets.gifX, offsets.gifY);
+  const textShadow = textShadowCss(settings);
 
   useEffect(() => {
     let cancelled = false;
     setSampledColor('');
     if (!dish?.imageUrl) return undefined;
-    sampleImageColor(dish.imageUrl)
-      .then((color) => {
-        if (!cancelled) setSampledColor(color);
-      })
-      .catch(() => {
-        if (!cancelled) setSampledColor('');
-      });
-    return () => {
-      cancelled = true;
-    };
+    sampleImageColor(dish.imageUrl).then((color) => {
+      if (!cancelled) setSampledColor(color);
+    }).catch(() => {
+      if (!cancelled) setSampledColor('');
+    });
+    return () => { cancelled = true; };
   }, [dish?.imageUrl]);
 
   const sceneClass = [
@@ -141,17 +130,16 @@ export function PromoPreview({ dish, settings, index = 0 }) {
     effects.pricePunch ? 'promo-effect-price-punch' : '',
     effects.glow ? 'promo-effect-glow' : '',
     effects.lightSweep ? 'promo-effect-light-sweep' : '',
+    effects.textRise ? 'promo-effect-text-rise' : '',
+    effects.dishPulse ? 'promo-effect-dish-pulse' : '',
+    effects.priceShake ? 'promo-effect-price-shake' : '',
+    effects.backgroundOrbit ? 'promo-effect-background-orbit' : '',
+    effects.spotlightPulse ? 'promo-effect-spotlight-pulse' : '',
   ].filter(Boolean).join(' ');
 
   return (
-    <section className="promo-preview-shell" aria-label={`TV Promo ${format.width} by ${format.height} preview`}>
-      <div
-        className="promo-canvas-wrap"
-        style={{
-          width: `${format.previewWidth}px`,
-          aspectRatio: `${format.width} / ${format.height}`,
-        }}
-      >
+    <section className="promo-preview-shell" aria-label={`TV Promo ${format.label} preview`}>
+      <div className="promo-canvas-wrap" style={{ width: `${format.previewWidth}px`, aspectRatio: `${format.width} / ${format.height}` }}>
         <article
           className={sceneClass}
           style={{
@@ -160,60 +148,40 @@ export function PromoPreview({ dish, settings, index = 0 }) {
             transform: `scale(${previewScale})`,
             '--promo-duration': `${settings.duration || 8}s`,
             '--promo-edge-color': tunedBackground,
+            '--promo-text-shadow': textShadow,
           }}
         >
           <div className="promo-background" />
+          {effects.spotlightPulse ? <div className="promo-spotlight" aria-hidden="true" /> : null}
           {effects.lightSweep ? <div className="promo-light-sweep" aria-hidden="true" /> : null}
 
-          <div className="promo-copy-block" style={layoutStyle(copyLayout)}>
-            {settings.showOffer ? (
-              <p
-                className="promo-eyebrow"
-                style={{ color: settings.offerColor, fontFamily: settings.offerFont, fontSize: `${settings.offerSize}px` }}
-              >
-                {offerText}
-              </p>
-            ) : null}
+          <div className="promo-copy-block" style={{ ...layoutStyle(copyLayout), textShadow }}>
+            {settings.showOffer ? <p className="promo-eyebrow" style={{ color: settings.offerColor, fontFamily: settings.offerFont, fontSize: `${settings.offerSize}px` }}>{offerText}</p> : null}
             <h2 style={{ color: settings.headlineColor, fontFamily: settings.headlineFont, fontSize: `${settings.headlineSize}px` }}>{headline}</h2>
             {dish?.nameGe ? <h3 style={{ color: settings.geTitleColor, fontFamily: settings.geTitleFont, fontSize: `${settings.geTitleSize}px` }}>{dish.nameGe}</h3> : null}
             {settings.showDescription && descriptionLines.length ? (
               <div className="promo-description-stack" style={{ transform: `translateY(${settings.descriptionOffsetY || 0}px)` }}>
-                {descriptionLines.map((line, lineIndex) => (
-                  <p key={`${line}-${lineIndex}`} className="promo-description" style={{ color: settings.descriptionColor, fontFamily: settings.descriptionFont, fontSize: `${settings.descriptionSize}px` }}>{line}</p>
-                ))}
+                {descriptionLines.map((line, lineIndex) => <p key={`${line}-${lineIndex}`} className="promo-description" style={{ color: settings.descriptionColor, fontFamily: settings.descriptionFont, fontSize: `${settings.descriptionSize}px` }}>{line}</p>)}
               </div>
             ) : null}
           </div>
 
           <div className="promo-dish-stage" style={{ ...layoutPositionStyle(dishLayout), transform: `scale(${dishScale})` }}>
-            {dish?.imageUrl ? (
-              <img className="promo-dish-image" src={dish.imageUrl} alt={dish.nameEn || dish.nameGe || 'Dish'} crossOrigin="anonymous" />
-            ) : (
-              <div className="promo-dish-placeholder">Select dish with image</div>
-            )}
+            {dish?.imageUrl ? <img className="promo-dish-image" src={dish.imageUrl} alt={dish.nameEn || dish.nameGe || 'Dish'} crossOrigin="anonymous" /> : <div className="promo-dish-placeholder">Select dish with image</div>}
           </div>
 
           {hasPrice ? (
-            <div className="promo-price-card" style={layoutStyle(priceLayout)}>
+            <div className="promo-price-card" style={{ ...layoutStyle(priceLayout), textShadow }}>
               {oldPrice ? <span className="promo-old-price" style={{ color: settings.oldPriceColor, fontFamily: settings.oldPriceFont, fontSize: `${settings.oldPriceSize}px` }}>{oldPrice}</span> : null}
               {salePrice ? <strong style={{ color: settings.salePriceColor, fontFamily: settings.salePriceFont, fontSize: `${settings.salePriceSize}px` }}>{salePrice}</strong> : null}
             </div>
           ) : null}
 
-          {settings.showCta ? <div className="promo-cta" style={{ ...layoutStyle(ctaLayout), color: settings.ctaColor, fontFamily: settings.ctaFont, fontSize: `${settings.ctaSize}px` }}>{settings.ctaText || 'ORDER NOW'}</div> : null}
-
-          {effects.gifOverlay && settings.gifUrl ? (
-            <img
-              className="promo-gif-overlay"
-              src={settings.gifUrl}
-              alt=""
-              aria-hidden="true"
-              style={{ ...layoutStyle(gifLayout), width: `${settings.gifSize || 18}%` }}
-            />
-          ) : null}
+          {settings.showCta ? <div className="promo-cta" style={{ ...layoutStyle(ctaLayout), color: settings.ctaColor, fontFamily: settings.ctaFont, fontSize: `${settings.ctaSize}px`, textShadow }}>{settings.ctaText || 'ORDER NOW'}</div> : null}
+          {effects.gifOverlay && settings.gifUrl ? <img className="promo-gif-overlay" src={settings.gifUrl} alt="" aria-hidden="true" style={{ ...layoutStyle(gifLayout), width: `${settings.gifSize || 18}%` }} /> : null}
         </article>
       </div>
-      <small className="promo-preview-size">Output canvas: {format.width} × {format.height}px</small>
+      <small className="promo-preview-size">Output format: {format.label}</small>
     </section>
   );
 }
