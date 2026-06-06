@@ -36,6 +36,13 @@ const FORMAT_LAYOUTS = Object.freeze({
   },
 });
 
+const GIF_SHAPE_CLIPS = Object.freeze({
+  star: 'polygon(50% 0%, 61% 34%, 98% 34%, 68% 55%, 79% 91%, 50% 70%, 21% 91%, 32% 55%, 2% 34%, 39% 34%)',
+  hexagon: 'polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%)',
+  diamond: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
+  blob: 'polygon(49% 2%, 78% 10%, 97% 35%, 92% 68%, 67% 94%, 32% 92%, 7% 68%, 5% 34%, 20% 11%)',
+});
+
 const getPrice = (value) => {
   const number = Number(value);
   if (!Number.isFinite(number) || number <= 0) return '';
@@ -53,12 +60,12 @@ const hexToRgb = (hex) => {
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, Number(value)));
 const adjustRgb = (color, amount) => {
-  const target = amount >= 0 ? { r: 255, g: 255, b: 255 } : { r: 0, g: 0 };
+  const target = amount >= 0 ? { r: 255, g: 255, b: 255 } : { r: 0, g: 0, b: 0 };
   const ratio = Math.abs(clamp(amount, -40, 40)) / 100;
   return {
     r: Math.round(color.r + (target.r - color.r) * ratio),
     g: Math.round(color.g + (target.g - color.g) * ratio),
-    b: Math.round(color.b + ((target.b ?? 0) - color.b) * ratio),
+    b: Math.round(color.b + (target.b - color.b) * ratio),
   };
 };
 const rgbToCss = ({ r, g, b }, alpha = 1) => `rgba(${r}, ${g}, ${b}, ${alpha})`;
@@ -84,6 +91,15 @@ const offsetPosition = (position = {}, offsetX = 0, offsetY = 0) => {
   if (next.top !== undefined) next.top += offsetY;
   else if (next.bottom !== undefined) next.bottom -= offsetY;
   return next;
+};
+
+const getGifShapeStyle = (settings) => {
+  const shape = settings.gifShape || 'rectangle';
+  if (shape === 'circle') return { borderRadius: '9999px', aspectRatio: '1 / 1', objectFit: 'cover' };
+  if (shape === 'rounded') return { borderRadius: `${settings.gifBorderRadius || 28}px` };
+  if (shape === 'rectangle') return { borderRadius: `${settings.gifBorderRadius || 0}px` };
+  const clipPath = GIF_SHAPE_CLIPS[shape];
+  return clipPath ? { clipPath, WebkitClipPath: clipPath, borderRadius: 0, aspectRatio: '1 / 1', objectFit: 'cover' } : { borderRadius: `${settings.gifBorderRadius || 0}px` };
 };
 
 export function PromoPreview({ dish, settings, index = 0 }) {
@@ -178,7 +194,7 @@ export function PromoPreview({ dish, settings, index = 0 }) {
           ) : null}
 
           {settings.showCta ? <div className="promo-cta" style={{ ...layoutStyle(ctaLayout), color: settings.ctaColor, fontFamily: settings.ctaFont, fontSize: `${settings.ctaSize}px`, textShadow }}>{settings.ctaText || 'ORDER NOW'}</div> : null}
-          {effects.gifOverlay && settings.gifUrl ? <img className="promo-gif-overlay" src={settings.gifUrl} alt="" aria-hidden="true" style={{ ...layoutStyle(gifLayout), width: `${settings.gifSize || 18}%`, borderRadius: `${settings.gifBorderRadius || 0}px` }} /> : null}
+          {effects.gifOverlay && settings.gifUrl ? <img className="promo-gif-overlay" src={settings.gifUrl} alt="" aria-hidden="true" style={{ ...layoutStyle(gifLayout), width: `${settings.gifSize || 18}%`, ...getGifShapeStyle(settings) }} /> : null}
         </article>
       </div>
       <small className="promo-preview-size">Output format: {format.label}</small>
