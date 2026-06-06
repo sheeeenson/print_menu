@@ -1,7 +1,7 @@
 import express from 'express';
 import { launch } from 'puppeteer-core';
 import { spawn } from 'node:child_process';
-import { mkdtemp, mkdir, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -10,6 +10,7 @@ const PORT = Number(process.env.PORT || 3000);
 const MAX_BODY_SIZE = process.env.MAX_BODY_SIZE || '25mb';
 const DEFAULT_CHROMIUM_PATH = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium';
 const IMAGE_WAIT_MS = Number(process.env.IMAGE_WAIT_MS || 10000);
+const SCREENCAST_QUALITY = Number(process.env.SCREENCAST_QUALITY || 88);
 
 app.use(express.json({ limit: MAX_BODY_SIZE }));
 
@@ -107,6 +108,19 @@ const freezeAnimationsAt = async (page, seconds) => {
   }, seconds);
 };
 
+const resetAndPlayAnimations = async (page) => {
+  await page.evaluate(() => {
+    document.getAnimations({ subtree: true }).forEach((animation) => {
+      try {
+        animation.cancel();
+        animation.play();
+      } catch (error) {
+        // Ignore animations that cannot be controlled by the Web Animations API.
+      }
+    });
+  });
+};
+
 const createPage = async (browser, { html, width, height, duration }) => {
   const page = await browser.newPage();
   page.setDefaultNavigationTimeout(0);
@@ -116,6 +130,104 @@ const createPage = async (browser, { html, width, height, duration }) => {
   await waitForImages(page);
   await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
   return page;
+};
+
+const renderMp4ViaScreencast = async ({ page, frameDir, outputPath, duration, fps, width, height }) => {
+  const client = await page.target().createCDPSession();
+  const targetFrameIntervalMs = 1000 / fps;
+  const pendingWrites = new Set();
+  let frameIndex = 0;
+  let firstTimestamp = null;
+  let lastSavedElapsedMs = -targetFrameIntervalMs;
+  let stopped = false;
+
+  const saveFrame = (data) => {
+    const framePath = path.join(frameDir, `frame-${String(frameIndex).padStart(5, '0')}.jpg`);
+    frameIndex += 1;
+    const promise = writeFile(framePath, Buffer.from(data, 'base64')).finally(() => pendingWrites.delete(promise));
+    pendingWrites.add(promise);
+  };
+
+  client.on('Page.screencastFrame', async ({ data, metadata, sessionId }) => {
+    try {
+      await client.send('Page.screencastFrameAck', { sessionId });
+    } catch (error) {
+      // The stream can already be stopped while a late frame arrives.
+    }
+
+    if (stopped) return;
+    const timestamp = Number(metadata?.timestamp || 0);
+    if (!firstTimestamp) firstTimestamp = timestamp || Date.now() / 1000;
+    const elapsedMs = Math.max(0, ((timestamp || Date.now() / 1000) - firstTimestamp) * 1000);
+
+    if (elapsedMs + 1 >= lastSavedElapsedMs + targetFrameIntervalMs) {
+      lastSavedElapsedMs = elapsedMs;
+      saveFrame(data);
+    }
+  });
+
+  await resetAndPlayAnimations(page);
+  await client.send('Page.startScreencast', {
+    format: 'jpeg',
+    quality: getNumber(SCREENCAST_QUALITY, 88, 50, 100),
+    maxWidth: width,
+    maxHeight: height,
+    everyNthFrame: 1,
+  });
+
+  await wait(Math.ceil(duration * 1000) + 350);
+  stopped = true;
+  await client.send('Page.stopScreencast').catch(() => undefined);
+  await Promise.all([...pendingWrites]);
+
+  if (frameIndex < Math.max(2, Math.round(duration * 8))) {
+    throw new Error(`Screencast captured too few frames: ${frameIndex}.`);
+  }
+
+  const effectiveFps = Math.max(1, frameIndex / duration).toFixed(3);
+
+  await runFfmpeg([
+    '-y',
+    '-framerate', effectiveFps,
+    '-i', path.join(frameDir, 'frame-%05d.jpg'),
+    '-t', String(duration),
+    '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+    '-c:v', 'libx264',
+    '-preset', 'veryfast',
+    '-crf', '23',
+    '-pix_fmt', 'yuv420p',
+    '-movflags', '+faststart',
+    outputPath,
+  ]);
+};
+
+const renderMp4ViaScreenshotFallback = async ({ page, frameDir, outputPath, duration, fps }) => {
+  const fallbackFps = Math.min(fps, 18);
+  const frameCount = Math.max(1, Math.round(duration * fallbackFps));
+  for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
+    const seconds = frameIndex / fallbackFps;
+    await freezeAnimationsAt(page, seconds);
+
+    await page.screenshot({
+      path: path.join(frameDir, `frame-${String(frameIndex).padStart(5, '0')}.jpg`),
+      type: 'jpeg',
+      quality: 84,
+      omitBackground: false,
+    });
+  }
+
+  await runFfmpeg([
+    '-y',
+    '-framerate', String(fallbackFps),
+    '-i', path.join(frameDir, 'frame-%05d.jpg'),
+    '-c:v', 'libx264',
+    '-preset', 'veryfast',
+    '-crf', '23',
+    '-pix_fmt', 'yuv420p',
+    '-movflags', '+faststart',
+    '-r', String(fallbackFps),
+    outputPath,
+  ]);
 };
 
 app.get('/health', (request, response) => {
@@ -128,7 +240,7 @@ app.post('/render', async (request, response) => {
   const width = getNumber(format.width, 1920, 320, 3840);
   const height = getNumber(format.height, 1080, 320, 3840);
   const duration = getNumber(payload.duration, 8, 1, 30);
-  const fps = getNumber(payload.fps, 30, 12, 60);
+  const fps = getNumber(payload.fps, 24, 12, 30);
   const output = payload.output === 'png' ? 'png' : 'mp4';
   const fallbackName = output === 'png' ? 'promo.png' : 'promo.mp4';
   const filename = sanitizeFilename(payload.filename || fallbackName).replace(/\.[^.]+$/, `.${output}`);
@@ -154,6 +266,7 @@ app.post('/render', async (request, response) => {
         '--disable-dev-shm-usage',
         '--disable-gpu',
         '--hide-scrollbars',
+        '--autoplay-policy=no-user-gesture-required',
       ],
       defaultViewport: { width, height, deviceScaleFactor: 1 },
       executablePath: DEFAULT_CHROMIUM_PATH,
@@ -177,29 +290,14 @@ app.post('/render', async (request, response) => {
       return;
     }
 
-    const frameCount = Math.max(1, Math.round(duration * fps));
-    for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
-      const seconds = frameIndex / fps;
-      await freezeAnimationsAt(page, seconds);
-
-      await page.screenshot({
-        path: path.join(frameDir, `frame-${String(frameIndex).padStart(5, '0')}.png`),
-        type: 'png',
-        omitBackground: false,
-        clip: { x: 0, y: 0, width, height },
-      });
+    try {
+      await renderMp4ViaScreencast({ page, frameDir, outputPath, duration, fps, width, height });
+    } catch (screencastError) {
+      console.warn('Screencast render failed, using screenshot fallback:', screencastError instanceof Error ? screencastError.message : String(screencastError));
+      await rm(frameDir, { recursive: true, force: true }).catch(() => {});
+      await mkdir(frameDir, { recursive: true });
+      await renderMp4ViaScreenshotFallback({ page, frameDir, outputPath, duration, fps });
     }
-
-    await runFfmpeg([
-      '-y',
-      '-framerate', String(fps),
-      '-i', path.join(frameDir, 'frame-%05d.png'),
-      '-c:v', 'libx264',
-      '-pix_fmt', 'yuv420p',
-      '-movflags', '+faststart',
-      '-r', String(fps),
-      outputPath,
-    ]);
 
     const videoBuffer = await readFile(outputPath);
     response.status(200);
