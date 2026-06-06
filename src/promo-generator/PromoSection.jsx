@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { PromoPreview } from './PromoPreview.jsx';
-import { DEFAULT_PROMO_EFFECTS, DEFAULT_PROMO_LAYOUT_OFFSETS, getPromoFormat, loadPromoProject, PROMO_DURATIONS, PROMO_FONT_OPTIONS, PROMO_FORMATS, savePromoProject } from './promoStorage.js';
+import { DEFAULT_PROMO_EFFECTS, DEFAULT_PROMO_LAYOUT_OFFSETS, getPromoFormat, loadPromoProject, PROMO_DURATIONS, PROMO_FONT_OPTIONS, PROMO_FORMATS, PROMO_GIF_SHAPES, savePromoProject } from './promoStorage.js';
 import './promoGenerator.css';
 
 const EFFECT_GROUPS = [
@@ -39,7 +39,7 @@ const LAYOUT_CONTROL_GROUPS = [
   { title: 'GIF', x: 'gifX', y: 'gifY' },
 ];
 
-const GLOBAL_PROMO_KEYS = new Set(['gifUrl', 'gifPosition', 'gifSize', 'gifBorderRadius', 'gifLibrary', 'selectedDishId', 'formatId']);
+const GLOBAL_PROMO_KEYS = new Set(['gifUrl', 'gifPosition', 'gifSize', 'gifBorderRadius', 'gifShape', 'gifLibrary', 'selectedDishId', 'formatId']);
 const getDishTitle = (dish) => dish?.nameEn || dish?.nameGe || 'Untitled dish';
 const getSafeFilename = (value) => String(value || 'promo').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'promo';
 const normalizeGifUrl = (value) => String(value || '').trim();
@@ -503,8 +503,14 @@ export function PromoSection({ project }) {
                 <option value="bottomRight">Bottom right</option>
               </select>
             </label>
+            <label className="image-menu-control">
+              <span>Shape</span>
+              <select value={settings.gifShape || 'rectangle'} onChange={(event) => updateSettings({ gifShape: event.target.value })}>
+                {PROMO_GIF_SHAPES.map((shape) => <option key={shape.id} value={shape.id}>{shape.label}</option>)}
+              </select>
+            </label>
             <RangeControl label="Size" value={settings.gifSize} min={6} max={42} onChange={(gifSize) => updateSettings({ gifSize })} suffix="%" />
-            <RangeControl label="Corner radius" value={settings.gifBorderRadius ?? 0} min={0} max={160} onChange={(gifBorderRadius) => updateSettings({ gifBorderRadius })} suffix="px" />
+            <RangeControl label="Corner radius" value={settings.gifBorderRadius ?? 0} min={0} max={500} onChange={(gifBorderRadius) => updateSettings({ gifBorderRadius })} suffix="px" />
           </PromoControlGroup>
         ) : null}
       </aside>
