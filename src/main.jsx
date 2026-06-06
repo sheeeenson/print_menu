@@ -15,6 +15,7 @@ import './pizzaBaselineFix.css';
 import './blurImageFix.css';
 import './finalPizzaPriceAlign.css';
 import './ui/appTheme.css';
+import './mobileFixes.css';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>
