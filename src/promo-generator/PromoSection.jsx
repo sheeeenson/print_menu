@@ -62,18 +62,15 @@ const downloadUrl = (url, filename) => {
   link.remove();
 };
 
-const getSupportedVideoMimeType = () => {
+const getSupportedMp4MimeType = () => {
   if (!window.MediaRecorder?.isTypeSupported) return '';
   return [
     'video/mp4;codecs="avc1.42E01E"',
+    'video/mp4;codecs="h264"',
     'video/mp4',
-    'video/webm;codecs=vp9',
-    'video/webm;codecs=vp8',
-    'video/webm',
   ].find((type) => window.MediaRecorder.isTypeSupported(type)) || '';
 };
 
-const getVideoExtension = (mimeType) => mimeType.includes('mp4') ? 'mp4' : 'webm';
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 const pauseCloneAnimationsAt = (scene, clone, seconds = 0) => {
@@ -163,28 +160,31 @@ async function downloadPromoPng(format, selectedDish) {
   });
 }
 
-async function downloadPromoVideo(format, selectedDish, settings) {
+async function downloadPromoMp4(format, selectedDish, settings) {
   if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
-    throw new Error('Video export is not supported in this browser. Try Chrome, Edge, or Safari.');
+    throw new Error('MP4 export is not supported in this browser. Try Safari or a Chromium browser with MP4 MediaRecorder support.');
+  }
+
+  const mimeType = getSupportedMp4MimeType();
+  if (!mimeType) {
+    throw new Error('This browser can record WebM only, but the export requires MP4/MPEG. Open this page in a browser with MP4 MediaRecorder support or use the backend renderer.');
   }
 
   const canvas = document.createElement('canvas');
   canvas.width = format.width;
   canvas.height = format.height;
 
-  const mimeType = getSupportedVideoMimeType();
-  const extension = getVideoExtension(mimeType);
-  const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-${format.label.replace(':', 'x')}.${extension}`;
+  const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-${format.label.replace(':', 'x')}.mp4`;
   const stream = canvas.captureStream(VIDEO_FPS);
   const chunks = [];
-  const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+  const recorder = new MediaRecorder(stream, { mimeType });
   const frameCount = Math.max(1, Math.round((settings.duration || 8) * VIDEO_FPS));
 
   const stopped = new Promise((resolve, reject) => {
     recorder.ondataavailable = (event) => {
       if (event.data?.size) chunks.push(event.data);
     };
-    recorder.onerror = () => reject(new Error('Video recorder failed.'));
+    recorder.onerror = () => reject(new Error('MP4 recorder failed.'));
     recorder.onstop = resolve;
   });
 
@@ -198,14 +198,12 @@ async function downloadPromoVideo(format, selectedDish, settings) {
   await stopped;
   stream.getTracks().forEach((track) => track.stop());
 
-  const videoBlob = new Blob(chunks, { type: mimeType || 'video/webm' });
-  if (!videoBlob.size) throw new Error('Could not create a video file.');
+  const videoBlob = new Blob(chunks, { type: 'video/mp4' });
+  if (!videoBlob.size) throw new Error('Could not create an MP4 file.');
 
   const videoUrl = URL.createObjectURL(videoBlob);
   downloadUrl(videoUrl, filename);
   setTimeout(() => URL.revokeObjectURL(videoUrl), 1000);
-
-  return extension.toUpperCase();
 }
 
 function PromoControlGroup({ title, children }) {
@@ -377,19 +375,19 @@ export function PromoSection({ project }) {
     }
   };
 
-  const handleDownloadVideo = async () => {
+  const handleDownloadMp4 = async () => {
     if (!selectedDish) {
-      setExportStatus('Select a dish with an image before exporting video.');
+      setExportStatus('Select a dish with an image before exporting MP4.');
       return;
     }
 
     try {
-      setExportStatus('Recording video...');
-      const extension = await downloadPromoVideo(activeFormat, selectedDish, settings);
-      setExportStatus(`${extension} video downloaded.`);
+      setExportStatus('Recording MP4...');
+      await downloadPromoMp4(activeFormat, selectedDish, settings);
+      setExportStatus('MP4 video downloaded.');
     } catch (error) {
       console.error(error);
-      setExportStatus(error instanceof Error ? error.message : 'Video export failed.');
+      setExportStatus(error instanceof Error ? error.message : 'MP4 export failed.');
     }
   };
 
@@ -414,7 +412,7 @@ export function PromoSection({ project }) {
         <PromoControlGroup title="Export">
           <div className="promo-duration-buttons">
             <button type="button" onClick={handleDownloadPng}>Download PNG</button>
-            <button type="button" onClick={handleDownloadVideo}>Download Video</button>
+            <button type="button" onClick={handleDownloadMp4}>Download MP4</button>
           </div>
           {exportStatus ? <small className="promo-preview-size">{exportStatus}</small> : null}
         </PromoControlGroup>
