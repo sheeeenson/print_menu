@@ -147,10 +147,22 @@ export function PromoPreview({ dish, settings, index = 0 }) {
     effects.glow ? 'promo-effect-glow' : '',
     effects.lightSweep ? 'promo-effect-light-sweep' : '',
     effects.textRise ? 'promo-effect-text-rise' : '',
+    effects.headlineSplit ? 'promo-effect-headline-split' : '',
+    effects.textWave ? 'promo-effect-text-wave' : '',
+    effects.textGlitch ? 'promo-effect-text-glitch' : '',
+    effects.dishSlide ? 'promo-effect-dish-slide' : '',
     effects.dishPulse ? 'promo-effect-dish-pulse' : '',
+    effects.dishRotate ? 'promo-effect-dish-rotate' : '',
     effects.priceShake ? 'promo-effect-price-shake' : '',
+    effects.priceFlip ? 'promo-effect-price-flip' : '',
+    effects.priceGlow ? 'promo-effect-price-glow' : '',
     effects.backgroundOrbit ? 'promo-effect-background-orbit' : '',
+    effects.backgroundPulse ? 'promo-effect-background-pulse' : '',
     effects.spotlightPulse ? 'promo-effect-spotlight-pulse' : '',
+    effects.confetti ? 'promo-effect-confetti' : '',
+    effects.vignette ? 'promo-effect-vignette' : '',
+    effects.gifSpin ? 'promo-effect-gif-spin' : '',
+    effects.gifBounce ? 'promo-effect-gif-bounce' : '',
   ].filter(Boolean).join(' ');
 
   return (
@@ -170,6 +182,8 @@ export function PromoPreview({ dish, settings, index = 0 }) {
           <div className="promo-background" />
           {effects.spotlightPulse ? <div className="promo-spotlight" aria-hidden="true" /> : null}
           {effects.lightSweep ? <div className="promo-light-sweep" aria-hidden="true" /> : null}
+          {effects.confetti ? <div className="promo-confetti" aria-hidden="true" /> : null}
+          {effects.vignette ? <div className="promo-vignette" aria-hidden="true" /> : null}
 
           <div className="promo-copy-block" style={{ ...layoutStyle(copyLayout), textShadow }}>
             {settings.showOffer ? <p className="promo-eyebrow" style={{ color: settings.offerColor, fontFamily: settings.offerFont, fontSize: `${settings.offerSize}px` }}>{offerText}</p> : null}
