@@ -347,7 +347,7 @@ export function PromoSection({ project }) {
   const toggleCategoryOpen = (categoryId) => {
     setOpenCategoryIds((current) => {
       const next = new Set(current);
-      if (next.has(categoryId)) next.delete();
+      if (next.has(categoryId)) next.delete(categoryId);
       else next.add(categoryId);
       return next;
     });
