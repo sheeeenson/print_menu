@@ -11,6 +11,9 @@ const EFFECT_GROUPS = [
       ['fastEntrance', 'Fast Entrance'],
       ['stopMotion', 'Stop Motion'],
       ['pricePunch', 'Price Punch'],
+      ['textRise', 'Text Rise'],
+      ['dishPulse', 'Dish Pulse'],
+      ['priceShake', 'Price Shake'],
     ],
   },
   {
@@ -18,6 +21,8 @@ const EFFECT_GROUPS = [
     items: [
       ['glow', 'Glow'],
       ['lightSweep', 'Light Sweep'],
+      ['backgroundOrbit', 'Background Orbit'],
+      ['spotlightPulse', 'Spotlight Pulse'],
     ],
   },
   {
@@ -39,6 +44,7 @@ const LAYOUT_CONTROL_GROUPS = [
 const getDishTitle = (dish) => dish?.nameEn || dish?.nameGe || 'Untitled dish';
 const getActiveFormatSettings = (settings, formatId = settings.formatId) => settings.formats?.[formatId] ?? {};
 const getSafeFilename = (value) => String(value || 'promo').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'promo';
+const withFallback = (value, fallback) => value === undefined || value === null ? fallback : value;
 
 const getDocumentCss = () => Array.from(document.styleSheets)
   .map((sheet) => {
@@ -201,6 +207,22 @@ function LayoutOffsetControls({ settings, updateLayoutOffset, resetLayoutOffsets
   );
 }
 
+function TextShadowControls({ settings, updateSettings }) {
+  const showTextShadow = withFallback(settings.showTextShadow, true);
+  const textShadowColor = withFallback(settings.textShadowColor, '#000000');
+  const textShadowOpacity = withFallback(settings.textShadowOpacity, 34);
+  const textShadowBlur = withFallback(settings.textShadowBlur, 38);
+
+  return (
+    <div className="promo-style-block">
+      <ToggleField label="Enable text shadow" checked={Boolean(showTextShadow)} onChange={(value) => updateSettings({ showTextShadow: value })} />
+      <ColorControl label="Shadow color" value={textShadowColor} onChange={(value) => updateSettings({ textShadowColor: value })} />
+      <RangeControl label="Shadow opacity" value={textShadowOpacity} min={0} max={100} onChange={(value) => updateSettings({ textShadowOpacity: value })} suffix="%" />
+      <RangeControl label="Shadow blur" value={textShadowBlur} min={0} max={90} onChange={(value) => updateSettings({ textShadowBlur: value })} suffix="px" />
+    </div>
+  );
+}
+
 export function PromoSection({ project }) {
   const contentCategories = useMemo(() => project.categories ?? [], [project.categories]);
   const contentDishes = useMemo(() => project.dishes ?? [], [project.dishes]);
@@ -210,7 +232,7 @@ export function PromoSection({ project }) {
     category,
     dishes: dishesWithImages.filter((dish) => dish.categoryId === category.id),
   })), [contentCategories, dishesWithImages]);
-  const [openCategoryIds, setOpenCategoryIds] = useState(() => new Set(contentCategories.map((category) => category.id)));
+  const [openCategoryIds, setOpenCategoryIds] = useState(() => new Set());
   const [settings, setSettings] = useState(() => loadPromoProject(dishesWithImages));
   const [exportStatus, setExportStatus] = useState('');
 
@@ -221,14 +243,6 @@ export function PromoSection({ project }) {
   useEffect(() => {
     savePromoProject(settings);
   }, [settings]);
-
-  useEffect(() => {
-    setOpenCategoryIds((current) => {
-      const next = new Set(current);
-      contentCategories.forEach((category) => next.add(category.id));
-      return next;
-    });
-  }, [contentCategories]);
 
   const selectedDish = dishesWithImages.find((dish) => dish.id === settings.selectedDishId) ?? dishesWithImages[0] ?? null;
   const selectedIndex = Math.max(0, dishesWithImages.findIndex((dish) => dish.id === selectedDish?.id));
@@ -332,7 +346,7 @@ export function PromoSection({ project }) {
         <header className="promo-panel-header">
           <p>TV Promo</p>
           <h2>Promo Generator</h2>
-          <span>{activeFormat.width} x {activeFormat.height} {activeFormat.name} scene.</span>
+          <span>{activeFormat.label} scene</span>
         </header>
 
         <PromoControlGroup title="Export">
@@ -344,7 +358,7 @@ export function PromoSection({ project }) {
         </PromoControlGroup>
 
         <PromoControlGroup title="Format">
-          <div className="promo-format-buttons">
+          <div className="promo-format-buttons promo-format-buttons-clean">
             {PROMO_FORMATS.map((format) => (
               <button
                 key={format.id}
@@ -353,7 +367,6 @@ export function PromoSection({ project }) {
                 onClick={() => switchFormat(format.id)}
               >
                 <strong>{format.label}</strong>
-                <small>{format.width}×{format.height}</small>
               </button>
             ))}
           </div>
@@ -443,6 +456,10 @@ export function PromoSection({ project }) {
           <RangeControl label="Description vertical offset" value={settings.descriptionOffsetY} min={-180} max={180} onChange={(descriptionOffsetY) => updateSettings({ descriptionOffsetY })} suffix="px" />
         </PromoControlGroup>
 
+        <PromoControlGroup title="Text shadow">
+          <TextShadowControls settings={settings} updateSettings={updateSettings} />
+        </PromoControlGroup>
+
         <PromoControlGroup title="Layout">
           <LayoutOffsetControls settings={settings} updateLayoutOffset={updateLayoutOffset} resetLayoutOffsets={resetLayoutOffsets} />
         </PromoControlGroup>
@@ -500,7 +517,7 @@ export function PromoSection({ project }) {
             <p>Preview</p>
             <h2>{selectedDish ? getDishTitle(selectedDish) : 'Select dish'}</h2>
           </div>
-          <div className="promo-output-pill">{activeFormat.label} · {activeFormat.width} × {activeFormat.height}</div>
+          <div className="promo-output-pill">{activeFormat.label}</div>
         </div>
         <PromoPreview dish={selectedDish} settings={settings} index={selectedIndex} />
       </main>
