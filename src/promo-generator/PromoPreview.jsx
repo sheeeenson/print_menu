@@ -17,22 +17,22 @@ const FORMAT_LAYOUTS = Object.freeze({
     copy: { left: 80, top: 78, width: 920, textAlign: 'center', justifyItems: 'center' },
     dish: { left: 90, top: 330, width: 900, height: 560, scale: 0.92 },
     price: { right: 74, bottom: 70, justifyItems: 'end', textAlign: 'right' },
-    cta: { left: 80, bottom: 88, textAlign: 'left' },
-    gif: { headlineLeft: { left: 80, top: 42 }, priceRight: { right: 74, top: 48 }, bottomLeft: { left: 80, bottom: 140 }, ctaLeft: { left: 80, bottom: 88 }, bottomRight: { right: 74, bottom: 70 } },
+    cta: { left: 80, bottom: 70, textAlign: 'left' },
+    gif: { headlineLeft: { left: 80, top: 42 }, priceRight: { right: 74, top: 48 }, bottomLeft: { left: 80, bottom: 140 }, ctaLeft: { left: 80, bottom: 70 }, bottomRight: { right: 74, bottom: 70 } },
   },
   portrait: {
     copy: { left: 74, top: 88, width: 932, textAlign: 'center', justifyItems: 'center' },
     dish: { left: 42, top: 410, width: 996, height: 650, scale: 1.05 },
     price: { right: 70, bottom: 88, justifyItems: 'end', textAlign: 'right' },
-    cta: { left: 74, bottom: 112, textAlign: 'left' },
-    gif: { headlineLeft: { left: 74, top: 50 }, priceRight: { right: 70, top: 62 }, bottomLeft: { left: 74, bottom: 168 }, ctaLeft: { left: 74, bottom: 112 }, bottomRight: { right: 70, bottom: 88 } },
+    cta: { left: 74, bottom: 88, textAlign: 'left' },
+    gif: { headlineLeft: { left: 74, top: 50 }, priceRight: { right: 70, top: 62 }, bottomLeft: { left: 74, bottom: 168 }, ctaLeft: { left: 74, bottom: 88 }, bottomRight: { right: 70, bottom: 88 } },
   },
   story: {
     copy: { left: 70, top: 110, width: 940, textAlign: 'center', justifyItems: 'center' },
     dish: { left: 34, top: 590, width: 1012, height: 820, scale: 1.14 },
     price: { right: 70, bottom: 190, justifyItems: 'end', textAlign: 'right' },
-    cta: { left: 70, bottom: 120, textAlign: 'left' },
-    gif: { headlineLeft: { left: 70, top: 62 }, priceRight: { right: 70, top: 76 }, bottomLeft: { left: 70, bottom: 184 }, ctaLeft: { left: 70, bottom: 120 }, bottomRight: { right: 70, bottom: 120 } },
+    cta: { left: 70, bottom: 190, textAlign: 'left' },
+    gif: { headlineLeft: { left: 70, top: 62 }, priceRight: { right: 70, top: 76 }, bottomLeft: { left: 70, bottom: 184 }, ctaLeft: { left: 70, bottom: 190 }, bottomRight: { right: 70, bottom: 190 } },
   },
 });
 
