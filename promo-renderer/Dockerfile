@@ -1,17 +1,10 @@
-FROM node:20-bookworm-slim
+FROM mcr.microsoft.com/playwright:v1.49.1-jammy
 
 ENV NODE_ENV=production
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends \
-    chromium \
-    ffmpeg \
-    fonts-dejavu \
-    fonts-liberation \
-    fonts-noto \
-    fonts-noto-color-emoji \
-    ca-certificates \
+  && apt-get install -y --no-install-recommends ffmpeg \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
