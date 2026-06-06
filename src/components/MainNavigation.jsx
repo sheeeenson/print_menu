@@ -9,7 +9,6 @@ export function MainNavigation({ snapshot, actions }) {
   const isLayout = project.selectedSection === APP_SECTIONS.LAYOUT_PRINT;
   const isImageMenu = project.selectedSection === APP_SECTIONS.IMAGE_MENU;
   const isTvPromo = project.selectedSection === APP_SECTIONS.TV_PROMO;
-  const isHtmlVideo = project.selectedSection === APP_SECTIONS.HTML_VIDEO;
   const canPrint = isLayout || isImageMenu;
 
   const handleImportClick = () => {
@@ -76,13 +75,6 @@ export function MainNavigation({ snapshot, actions }) {
           onClick={() => actions.setSection(APP_SECTIONS.TV_PROMO)}
         >
           TV Promo
-        </button>
-        <button
-          className={isHtmlVideo ? 'active' : ''}
-          type="button"
-          onClick={() => actions.setSection(APP_SECTIONS.HTML_VIDEO)}
-        >
-          HTML → MP4
         </button>
       </div>
       <div className="project-actions" aria-label="Project actions">
