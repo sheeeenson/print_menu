@@ -3,6 +3,8 @@ import { PromoPreview } from './PromoPreview.jsx';
 import { DEFAULT_PROMO_EFFECTS, DEFAULT_PROMO_LAYOUT_OFFSETS, getPromoFormat, loadPromoProject, PROMO_DURATIONS, PROMO_FONT_OPTIONS, PROMO_FORMATS, savePromoProject } from './promoStorage.js';
 import './promoGenerator.css';
 
+const VIDEO_FPS = 24;
+
 const EFFECT_GROUPS = [
   {
     title: 'Animation',
@@ -60,7 +62,38 @@ const downloadUrl = (url, filename) => {
   link.remove();
 };
 
-const getPromoSceneHtml = () => {
+const getSupportedVideoMimeType = () => {
+  if (!window.MediaRecorder?.isTypeSupported) return '';
+  return [
+    'video/mp4;codecs="avc1.42E01E"',
+    'video/mp4',
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm',
+  ].find((type) => window.MediaRecorder.isTypeSupported(type)) || '';
+};
+
+const getVideoExtension = (mimeType) => mimeType.includes('mp4') ? 'mp4' : 'webm';
+const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+const pauseCloneAnimationsAt = (scene, clone, seconds = 0) => {
+  const sourceElements = [scene, ...scene.querySelectorAll('*')];
+  const cloneElements = [clone, ...clone.querySelectorAll('*')];
+
+  sourceElements.forEach((sourceElement, index) => {
+    const cloneElement = cloneElements[index];
+    if (!cloneElement) return;
+
+    const style = window.getComputedStyle(sourceElement);
+    if (!style.animationName || style.animationName === 'none') return;
+
+    const animationCount = style.animationName.split(',').length;
+    cloneElement.style.animationPlayState = Array.from({ length: animationCount }, () => 'paused').join(',');
+    cloneElement.style.animationDelay = Array.from({ length: animationCount }, () => `-${seconds}s`).join(',');
+  });
+};
+
+const getPromoSceneHtml = (seconds = 0) => {
   const scene = document.querySelector('.promo-scene');
   if (!scene) return '';
 
@@ -70,6 +103,7 @@ const getPromoSceneHtml = () => {
   clone.style.position = 'relative';
   clone.style.left = '0';
   clone.style.top = '0';
+  pauseCloneAnimationsAt(scene, clone, seconds);
 
   return `
     <style>${getDocumentCss()}</style>
@@ -77,8 +111,8 @@ const getPromoSceneHtml = () => {
   `;
 };
 
-async function downloadPromoPng(format, selectedDish) {
-  const html = getPromoSceneHtml();
+const renderPromoFrameToCanvas = async (format, seconds, canvas) => {
+  const html = getPromoSceneHtml(seconds);
   if (!html) throw new Error('Could not find the promo scene.');
 
   const svg = `
@@ -94,69 +128,84 @@ async function downloadPromoPng(format, selectedDish) {
   await new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = format.width;
-      canvas.height = format.height;
       const context = canvas.getContext('2d');
+      context.clearRect(0, 0, format.width, format.height);
       context.drawImage(image, 0, 0, format.width, format.height);
       URL.revokeObjectURL(svgUrl);
-      const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-${format.label.replace(':', 'x')}.png`;
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          reject(new Error('Could not create PNG file.'));
-          return;
-        }
-        const pngUrl = URL.createObjectURL(blob);
-        downloadUrl(pngUrl, filename);
-        setTimeout(() => URL.revokeObjectURL(pngUrl), 1000);
-        resolve();
-      }, 'image/png');
+      resolve();
     };
     image.onerror = () => {
       URL.revokeObjectURL(svgUrl);
-      reject(new Error('Could not render the promo preview as PNG.'));
+      reject(new Error('Could not render the promo preview frame.'));
     };
     image.src = svgUrl;
   });
+};
+
+async function downloadPromoPng(format, selectedDish) {
+  const canvas = document.createElement('canvas');
+  canvas.width = format.width;
+  canvas.height = format.height;
+  await renderPromoFrameToCanvas(format, 0, canvas);
+
+  await new Promise((resolve, reject) => {
+    const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-${format.label.replace(':', 'x')}.png`;
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error('Could not create PNG file.'));
+        return;
+      }
+      const pngUrl = URL.createObjectURL(blob);
+      downloadUrl(pngUrl, filename);
+      setTimeout(() => URL.revokeObjectURL(pngUrl), 1000);
+      resolve();
+    }, 'image/png');
+  });
 }
 
-async function downloadPromoMp4(format, selectedDish, settings) {
-  const html = getPromoSceneHtml();
-  if (!html) throw new Error('Could not find the promo scene.');
-
-  const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-${format.label.replace(':', 'x')}.mp4`;
-  const response = await fetch('/api/promo-render', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      filename,
-      format,
-      duration: settings.duration || 8,
-      settings,
-      dish: selectedDish,
-      html,
-    }),
-  });
-
-  if (!response.ok) {
-    let message = 'MP4 export failed.';
-    try {
-      const payload = await response.json();
-      message = payload.detail || payload.error || message;
-    } catch (error) {
-      message = await response.text();
-    }
-    throw new Error(message);
+async function downloadPromoVideo(format, selectedDish, settings) {
+  if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
+    throw new Error('Video export is not supported in this browser. Try Chrome, Edge, or Safari.');
   }
 
-  const videoBlob = await response.blob();
-  if (!videoBlob.size) throw new Error('Renderer returned an empty MP4 file.');
+  const canvas = document.createElement('canvas');
+  canvas.width = format.width;
+  canvas.height = format.height;
+
+  const mimeType = getSupportedVideoMimeType();
+  const extension = getVideoExtension(mimeType);
+  const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-${format.label.replace(':', 'x')}.${extension}`;
+  const stream = canvas.captureStream(VIDEO_FPS);
+  const chunks = [];
+  const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+  const frameCount = Math.max(1, Math.round((settings.duration || 8) * VIDEO_FPS));
+
+  const stopped = new Promise((resolve, reject) => {
+    recorder.ondataavailable = (event) => {
+      if (event.data?.size) chunks.push(event.data);
+    };
+    recorder.onerror = () => reject(new Error('Video recorder failed.'));
+    recorder.onstop = resolve;
+  });
+
+  recorder.start();
+  for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
+    await renderPromoFrameToCanvas(format, frameIndex / VIDEO_FPS, canvas);
+    stream.getVideoTracks().forEach((track) => track.requestFrame?.());
+    await wait(1000 / VIDEO_FPS);
+  }
+  recorder.stop();
+  await stopped;
+  stream.getTracks().forEach((track) => track.stop());
+
+  const videoBlob = new Blob(chunks, { type: mimeType || 'video/webm' });
+  if (!videoBlob.size) throw new Error('Could not create a video file.');
 
   const videoUrl = URL.createObjectURL(videoBlob);
   downloadUrl(videoUrl, filename);
   setTimeout(() => URL.revokeObjectURL(videoUrl), 1000);
+
+  return extension.toUpperCase();
 }
 
 function PromoControlGroup({ title, children }) {
@@ -328,19 +377,19 @@ export function PromoSection({ project }) {
     }
   };
 
-  const handleDownloadMp4 = async () => {
+  const handleDownloadVideo = async () => {
     if (!selectedDish) {
-      setExportStatus('Select a dish with an image before exporting MP4.');
+      setExportStatus('Select a dish with an image before exporting video.');
       return;
     }
 
     try {
-      setExportStatus('Rendering MP4...');
-      await downloadPromoMp4(activeFormat, selectedDish, settings);
-      setExportStatus('MP4 downloaded.');
+      setExportStatus('Recording video...');
+      const extension = await downloadPromoVideo(activeFormat, selectedDish, settings);
+      setExportStatus(`${extension} video downloaded.`);
     } catch (error) {
       console.error(error);
-      setExportStatus(error instanceof Error ? error.message : 'MP4 export failed.');
+      setExportStatus(error instanceof Error ? error.message : 'Video export failed.');
     }
   };
 
@@ -365,7 +414,7 @@ export function PromoSection({ project }) {
         <PromoControlGroup title="Export">
           <div className="promo-duration-buttons">
             <button type="button" onClick={handleDownloadPng}>Download PNG</button>
-            <button type="button" onClick={handleDownloadMp4}>Download MP4</button>
+            <button type="button" onClick={handleDownloadVideo}>Download Video</button>
           </div>
           {exportStatus ? <small className="promo-preview-size">{exportStatus}</small> : null}
         </PromoControlGroup>
