@@ -1,5 +1,5 @@
 import express from 'express';
-import { launch } from 'puppeteer-core';
+import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -9,12 +9,12 @@ import crypto from 'node:crypto';
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
-const MAX_BODY_SIZE = process.env.MAX_BODY_SIZE || '25mb';
-const DEFAULT_CHROMIUM_PATH = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium';
+const MAX_BODY_SIZE = process.env.MAX_BODY_SIZE || '35mb';
 const IMAGE_WAIT_MS = Number(process.env.IMAGE_WAIT_MS || 10000);
-const SCREENCAST_QUALITY = Number(process.env.SCREENCAST_QUALITY || 88);
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
 const JOB_TTL_MS = Number(process.env.JOB_TTL_MS || 20 * 60 * 1000);
+const MAX_VIDEO_FPS = Number(process.env.MAX_VIDEO_FPS || 24);
+const MAX_VIDEO_DURATION = Number(process.env.MAX_VIDEO_DURATION || 15);
 
 const jobs = new Map();
 
@@ -123,50 +123,61 @@ const waitForImages = async (page) => {
   }
 };
 
-const freezeAnimationsAt = async (page, seconds) => {
-  await page.evaluate((time) => {
-    const elements = [document.documentElement, document.body, ...document.querySelectorAll('*')];
-    elements.forEach((element) => {
-      const style = window.getComputedStyle(element);
-      if (!style.animationName || style.animationName === 'none') return;
-      const count = style.animationName.split(',').length;
-      element.style.animationPlayState = Array.from({ length: count }, () => 'paused').join(',');
-      element.style.animationDelay = Array.from({ length: count }, () => `-${time}s`).join(',');
-    });
-  }, seconds);
+const createPage = async (browser, render) => {
+  const page = await browser.newPage({
+    viewport: { width: render.width, height: render.height },
+    deviceScaleFactor: 1,
+  });
+  page.setDefaultNavigationTimeout(0);
+  page.setDefaultTimeout(0);
+  await page.setContent(buildDocument(render), { waitUntil: 'domcontentloaded', timeout: 0 });
+  await waitForImages(page);
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  return page;
 };
 
-const resetAndPlayAnimations = async (page) => {
+const restartAnimations = async (page) => {
   await page.evaluate(() => {
     document.getAnimations({ subtree: true }).forEach((animation) => {
       try {
         animation.cancel();
         animation.play();
       } catch (error) {
-        // Ignore animations that cannot be controlled by the Web Animations API.
+        // Ignore non-controllable animations.
       }
     });
   });
 };
 
-const createPage = async (browser, { html, width, height, duration }) => {
-  const page = await browser.newPage();
-  page.setDefaultNavigationTimeout(0);
-  page.setDefaultTimeout(0);
-  await page.setViewport({ width, height, deviceScaleFactor: 1 });
-  await page.setContent(buildDocument({ html, width, height, duration }), { waitUntil: 'domcontentloaded', timeout: 0 });
-  await waitForImages(page);
-  await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
-  return page;
+const seekAnimations = async (page, milliseconds) => {
+  await page.evaluate((time) => {
+    document.getAnimations({ subtree: true }).forEach((animation) => {
+      try {
+        animation.currentTime = time;
+        animation.pause();
+      } catch (error) {
+        // Ignore non-controllable animations.
+      }
+    });
+  }, milliseconds);
 };
 
-const getVideoFfmpegArgs = ({ output, inputPattern, outputPath, duration, fps }) => {
+const capturePng = async ({ page, outputPath, width, height }) => {
+  await seekAnimations(page, 0);
+  const buffer = await page.screenshot({
+    type: 'png',
+    omitBackground: false,
+    clip: { x: 0, y: 0, width, height },
+  });
+  await writeFile(outputPath, buffer);
+};
+
+const getVideoFfmpegArgs = ({ output, inputPattern, outputPath, fps }) => {
   if (output === 'webm') {
     return [
       '-y',
       '-framerate', String(fps),
       '-i', inputPattern,
-      '-t', String(duration),
       '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
       '-c:v', 'libvpx-vp9',
       '-b:v', '0',
@@ -180,7 +191,6 @@ const getVideoFfmpegArgs = ({ output, inputPattern, outputPath, duration, fps })
     '-y',
     '-framerate', String(fps),
     '-i', inputPattern,
-    '-t', String(duration),
     '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
     '-c:v', 'libx264',
     '-preset', 'veryfast',
@@ -191,89 +201,29 @@ const getVideoFfmpegArgs = ({ output, inputPattern, outputPath, duration, fps })
   ];
 };
 
-const renderVideoViaScreencast = async ({ page, frameDir, outputPath, output, duration, fps, width, height }) => {
-  const client = await page.target().createCDPSession();
-  const targetFrameIntervalMs = 1000 / fps;
-  const pendingWrites = new Set();
-  let frameIndex = 0;
-  let firstTimestamp = null;
-  let lastSavedElapsedMs = -targetFrameIntervalMs;
-  let stopped = false;
+const captureVideoFrames = async ({ page, frameDir, duration, fps, width, height }) => {
+  const frameCount = Math.max(1, Math.round(duration * fps));
+  await restartAnimations(page);
 
-  const saveFrame = (data) => {
-    const framePath = path.join(frameDir, `frame-${String(frameIndex).padStart(5, '0')}.jpg`);
-    frameIndex += 1;
-    const promise = writeFile(framePath, Buffer.from(data, 'base64')).finally(() => pendingWrites.delete(promise));
-    pendingWrites.add(promise);
-  };
-
-  client.on('Page.screencastFrame', async ({ data, metadata, sessionId }) => {
-    try {
-      await client.send('Page.screencastFrameAck', { sessionId });
-    } catch (error) {
-      // The stream can already be stopped while a late frame arrives.
-    }
-
-    if (stopped) return;
-    const timestamp = Number(metadata?.timestamp || 0);
-    if (!firstTimestamp) firstTimestamp = timestamp || Date.now() / 1000;
-    const elapsedMs = Math.max(0, ((timestamp || Date.now() / 1000) - firstTimestamp) * 1000);
-
-    if (elapsedMs + 1 >= lastSavedElapsedMs + targetFrameIntervalMs) {
-      lastSavedElapsedMs = elapsedMs;
-      saveFrame(data);
-    }
-  });
-
-  await resetAndPlayAnimations(page);
-  await client.send('Page.startScreencast', {
-    format: 'jpeg',
-    quality: getNumber(SCREENCAST_QUALITY, 88, 50, 100),
-    maxWidth: width,
-    maxHeight: height,
-    everyNthFrame: 1,
-  });
-
-  await wait(Math.ceil(duration * 1000) + 350);
-  stopped = true;
-  await client.send('Page.stopScreencast').catch(() => undefined);
-  await Promise.all([...pendingWrites]);
-
-  if (frameIndex < Math.max(2, Math.round(duration * 8))) {
-    throw new Error(`Screencast captured too few frames: ${frameIndex}.`);
-  }
-
-  const effectiveFps = Math.max(1, frameIndex / duration).toFixed(3);
-  await runFfmpeg(getVideoFfmpegArgs({
-    output,
-    inputPattern: path.join(frameDir, 'frame-%05d.jpg'),
-    outputPath,
-    duration,
-    fps: effectiveFps,
-  }));
-};
-
-const renderVideoViaScreenshotFallback = async ({ page, frameDir, outputPath, output, duration, fps }) => {
-  const fallbackFps = Math.min(fps, 18);
-  const frameCount = Math.max(1, Math.round(duration * fallbackFps));
   for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
-    const seconds = frameIndex / fallbackFps;
-    await freezeAnimationsAt(page, seconds);
-
+    const milliseconds = (frameIndex / fps) * 1000;
+    await seekAnimations(page, milliseconds);
     await page.screenshot({
-      path: path.join(frameDir, `frame-${String(frameIndex).padStart(5, '0')}.jpg`),
-      type: 'jpeg',
-      quality: 84,
+      path: path.join(frameDir, `frame-${String(frameIndex).padStart(5, '0')}.png`),
+      type: 'png',
       omitBackground: false,
+      clip: { x: 0, y: 0, width, height },
     });
   }
+};
 
+const captureVideo = async ({ page, frameDir, outputPath, output, duration, fps, width, height }) => {
+  await captureVideoFrames({ page, frameDir, duration, fps, width, height });
   await runFfmpeg(getVideoFfmpegArgs({
     output,
-    inputPattern: path.join(frameDir, 'frame-%05d.jpg'),
+    inputPattern: path.join(frameDir, 'frame-%05d.png'),
     outputPath,
-    duration,
-    fps: fallbackFps,
+    fps,
   }));
 };
 
@@ -284,8 +234,8 @@ const normalizeRenderPayload = (payload = {}) => {
   return {
     width: getNumber(format.width, 1920, 320, 3840),
     height: getNumber(format.height, 1080, 320, 3840),
-    duration: getNumber(payload.duration, 8, 1, 30),
-    fps: getNumber(payload.fps, 24, 12, 30),
+    duration: getNumber(payload.duration, 8, 1, MAX_VIDEO_DURATION),
+    fps: getNumber(payload.fps, 24, 8, MAX_VIDEO_FPS),
     output,
     filename: sanitizeFilename(payload.filename || fallbackName).replace(/\.[^.]+$/, `.${output}`),
     html: String(payload.html || '').trim(),
@@ -304,55 +254,30 @@ const renderToFile = async (payload) => {
   try {
     await mkdir(frameDir, { recursive: true });
 
-    browser = await launch({
+    browser = await chromium.launch({
       args: [
         '--no-sandbox',
-        '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--disable-gpu',
         '--hide-scrollbars',
         '--autoplay-policy=no-user-gesture-required',
       ],
-      defaultViewport: { width: render.width, height: render.height, deviceScaleFactor: 1 },
-      executablePath: DEFAULT_CHROMIUM_PATH,
-      headless: 'new',
     });
 
     const page = await createPage(browser, render);
 
     if (render.output === 'png') {
-      await freezeAnimationsAt(page, 0);
-      const imageBuffer = await page.screenshot({
-        type: 'png',
-        omitBackground: false,
-        clip: { x: 0, y: 0, width: render.width, height: render.height },
-      });
-      await writeFile(outputPath, imageBuffer);
+      await capturePng({ page, outputPath, width: render.width, height: render.height });
     } else {
-      try {
-        await renderVideoViaScreencast({
-          page,
-          frameDir,
-          outputPath,
-          output: render.output,
-          duration: render.duration,
-          fps: render.fps,
-          width: render.width,
-          height: render.height,
-        });
-      } catch (screencastError) {
-        console.warn('Screencast render failed, using screenshot fallback:', screencastError instanceof Error ? screencastError.message : String(screencastError));
-        await rm(frameDir, { recursive: true, force: true }).catch(() => {});
-        await mkdir(frameDir, { recursive: true });
-        await renderVideoViaScreenshotFallback({
-          page,
-          frameDir,
-          outputPath,
-          output: render.output,
-          duration: render.duration,
-          fps: render.fps,
-        });
-      }
+      await captureVideo({
+        page,
+        frameDir,
+        outputPath,
+        output: render.output,
+        duration: render.duration,
+        fps: render.fps,
+        width: render.width,
+        height: render.height,
+      });
     }
 
     return {
@@ -409,8 +334,26 @@ const runJob = async (jobId, payload) => {
   }
 };
 
+const handleRenderRequest = async (request, response) => {
+  try {
+    const result = await renderToFile(request.body || {});
+    const buffer = await readFile(result.filePath);
+    response.status(200);
+    response.setHeader('Content-Type', result.contentType);
+    response.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    response.end(buffer);
+    await rm(result.workdir, { recursive: true, force: true }).catch(() => {});
+  } catch (error) {
+    console.error(error);
+    response.status(500).json({
+      error: 'Unable to render export.',
+      detail: error instanceof Error ? error.message : String(error),
+    });
+  }
+};
+
 app.get('/health', (request, response) => {
-  response.json({ ok: true });
+  response.json({ ok: true, renderer: 'playwright-frame-capture' });
 });
 
 app.post('/jobs', (request, response) => {
@@ -463,31 +406,14 @@ app.get('/jobs/:id/file', async (request, response) => {
   response.end(buffer);
 });
 
-app.post('/render', async (request, response) => {
-  try {
-    const result = await renderToFile(request.body || {});
-    const buffer = await readFile(result.filePath);
-    response.status(200);
-    response.setHeader('Content-Type', result.contentType);
-    response.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
-    response.end(buffer);
-    await rm(result.workdir, { recursive: true, force: true }).catch(() => {});
-  } catch (error) {
-    console.error(error);
-    response.status(500).json({
-      error: 'Unable to render export.',
-      detail: error instanceof Error ? error.message : String(error),
-    });
-  }
-});
-
+app.post('/render', handleRenderRequest);
 app.post('/html-to-mp4', (request, response) => {
   request.body = { ...(request.body || {}), output: 'mp4' };
-  return app._router.handle(request, response, () => {});
+  return handleRenderRequest(request, response);
 });
 app.post('/html-to-webm', (request, response) => {
   request.body = { ...(request.body || {}), output: 'webm' };
-  return app._router.handle(request, response, () => {});
+  return handleRenderRequest(request, response);
 });
 
 app.listen(PORT, () => {
