@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { ContentSection } from './components/ContentSection.jsx';
 import { LayoutPrintSection } from './components/LayoutPrintSection.jsx';
 import { MainNavigation } from './components/MainNavigation.jsx';
+import { HtmlVideoSection } from './html-video/HtmlVideoSection.jsx';
 import { ImageMenuSection } from './image-menu/ImageMenuSection.jsx';
 import { APP_SECTIONS } from './models/menu.js';
 import { PromoSection } from './promo-generator/PromoSection.jsx';
@@ -25,6 +26,10 @@ export function App() {
 
     if (project.selectedSection === APP_SECTIONS.TV_PROMO) {
       return <PromoSection project={project} />;
+    }
+
+    if (project.selectedSection === APP_SECTIONS.HTML_VIDEO) {
+      return <HtmlVideoSection />;
     }
 
     return <LayoutPrintSection project={project} actions={store.actions} />;
