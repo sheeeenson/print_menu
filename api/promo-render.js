@@ -8,6 +8,8 @@ const json = (response, statusCode, payload) => {
   response.end(JSON.stringify(payload));
 };
 
+const getFallbackContentType = (filename = '') => filename.toLowerCase().endsWith('.png') ? 'image/png' : 'video/mp4';
+
 export default async function handler(request, response) {
   if (request.method !== 'POST') {
     response.setHeader('Allow', 'POST');
@@ -18,8 +20,8 @@ export default async function handler(request, response) {
   const rendererUrl = getRendererUrl();
   if (!rendererUrl) {
     json(response, 501, {
-      error: 'MP4 renderer is not configured.',
-      detail: 'Set PROMO_RENDERER_URL to a renderer service that accepts the TV promo payload and returns an MP4 file.',
+      error: 'Promo renderer is not configured.',
+      detail: 'Set PROMO_RENDERER_URL to a renderer service that accepts the TV promo payload and returns a PNG or MP4 file.',
     });
     return;
   }
@@ -41,21 +43,21 @@ export default async function handler(request, response) {
         detail = rendererResponse.statusText;
       }
       json(response, rendererResponse.status, {
-        error: 'Renderer failed to create MP4.',
+        error: 'Renderer failed to create export file.',
         detail,
       });
       return;
     }
 
     const fileBuffer = Buffer.from(await rendererResponse.arrayBuffer());
-    const filename = request.body?.filename || 'promo.mp4';
+    const filename = request.body?.filename || (request.body?.output === 'png' ? 'promo.png' : 'promo.mp4');
     response.statusCode = 200;
-    response.setHeader('Content-Type', rendererResponse.headers.get('Content-Type') || 'video/mp4');
+    response.setHeader('Content-Type', rendererResponse.headers.get('Content-Type') || getFallbackContentType(filename));
     response.setHeader('Content-Disposition', `attachment; filename="${filename.replace(/[^a-zA-Z0-9._-]/g, '-')}"`);
     response.end(fileBuffer);
   } catch (error) {
     json(response, 500, {
-      error: 'Unable to contact MP4 renderer.',
+      error: 'Unable to contact promo renderer.',
       detail: error instanceof Error ? error.message : String(error),
     });
   }
