@@ -91,6 +91,7 @@ export const DEFAULT_PROMO_GLOBAL_SETTINGS = Object.freeze({
   gifUrl: '',
   gifPosition: 'textLeft',
   gifSize: 18,
+  gifBorderRadius: 0,
   gifLibrary: [],
 });
 
@@ -221,6 +222,7 @@ export const normalizePromoProject = (project = {}, dishes = []) => {
     gifUrl: legacyGifUrl,
     gifPosition: normalizeGifPosition(project.gifPosition || project.stickerPosition || project.formats?.[formatId]?.gifPosition),
     gifSize: normalizeNumber(project.gifSize ?? project.stickerSize ?? project.formats?.[formatId]?.gifSize, DEFAULT_PROMO_GLOBAL_SETTINGS.gifSize, 6, 42),
+    gifBorderRadius: normalizeNumber(project.gifBorderRadius ?? project.formats?.[formatId]?.gifBorderRadius, DEFAULT_PROMO_GLOBAL_SETTINGS.gifBorderRadius, 0, 160),
     gifLibrary: legacyGifUrl && !gifLibrary.some((item) => item.url === legacyGifUrl)
       ? [{ id: `gif_${Date.now()}`, name: 'Current GIF', url: legacyGifUrl }, ...gifLibrary]
       : gifLibrary,
