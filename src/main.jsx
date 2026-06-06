@@ -17,6 +17,7 @@ import './finalPizzaPriceAlign.css';
 import './ui/appTheme.css';
 import './mobileFixes.css';
 import './advancedResponsiveFix.css';
+import './unifiedAppTheme.css';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>
