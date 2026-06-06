@@ -41,6 +41,18 @@ const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mill
 
 const isFullHtmlDocument = (html) => /<!doctype\s+html|<html[\s>]/i.test(html);
 
+const getOutput = (value) => {
+  if (value === 'png') return 'png';
+  if (value === 'webm') return 'webm';
+  return 'mp4';
+};
+
+const getContentType = (output) => {
+  if (output === 'png') return 'image/png';
+  if (output === 'webm') return 'video/webm';
+  return 'video/mp4';
+};
+
 const buildDocument = ({ html, width, height, duration }) => {
   if (isFullHtmlDocument(html)) return html;
 
@@ -150,7 +162,38 @@ const createPage = async (browser, { html, width, height, duration }) => {
   return page;
 };
 
-const renderMp4ViaScreencast = async ({ page, frameDir, outputPath, duration, fps, width, height }) => {
+const getVideoFfmpegArgs = ({ output, inputPattern, outputPath, duration, fps }) => {
+  if (output === 'webm') {
+    return [
+      '-y',
+      '-framerate', String(fps),
+      '-i', inputPattern,
+      '-t', String(duration),
+      '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+      '-c:v', 'libvpx-vp9',
+      '-b:v', '0',
+      '-crf', '32',
+      '-pix_fmt', 'yuv420p',
+      outputPath,
+    ];
+  }
+
+  return [
+    '-y',
+    '-framerate', String(fps),
+    '-i', inputPattern,
+    '-t', String(duration),
+    '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+    '-c:v', 'libx264',
+    '-preset', 'veryfast',
+    '-crf', '23',
+    '-pix_fmt', 'yuv420p',
+    '-movflags', '+faststart',
+    outputPath,
+  ];
+};
+
+const renderVideoViaScreencast = async ({ page, frameDir, outputPath, output, duration, fps, width, height }) => {
   const client = await page.target().createCDPSession();
   const targetFrameIntervalMs = 1000 / fps;
   const pendingWrites = new Set();
@@ -203,23 +246,16 @@ const renderMp4ViaScreencast = async ({ page, frameDir, outputPath, duration, fp
   }
 
   const effectiveFps = Math.max(1, frameIndex / duration).toFixed(3);
-
-  await runFfmpeg([
-    '-y',
-    '-framerate', effectiveFps,
-    '-i', path.join(frameDir, 'frame-%05d.jpg'),
-    '-t', String(duration),
-    '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
-    '-c:v', 'libx264',
-    '-preset', 'veryfast',
-    '-crf', '23',
-    '-pix_fmt', 'yuv420p',
-    '-movflags', '+faststart',
+  await runFfmpeg(getVideoFfmpegArgs({
+    output,
+    inputPattern: path.join(frameDir, 'frame-%05d.jpg'),
     outputPath,
-  ]);
+    duration,
+    fps: effectiveFps,
+  }));
 };
 
-const renderMp4ViaScreenshotFallback = async ({ page, frameDir, outputPath, duration, fps }) => {
+const renderVideoViaScreenshotFallback = async ({ page, frameDir, outputPath, output, duration, fps }) => {
   const fallbackFps = Math.min(fps, 18);
   const frameCount = Math.max(1, Math.round(duration * fallbackFps));
   for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
@@ -234,18 +270,13 @@ const renderMp4ViaScreenshotFallback = async ({ page, frameDir, outputPath, dura
     });
   }
 
-  await runFfmpeg([
-    '-y',
-    '-framerate', String(fallbackFps),
-    '-i', path.join(frameDir, 'frame-%05d.jpg'),
-    '-c:v', 'libx264',
-    '-preset', 'veryfast',
-    '-crf', '23',
-    '-pix_fmt', 'yuv420p',
-    '-movflags', '+faststart',
-    '-r', String(fallbackFps),
+  await runFfmpeg(getVideoFfmpegArgs({
+    output,
+    inputPattern: path.join(frameDir, 'frame-%05d.jpg'),
     outputPath,
-  ]);
+    duration,
+    fps: fallbackFps,
+  }));
 };
 
 app.get('/health', (request, response) => {
@@ -259,8 +290,8 @@ const handleRender = async (request, response) => {
   const height = getNumber(format.height, 1080, 320, 3840);
   const duration = getNumber(payload.duration, 8, 1, 30);
   const fps = getNumber(payload.fps, 24, 12, 30);
-  const output = payload.output === 'png' ? 'png' : 'mp4';
-  const fallbackName = output === 'png' ? 'promo.png' : 'promo.mp4';
+  const output = getOutput(payload.output);
+  const fallbackName = output === 'png' ? 'promo.png' : `promo.${output}`;
   const filename = sanitizeFilename(payload.filename || fallbackName).replace(/\.[^.]+$/, `.${output}`);
   const html = String(payload.html || '').trim();
 
@@ -302,24 +333,24 @@ const handleRender = async (request, response) => {
       });
 
       response.status(200);
-      response.setHeader('Content-Type', 'image/png');
+      response.setHeader('Content-Type', getContentType(output));
       response.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       response.end(imageBuffer);
       return;
     }
 
     try {
-      await renderMp4ViaScreencast({ page, frameDir, outputPath, duration, fps, width, height });
+      await renderVideoViaScreencast({ page, frameDir, outputPath, output, duration, fps, width, height });
     } catch (screencastError) {
       console.warn('Screencast render failed, using screenshot fallback:', screencastError instanceof Error ? screencastError.message : String(screencastError));
       await rm(frameDir, { recursive: true, force: true }).catch(() => {});
       await mkdir(frameDir, { recursive: true });
-      await renderMp4ViaScreenshotFallback({ page, frameDir, outputPath, duration, fps });
+      await renderVideoViaScreenshotFallback({ page, frameDir, outputPath, output, duration, fps });
     }
 
     const videoBuffer = await readFile(outputPath);
     response.status(200);
-    response.setHeader('Content-Type', 'video/mp4');
+    response.setHeader('Content-Type', getContentType(output));
     response.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     response.end(videoBuffer);
   } catch (error) {
@@ -337,6 +368,10 @@ const handleRender = async (request, response) => {
 app.post('/render', handleRender);
 app.post('/html-to-mp4', (request, response) => {
   request.body = { ...(request.body || {}), output: 'mp4' };
+  return handleRender(request, response);
+});
+app.post('/html-to-webm', (request, response) => {
+  request.body = { ...(request.body || {}), output: 'webm' };
   return handleRender(request, response);
 });
 
