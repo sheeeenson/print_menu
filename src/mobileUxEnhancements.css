@@ -1,9 +1,5 @@
 /* Mobile-first UX polish loaded after the unified theme. */
 
-:root {
-  --mobile-nav-height: 74px;
-}
-
 @media (hover: none) {
   button:hover {
     transform: none !important;
@@ -31,7 +27,7 @@ textarea:focus-visible {
   }
 
   .workspace {
-    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom) + 14px) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 16px) !important;
   }
 
   .main-navigation,
@@ -78,9 +74,71 @@ textarea:focus-visible {
     white-space: nowrap;
   }
 
-  .project-actions {
+  .section-tabs {
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    z-index: auto !important;
     grid-column: 1 / -1 !important;
     grid-row: 2 !important;
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 48px !important;
+    padding: 5px !important;
+    gap: 6px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    border-radius: 18px !important;
+    background: rgba(255,255,255,0.045) !important;
+    border: 1px solid rgba(255,255,255,0.11) !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .section-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .section-tabs button {
+    flex: 0 0 auto !important;
+    min-width: max-content !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 40px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 9px 14px !important;
+    border-radius: 14px !important;
+    font-size: 0.9rem !important;
+    line-height: 1.1 !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+    letter-spacing: -0.02em !important;
+    scroll-snap-align: start;
+  }
+
+  .section-tabs button::before {
+    content: none !important;
+  }
+
+  .section-tabs button.active,
+  .section-tabs button[aria-selected='true'] {
+    background: linear-gradient(180deg, rgba(140,61,255,0.34), rgba(140,61,255,0.12)) !important;
+    border-color: rgba(185,92,255,0.42) !important;
+    color: #ffffff !important;
+    box-shadow: inset 0 -2px 0 rgba(185,92,255,0.85) !important;
+  }
+
+  .project-actions {
+    grid-column: 1 / -1 !important;
+    grid-row: 3 !important;
     display: flex !important;
     gap: 8px !important;
     width: 100% !important;
@@ -101,7 +159,7 @@ textarea:focus-visible {
   .project-actions button {
     flex: 0 0 auto !important;
     min-width: 132px !important;
-    min-height: 46px !important;
+    min-height: 44px !important;
     padding: 9px 12px !important;
     border-radius: 14px !important;
     scroll-snap-align: start;
@@ -111,63 +169,6 @@ textarea:focus-visible {
   .project-actions .primary-action {
     min-width: 116px !important;
     box-shadow: none !important;
-  }
-
-  .section-tabs {
-    position: fixed !important;
-    left: max(10px, env(safe-area-inset-left)) !important;
-    right: max(10px, env(safe-area-inset-right)) !important;
-    bottom: max(8px, env(safe-area-inset-bottom)) !important;
-    z-index: 90 !important;
-    display: grid !important;
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    width: auto !important;
-    max-width: none !important;
-    height: var(--mobile-nav-height) !important;
-    padding: 7px !important;
-    gap: 6px !important;
-    overflow: visible !important;
-    border-radius: 24px !important;
-    background: rgba(16, 17, 22, 0.94) !important;
-    border: 1px solid rgba(255,255,255,0.14) !important;
-    box-shadow: 0 18px 46px rgba(0,0,0,0.42) !important;
-    backdrop-filter: blur(18px);
-  }
-
-  .section-tabs button {
-    min-width: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    min-height: 0 !important;
-    display: grid !important;
-    place-items: center !important;
-    align-content: center !important;
-    gap: 2px !important;
-    padding: 6px 4px !important;
-    border-radius: 18px !important;
-    font-size: 0.68rem !important;
-    line-height: 1.05 !important;
-    white-space: normal !important;
-    text-align: center !important;
-    letter-spacing: -0.02em !important;
-  }
-
-  .section-tabs button::before {
-    display: block;
-    font-size: 1.05rem;
-    line-height: 1;
-  }
-
-  .section-tabs button:nth-child(1)::before { content: '☰'; }
-  .section-tabs button:nth-child(2)::before { content: '▣'; }
-  .section-tabs button:nth-child(3)::before { content: '◇'; }
-  .section-tabs button:nth-child(4)::before { content: '▶'; }
-
-  .section-tabs button.active,
-  .section-tabs button[aria-selected='true'] {
-    background: linear-gradient(180deg, rgba(140,61,255,0.42), rgba(140,61,255,0.16)) !important;
-    border-color: rgba(185,92,255,0.46) !important;
-    box-shadow: inset 0 0 0 1px rgba(185,92,255,0.18) !important;
   }
 
   .content-section,
@@ -309,7 +310,7 @@ textarea:focus-visible {
   .image-menu-panel > .image-menu-select-section:first-of-type,
   .layout-admin-panel > .layout-print-controls {
     position: sticky !important;
-    top: calc(max(8px, env(safe-area-inset-top)) + 96px) !important;
+    top: calc(max(8px, env(safe-area-inset-top)) + 144px) !important;
     z-index: 25 !important;
     box-shadow: 0 14px 34px rgba(0,0,0,0.26) !important;
   }
@@ -375,10 +376,6 @@ textarea:focus-visible {
 }
 
 @media (max-width: 520px) {
-  :root {
-    --mobile-nav-height: 70px;
-  }
-
   .main-navigation,
   .main-navigation.top-nav {
     padding-left: 8px !important;
@@ -391,15 +388,15 @@ textarea:focus-visible {
   }
 
   .section-tabs {
-    left: max(8px, env(safe-area-inset-left)) !important;
-    right: max(8px, env(safe-area-inset-right)) !important;
-    padding: 6px !important;
-    border-radius: 22px !important;
+    padding: 5px !important;
+    border-radius: 18px !important;
   }
 
   .section-tabs button {
-    border-radius: 16px !important;
-    font-size: 0.63rem !important;
+    border-radius: 14px !important;
+    font-size: 0.84rem !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
   }
 
   .category-panel,
