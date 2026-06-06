@@ -96,10 +96,10 @@ const offsetPosition = (position = {}, offsetX = 0, offsetY = 0) => {
 const getGifShapeStyle = (settings) => {
   const shape = settings.gifShape || 'rectangle';
   if (shape === 'circle') return { borderRadius: '9999px', aspectRatio: '1 / 1', objectFit: 'cover' };
-  if (shape === 'rounded') return { borderRadius: `${settings.gifBorderRadius || 28}px` };
-  if (shape === 'rectangle') return { borderRadius: `${settings.gifBorderRadius || 0}px` };
+  if (shape === 'rounded') return { borderRadius: '36px' };
+  if (shape === 'rectangle') return { borderRadius: 0 };
   const clipPath = GIF_SHAPE_CLIPS[shape];
-  return clipPath ? { clipPath, WebkitClipPath: clipPath, borderRadius: 0, aspectRatio: '1 / 1', objectFit: 'cover' } : { borderRadius: `${settings.gifBorderRadius || 0}px` };
+  return clipPath ? { clipPath, WebkitClipPath: clipPath, borderRadius: 0, aspectRatio: '1 / 1', objectFit: 'cover' } : { borderRadius: 0 };
 };
 
 export function PromoPreview({ dish, settings, index = 0 }) {
