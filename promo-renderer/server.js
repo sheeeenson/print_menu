@@ -1,10 +1,14 @@
 import express from 'express';
 import { launch } from 'puppeteer-core';
-import chromium from '@sparticuz/chromium';
+import { spawn } from 'node:child_process';
+import { mkdtemp, mkdir, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
 const MAX_BODY_SIZE = process.env.MAX_BODY_SIZE || '25mb';
+const DEFAULT_CHROMIUM_PATH = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium';
 
 app.use(express.json({ limit: MAX_BODY_SIZE }));
 
@@ -17,11 +21,6 @@ const getNumber = (value, fallback, min, max) => {
   const number = Number(value);
   if (!Number.isFinite(number)) return fallback;
   return Math.min(max, Math.max(min, number));
-};
-
-const getExecutablePath = async () => {
-  if (process.env.PUPPETEER_EXECUTABLE_PATH) return process.env.PUPPETEER_EXECUTABLE_PATH;
-  return chromium.executablePath();
 };
 
 const buildDocument = ({ html, width, height, duration }) => `<!doctype html>
@@ -53,6 +52,21 @@ const buildDocument = ({ html, width, height, duration }) => `<!doctype html>
   <body>${html}</body>
 </html>`;
 
+const runFfmpeg = (args) => new Promise((resolve, reject) => {
+  const ffmpeg = spawn('ffmpeg', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+  let stderr = '';
+
+  ffmpeg.stderr.on('data', (chunk) => {
+    stderr += chunk.toString();
+  });
+
+  ffmpeg.on('error', reject);
+  ffmpeg.on('close', (code) => {
+    if (code === 0) resolve();
+    else reject(new Error(stderr || `ffmpeg exited with code ${code}`));
+  });
+});
+
 app.get('/health', (request, response) => {
   response.json({ ok: true });
 });
@@ -73,12 +87,24 @@ app.post('/render', async (request, response) => {
   }
 
   let browser;
+  const workdir = await mkdtemp(path.join(tmpdir(), 'promo-render-'));
+  const frameDir = path.join(workdir, 'frames');
+  const outputPath = path.join(workdir, filename);
+
   try {
+    await mkdir(frameDir, { recursive: true });
+
     browser = await launch({
-      args: chromium.args,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--hide-scrollbars',
+      ],
       defaultViewport: { width, height, deviceScaleFactor: 1 },
-      executablePath: await getExecutablePath(),
-      headless: chromium.headless,
+      executablePath: DEFAULT_CHROMIUM_PATH,
+      headless: 'new',
     });
 
     const page = await browser.newPage();
@@ -86,20 +112,44 @@ app.post('/render', async (request, response) => {
     await page.setContent(buildDocument({ html, width, height, duration }), { waitUntil: 'networkidle0' });
     await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
 
-    const stream = await page.screencast({
-      path: undefined,
-      format: 'mp4',
-      fps,
-      scale: 1,
-    });
+    const frameCount = Math.max(1, Math.round(duration * fps));
+    for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
+      const seconds = frameIndex / fps;
+      await page.evaluate((time) => {
+        const elements = [document.documentElement, document.body, ...document.querySelectorAll('*')];
+        elements.forEach((element) => {
+          const style = window.getComputedStyle(element);
+          if (!style.animationName || style.animationName === 'none') return;
+          const count = style.animationName.split(',').length;
+          element.style.animationPlayState = Array.from({ length: count }, () => 'paused').join(',');
+          element.style.animationDelay = Array.from({ length: count }, () => `-${time}s`).join(',');
+        });
+      }, seconds);
 
-    await new Promise((resolve) => setTimeout(resolve, duration * 1000));
-    const videoBuffer = await stream.stop();
+      await page.screenshot({
+        path: path.join(frameDir, `frame-${String(frameIndex).padStart(5, '0')}.png`),
+        type: 'png',
+        omitBackground: false,
+        clip: { x: 0, y: 0, width, height },
+      });
+    }
 
+    await runFfmpeg([
+      '-y',
+      '-framerate', String(fps),
+      '-i', path.join(frameDir, 'frame-%05d.png'),
+      '-c:v', 'libx264',
+      '-pix_fmt', 'yuv420p',
+      '-movflags', '+faststart',
+      '-r', String(fps),
+      outputPath,
+    ]);
+
+    const videoBuffer = await readFile(outputPath);
     response.status(200);
     response.setHeader('Content-Type', 'video/mp4');
     response.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    response.end(Buffer.from(videoBuffer));
+    response.end(videoBuffer);
   } catch (error) {
     console.error(error);
     response.status(500).json({
@@ -108,6 +158,7 @@ app.post('/render', async (request, response) => {
     });
   } finally {
     if (browser) await browser.close().catch(() => {});
+    await rm(workdir, { recursive: true, force: true }).catch(() => {});
   }
 });
 
