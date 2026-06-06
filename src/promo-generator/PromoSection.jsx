@@ -60,9 +60,9 @@ const downloadUrl = (url, filename) => {
   link.remove();
 };
 
-async function downloadPromoPng(format, selectedDish) {
+const getPromoSceneHtml = () => {
   const scene = document.querySelector('.promo-scene');
-  if (!scene) return;
+  if (!scene) return '';
 
   const clone = scene.cloneNode(true);
   clone.style.transform = 'none';
@@ -71,10 +71,16 @@ async function downloadPromoPng(format, selectedDish) {
   clone.style.left = '0';
   clone.style.top = '0';
 
-  const html = `
+  return `
     <style>${getDocumentCss()}</style>
     ${clone.outerHTML}
   `;
+};
+
+async function downloadPromoPng(format, selectedDish) {
+  const html = getPromoSceneHtml();
+  if (!html) throw new Error('Could not find the promo scene.');
+
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="${format.width}" height="${format.height}" viewBox="0 0 ${format.width} ${format.height}">
       <foreignObject width="100%" height="100%">
@@ -112,6 +118,45 @@ async function downloadPromoPng(format, selectedDish) {
     };
     image.src = svgUrl;
   });
+}
+
+async function downloadPromoMp4(format, selectedDish, settings) {
+  const html = getPromoSceneHtml();
+  if (!html) throw new Error('Could not find the promo scene.');
+
+  const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-${format.label.replace(':', 'x')}.mp4`;
+  const response = await fetch('/api/promo-render', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      filename,
+      format,
+      duration: settings.duration || 8,
+      settings,
+      dish: selectedDish,
+      html,
+    }),
+  });
+
+  if (!response.ok) {
+    let message = 'MP4 export failed.';
+    try {
+      const payload = await response.json();
+      message = payload.detail || payload.error || message;
+    } catch (error) {
+      message = await response.text();
+    }
+    throw new Error(message);
+  }
+
+  const videoBlob = await response.blob();
+  if (!videoBlob.size) throw new Error('Renderer returned an empty MP4 file.');
+
+  const videoUrl = URL.createObjectURL(videoBlob);
+  downloadUrl(videoUrl, filename);
+  setTimeout(() => URL.revokeObjectURL(videoUrl), 1000);
 }
 
 function PromoControlGroup({ title, children }) {
@@ -283,14 +328,26 @@ export function PromoSection({ project }) {
     }
   };
 
-  const handleDownloadMp4 = () => {
-    setExportStatus('MP4 export needs the renderer service. This button is ready for the next backend step.');
+  const handleDownloadMp4 = async () => {
+    if (!selectedDish) {
+      setExportStatus('Select a dish with an image before exporting MP4.');
+      return;
+    }
+
+    try {
+      setExportStatus('Rendering MP4...');
+      await downloadPromoMp4(activeFormat, selectedDish, settings);
+      setExportStatus('MP4 downloaded.');
+    } catch (error) {
+      console.error(error);
+      setExportStatus(error instanceof Error ? error.message : 'MP4 export failed.');
+    }
   };
 
   const toggleCategoryOpen = (categoryId) => {
     setOpenCategoryIds((current) => {
       const next = new Set(current);
-      if (next.has(categoryId)) next.delete(categoryId);
+      if (next.has(categoryId)) next.delete();
       else next.add(categoryId);
       return next;
     });
