@@ -1,3 +1,5 @@
+const DEFAULT_RENDERER_ENDPOINT = 'https://print-menu.onrender.com/render';
+
 const getDocumentCss = () => Array.from(document.styleSheets)
   .map((sheet) => {
     try {
@@ -26,6 +28,23 @@ const downloadBlob = (blob, filename) => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
+const getRendererEndpoint = () => {
+  const configuredEndpoint = import.meta.env?.VITE_PROMO_RENDERER_URL || import.meta.env?.VITE_RENDERER_URL || '';
+  const endpoint = configuredEndpoint || DEFAULT_RENDERER_ENDPOINT;
+  return endpoint.replace(/\/$/, '').replace(/\/render$/, '/render');
+};
+
+const getSceneSize = (scene) => {
+  const scale = Number(scene.style.transform?.match(/scale\(([^)]+)\)/)?.[1] || 1) || 1;
+  const rect = scene.getBoundingClientRect();
+  return {
+    width: Math.round(rect.width / scale) || scene.offsetWidth || 1920,
+    height: Math.round(rect.height / scale) || scene.offsetHeight || 1080,
+  };
+};
+
+const getCurrentPromoTitle = () => document.querySelector('.promo-generator-toolbar h2')?.textContent || 'tv-promo';
+
 const getSceneHtmlDocument = () => {
   const scene = document.querySelector('.promo-scene');
   if (!scene) throw new Error('Could not find the promo scene.');
@@ -37,8 +56,7 @@ const getSceneHtmlDocument = () => {
   clone.style.left = '0';
   clone.style.top = '0';
 
-  const width = Math.round(scene.getBoundingClientRect().width / (scene.style.transform?.match(/scale\(([^)]+)\)/)?.[1] || 1)) || scene.offsetWidth || 1920;
-  const height = Math.round(scene.getBoundingClientRect().height / (scene.style.transform?.match(/scale\(([^)]+)\)/)?.[1] || 1)) || scene.offsetHeight || 1080;
+  const { width, height } = getSceneSize(scene);
 
   return `<!doctype html>
 <html>
@@ -63,40 +81,111 @@ const getSceneHtmlDocument = () => {
 </html>`;
 };
 
-const downloadCurrentPromoHtml = () => {
-  const title = document.querySelector('.promo-generator-toolbar h2')?.textContent || 'tv-promo';
-  const html = getSceneHtmlDocument();
-  downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), `${getSafeFilename(title)}.html`);
+const setDownloadStatus = (downloadGroup, message) => {
+  const status = downloadGroup?.querySelector('.promo-preview-size');
+  if (status) status.textContent = message;
 };
 
-const ensureHtmlButton = () => {
-  const downloadGroup = Array.from(document.querySelectorAll('.promo-panel-group'))
-    .find((group) => group.querySelector('h3')?.textContent?.trim() === 'Download');
-  const buttonRow = downloadGroup?.querySelector('.promo-duration-buttons');
-  if (!buttonRow || buttonRow.querySelector('[data-promo-html-download]')) return;
+const getRenderErrorMessage = async (response, fallbackMessage) => {
+  const text = await response.text();
+  if (!text) return fallbackMessage;
+
+  try {
+    const payload = JSON.parse(text);
+    return payload.detail || payload.error || text;
+  } catch (error) {
+    return text;
+  }
+};
+
+const downloadCurrentPromoHtml = () => {
+  const html = getSceneHtmlDocument();
+  downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), `${getSafeFilename(getCurrentPromoTitle())}.html`);
+};
+
+const downloadCurrentPromoWebm = async (downloadGroup) => {
+  const scene = document.querySelector('.promo-scene');
+  if (!scene) throw new Error('Could not find the promo scene.');
+
+  const html = getSceneHtmlDocument();
+  const { width, height } = getSceneSize(scene);
+  const filename = `${getSafeFilename(getCurrentPromoTitle())}.webm`;
+  const response = await fetch(getRendererEndpoint(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      output: 'webm',
+      filename,
+      format: { id: 'current', label: `${width}x${height}`, width, height },
+      duration: 8,
+      fps: 24,
+      html,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getRenderErrorMessage(response, 'WebM export failed.'));
+  }
+
+  const blob = await response.blob();
+  if (!blob.size) throw new Error('Renderer returned an empty WebM file.');
+  downloadBlob(blob, filename);
+  setDownloadStatus(downloadGroup, 'WebM video downloaded.');
+};
+
+const addDownloadButton = ({ buttonRow, downloadGroup, label, dataAttribute, onClick }) => {
+  if (buttonRow.querySelector(`[${dataAttribute}]`)) return;
 
   const button = document.createElement('button');
   button.type = 'button';
-  button.textContent = 'HTML';
-  button.dataset.promoHtmlDownload = 'true';
-  button.addEventListener('click', () => {
+  button.textContent = label;
+  button.setAttribute(dataAttribute, 'true');
+  button.addEventListener('click', async () => {
     try {
-      downloadCurrentPromoHtml();
+      await onClick(downloadGroup);
     } catch (error) {
       console.error(error);
-      const status = downloadGroup.querySelector('.promo-preview-size');
-      if (status) status.textContent = error instanceof Error ? error.message : 'HTML export failed.';
+      setDownloadStatus(downloadGroup, error instanceof Error ? error.message : `${label} export failed.`);
     }
   });
 
   buttonRow.appendChild(button);
 };
 
+const ensureDownloadButtons = () => {
+  const downloadGroup = Array.from(document.querySelectorAll('.promo-panel-group'))
+    .find((group) => group.querySelector('h3')?.textContent?.trim() === 'Download');
+  const buttonRow = downloadGroup?.querySelector('.promo-duration-buttons');
+  if (!buttonRow) return;
+
+  addDownloadButton({
+    buttonRow,
+    downloadGroup,
+    label: 'WebM',
+    dataAttribute: 'data-promo-webm-download',
+    onClick: async (group) => {
+      setDownloadStatus(group, 'Rendering WebM on server...');
+      await downloadCurrentPromoWebm(group);
+    },
+  });
+
+  addDownloadButton({
+    buttonRow,
+    downloadGroup,
+    label: 'HTML',
+    dataAttribute: 'data-promo-html-download',
+    onClick: () => {
+      downloadCurrentPromoHtml();
+      setDownloadStatus(downloadGroup, 'HTML downloaded.');
+    },
+  });
+};
+
 export const installPromoHtmlDownloadButton = () => {
   if (typeof window === 'undefined') return;
 
-  const observer = new MutationObserver(ensureHtmlButton);
+  const observer = new MutationObserver(ensureDownloadButtons);
   observer.observe(document.body, { childList: true, subtree: true });
-  window.addEventListener('load', ensureHtmlButton);
-  ensureHtmlButton();
+  window.addEventListener('load', ensureDownloadButtons);
+  ensureDownloadButtons();
 };
