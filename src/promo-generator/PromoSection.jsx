@@ -41,10 +41,12 @@ const LAYOUT_CONTROL_GROUPS = [
   { title: 'GIF', x: 'gifX', y: 'gifY' },
 ];
 
+const GLOBAL_PROMO_KEYS = new Set(['gifUrl', 'gifPosition', 'gifSize', 'gifLibrary']);
 const getDishTitle = (dish) => dish?.nameEn || dish?.nameGe || 'Untitled dish';
 const getActiveFormatSettings = (settings, formatId = settings.formatId) => settings.formats?.[formatId] ?? {};
 const getSafeFilename = (value) => String(value || 'promo').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'promo';
 const withFallback = (value, fallback) => value === undefined || value === null ? fallback : value;
+const normalizeGifUrl = (value) => String(value || '').trim();
 
 const getDocumentCss = () => Array.from(document.styleSheets)
   .map((sheet) => {
@@ -223,6 +225,69 @@ function TextShadowControls({ settings, updateSettings }) {
   );
 }
 
+function GifLibraryControls({ settings, updateSettings }) {
+  const gifUrl = normalizeGifUrl(settings.gifUrl);
+  const gifLibrary = Array.isArray(settings.gifLibrary) ? settings.gifLibrary : [];
+  const selectedLibraryUrl = gifLibrary.some((item) => item.url === gifUrl) ? gifUrl : '';
+
+  const saveCurrentGif = () => {
+    const url = normalizeGifUrl(settings.gifUrl);
+    if (!url) return;
+    const existing = gifLibrary.find((item) => item.url === url);
+    const nextItem = existing || {
+      id: `gif_${Date.now()}`,
+      name: `GIF ${gifLibrary.length + 1}`,
+      url,
+    };
+    updateSettings({
+      gifLibrary: [nextItem, ...gifLibrary.filter((item) => item.url !== url)].slice(0, 60),
+      gifUrl: url,
+    });
+  };
+
+  const selectGif = (url) => {
+    updateSettings({ gifUrl: url });
+  };
+
+  const deleteGif = (url) => {
+    updateSettings({
+      gifLibrary: gifLibrary.filter((item) => item.url !== url),
+      gifUrl: gifUrl === url ? '' : gifUrl,
+    });
+  };
+
+  return (
+    <div className="promo-gif-library">
+      <label className="image-menu-control">
+        <span>GIF URL</span>
+        <input value={settings.gifUrl || ''} placeholder="Paste GIF URL" onChange={(event) => updateSettings({ gifUrl: event.target.value })} />
+      </label>
+      <div className="promo-gif-library-actions">
+        <button type="button" onClick={saveCurrentGif} disabled={!gifUrl}>Save current GIF</button>
+        {gifLibrary.length ? (
+          <select value={selectedLibraryUrl} onChange={(event) => event.target.value && selectGif(event.target.value)}>
+            <option value="">Choose saved GIF</option>
+            {gifLibrary.map((item) => <option key={item.id || item.url} value={item.url}>{item.name}</option>)}
+          </select>
+        ) : null}
+      </div>
+      {gifLibrary.length ? (
+        <div className="promo-gif-library-list">
+          {gifLibrary.map((item) => (
+            <div key={item.id || item.url} className={item.url === gifUrl ? 'active' : ''}>
+              <button type="button" onClick={() => selectGif(item.url)}>
+                <span>{item.name}</span>
+                <small>{item.url}</small>
+              </button>
+              <button type="button" className="danger" onClick={() => deleteGif(item.url)}>Delete</button>
+            </div>
+          ))}
+        </div>
+      ) : <small className="promo-preview-size">Saved GIFs will appear here after you save a URL.</small>}
+    </div>
+  );
+}
+
 export function PromoSection({ project }) {
   const contentCategories = useMemo(() => project.categories ?? [], [project.categories]);
   const contentDishes = useMemo(() => project.dishes ?? [], [project.dishes]);
@@ -251,7 +316,8 @@ export function PromoSection({ project }) {
   const updateSettings = (changes) => {
     setSettings((current) => {
       const activeFormatSettings = getActiveFormatSettings(current);
-      const nextFormatSettings = { ...activeFormatSettings, ...changes };
+      const formatChanges = Object.fromEntries(Object.entries(changes).filter(([key]) => !GLOBAL_PROMO_KEYS.has(key)));
+      const nextFormatSettings = { ...activeFormatSettings, ...formatChanges };
       return {
         ...current,
         ...changes,
@@ -281,9 +347,18 @@ export function PromoSection({ project }) {
     setSettings((current) => {
       const currentFormatSettings = getActiveFormatSettings(current);
       const nextFormatSettings = getActiveFormatSettings(current, formatId);
+      const gifOverlay = Boolean(current.effects?.gifOverlay);
       return {
         ...current,
         ...nextFormatSettings,
+        gifUrl: current.gifUrl || '',
+        gifPosition: current.gifPosition || 'textLeft',
+        gifSize: current.gifSize || 18,
+        gifLibrary: current.gifLibrary || [],
+        effects: {
+          ...(nextFormatSettings.effects ?? DEFAULT_PROMO_EFFECTS),
+          gifOverlay,
+        },
         formatId,
         formats: {
           ...(current.formats ?? {}),
@@ -360,12 +435,7 @@ export function PromoSection({ project }) {
         <PromoControlGroup title="Format">
           <div className="promo-format-buttons promo-format-buttons-clean">
             {PROMO_FORMATS.map((format) => (
-              <button
-                key={format.id}
-                className={settings.formatId === format.id ? 'active' : ''}
-                type="button"
-                onClick={() => switchFormat(format.id)}
-              >
+              <button key={format.id} className={settings.formatId === format.id ? 'active' : ''} type="button" onClick={() => switchFormat(format.id)}>
                 <strong>{format.label}</strong>
               </button>
             ))}
@@ -420,33 +490,17 @@ export function PromoSection({ project }) {
         <PromoControlGroup title="Duration">
           <div className="promo-duration-buttons">
             {PROMO_DURATIONS.map((duration) => (
-              <button
-                key={duration}
-                className={settings.duration === duration ? 'active' : ''}
-                type="button"
-                onClick={() => updateSettings({ duration })}
-              >
-                {duration}s
-              </button>
+              <button key={duration} className={settings.duration === duration ? 'active' : ''} type="button" onClick={() => updateSettings({ duration })}>{duration}s</button>
             ))}
           </div>
         </PromoControlGroup>
 
         <PromoControlGroup title="Offer">
           <ToggleField label="Show offer text" checked={Boolean(settings.showOffer)} onChange={(showOffer) => updateSettings({ showOffer })} />
-          <label className="image-menu-control">
-            <span>Headline</span>
-            <input value={settings.headline} placeholder={selectedDish ? getDishTitle(selectedDish) : 'Promo headline'} onChange={(event) => updateSettings({ headline: event.target.value })} />
-          </label>
-          <label className="image-menu-control">
-            <span>Offer text</span>
-            <input value={settings.offerText} placeholder="New, Today only, -20%" onChange={(event) => updateSettings({ offerText: event.target.value })} />
-          </label>
+          <label className="image-menu-control"><span>Headline</span><input value={settings.headline} placeholder={selectedDish ? getDishTitle(selectedDish) : 'Promo headline'} onChange={(event) => updateSettings({ headline: event.target.value })} /></label>
+          <label className="image-menu-control"><span>Offer text</span><input value={settings.offerText} placeholder="New, Today only, -20%" onChange={(event) => updateSettings({ offerText: event.target.value })} /></label>
           <ToggleField label="Show CTA" checked={Boolean(settings.showCta)} onChange={(showCta) => updateSettings({ showCta })} />
-          <label className="image-menu-control">
-            <span>CTA</span>
-            <input value={settings.ctaText} placeholder="ORDER NOW" onChange={(event) => updateSettings({ ctaText: event.target.value })} />
-          </label>
+          <label className="image-menu-control"><span>CTA</span><input value={settings.ctaText} placeholder="ORDER NOW" onChange={(event) => updateSettings({ ctaText: event.target.value })} /></label>
         </PromoControlGroup>
 
         <PromoControlGroup title="Appearance">
@@ -456,13 +510,8 @@ export function PromoSection({ project }) {
           <RangeControl label="Description vertical offset" value={settings.descriptionOffsetY} min={-180} max={180} onChange={(descriptionOffsetY) => updateSettings({ descriptionOffsetY })} suffix="px" />
         </PromoControlGroup>
 
-        <PromoControlGroup title="Text shadow">
-          <TextShadowControls settings={settings} updateSettings={updateSettings} />
-        </PromoControlGroup>
-
-        <PromoControlGroup title="Layout">
-          <LayoutOffsetControls settings={settings} updateLayoutOffset={updateLayoutOffset} resetLayoutOffsets={resetLayoutOffsets} />
-        </PromoControlGroup>
+        <PromoControlGroup title="Text shadow"><TextShadowControls settings={settings} updateSettings={updateSettings} /></PromoControlGroup>
+        <PromoControlGroup title="Layout"><LayoutOffsetControls settings={settings} updateLayoutOffset={updateLayoutOffset} resetLayoutOffsets={resetLayoutOffsets} /></PromoControlGroup>
 
         <PromoControlGroup title="Text styles">
           <TextStyleControls title="Offer label" prefix="offer" settings={settings} updateSettings={updateSettings} sizeMin={16} sizeMax={76} />
@@ -480,19 +529,14 @@ export function PromoSection({ project }) {
         {EFFECT_GROUPS.map((group) => (
           <PromoControlGroup key={group.title} title={group.title}>
             <div className="promo-toggle-list">
-              {group.items.map(([key, label]) => (
-                <ToggleField key={key} label={label} checked={Boolean(settings.effects?.[key])} onChange={(value) => updateEffect(key, value)} />
-              ))}
+              {group.items.map(([key, label]) => <ToggleField key={key} label={label} checked={Boolean(settings.effects?.[key])} onChange={(value) => updateEffect(key, value)} />)}
             </div>
           </PromoControlGroup>
         ))}
 
         {settings.effects?.gifOverlay ? (
           <PromoControlGroup title="GIF Overlay">
-            <label className="image-menu-control">
-              <span>GIF URL</span>
-              <input value={settings.gifUrl} placeholder="Paste GIF URL" onChange={(event) => updateSettings({ gifUrl: event.target.value })} />
-            </label>
+            <GifLibraryControls settings={settings} updateSettings={updateSettings} />
             <label className="image-menu-control">
               <span>Position</span>
               <select value={settings.gifPosition} onChange={(event) => updateSettings({ gifPosition: event.target.value })}>
@@ -503,20 +547,14 @@ export function PromoSection({ project }) {
                 <option value="bottomRight">Bottom right</option>
               </select>
             </label>
-            <label className="image-menu-control">
-              <span>Size <strong>{settings.gifSize}%</strong></span>
-              <input type="range" min="6" max="42" value={settings.gifSize} onChange={(event) => updateSettings({ gifSize: Number(event.target.value) })} />
-            </label>
+            <RangeControl label="Size" value={settings.gifSize} min={6} max={42} onChange={(gifSize) => updateSettings({ gifSize })} suffix="%" />
           </PromoControlGroup>
         ) : null}
       </aside>
 
       <main className="promo-generator-preview-stage">
         <div className="promo-generator-toolbar">
-          <div>
-            <p>Preview</p>
-            <h2>{selectedDish ? getDishTitle(selectedDish) : 'Select dish'}</h2>
-          </div>
+          <div><p>Preview</p><h2>{selectedDish ? getDishTitle(selectedDish) : 'Select dish'}</h2></div>
           <div className="promo-output-pill">{activeFormat.label}</div>
         </div>
         <PromoPreview dish={selectedDish} settings={settings} index={selectedIndex} />
