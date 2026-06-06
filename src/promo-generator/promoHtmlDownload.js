@@ -1,3 +1,5 @@
+import { downloadHtmlRender } from '../utils/htmlVideoExport.js';
+
 const getDocumentCss = () => Array.from(document.styleSheets)
   .map((sheet) => {
     try {
@@ -83,55 +85,25 @@ const downloadCurrentPromoHtml = () => {
   downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), `${getSafeFilename(getCurrentPromoTitle())}.html`);
 };
 
-const getSupportedRecorderType = () => {
-  const types = [
-    'video/webm;codecs=vp9',
-    'video/webm;codecs=vp8',
-    'video/webm',
-  ];
-  return types.find((type) => MediaRecorder.isTypeSupported(type)) || '';
-};
-
-const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
-
 const downloadCurrentPromoWebm = async (downloadGroup) => {
-  if (!navigator.mediaDevices?.getDisplayMedia) {
-    throw new Error('This browser does not support local WebM screen recording. Try Chrome or Edge.');
-  }
+  const scene = document.querySelector('.promo-scene');
+  if (!scene) throw new Error('Could not find the promo scene.');
 
+  const html = getSceneHtmlDocument();
+  const { width, height } = getSceneSize(scene);
   const filename = `${getSafeFilename(getCurrentPromoTitle())}.webm`;
-  setDownloadStatus(downloadGroup, 'Select this browser tab/window in the screen-share dialog. Recording starts after selection.');
 
-  const stream = await navigator.mediaDevices.getDisplayMedia({
-    video: { frameRate: 30 },
-    audio: false,
+  await downloadHtmlRender({
+    output: 'webm',
+    filename,
+    format: { id: 'current', label: `${width}x${height}`, width, height },
+    duration: 8,
+    fps: 24,
+    html,
+    onStatus: (message) => setDownloadStatus(downloadGroup, message),
   });
 
-  const chunks = [];
-  const mimeType = getSupportedRecorderType();
-  const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-
-  const stopTracks = () => stream.getTracks().forEach((track) => track.stop());
-
-  const finished = new Promise((resolve, reject) => {
-    recorder.ondataavailable = (event) => {
-      if (event.data?.size) chunks.push(event.data);
-    };
-    recorder.onerror = () => reject(new Error('WebM recording failed.'));
-    recorder.onstop = resolve;
-  });
-
-  recorder.start(250);
-  setDownloadStatus(downloadGroup, 'Recording WebM locally... keep the promo preview visible for 8 seconds.');
-  await wait(8000);
-  if (recorder.state !== 'inactive') recorder.stop();
-  await finished;
-  stopTracks();
-
-  const blob = new Blob(chunks, { type: mimeType || 'video/webm' });
-  if (!blob.size) throw new Error('Browser returned an empty WebM recording.');
-  downloadBlob(blob, filename);
-  setDownloadStatus(downloadGroup, 'WebM recording downloaded.');
+  setDownloadStatus(downloadGroup, 'WebM downloaded.');
 };
 
 const addDownloadButton = ({ buttonRow, downloadGroup, label, dataAttribute, onClick }) => {
