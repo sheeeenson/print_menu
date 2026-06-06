@@ -41,6 +41,18 @@ export const DEFAULT_PROMO_EFFECTS = Object.freeze({
   priceShake: false,
   backgroundOrbit: false,
   spotlightPulse: false,
+  headlineSplit: false,
+  textWave: false,
+  textGlitch: false,
+  dishSlide: false,
+  dishRotate: false,
+  priceFlip: false,
+  priceGlow: false,
+  backgroundPulse: false,
+  confetti: false,
+  vignette: false,
+  gifSpin: false,
+  gifBounce: false,
   gifOverlay: false,
 });
 
