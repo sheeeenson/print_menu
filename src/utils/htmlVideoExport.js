@@ -12,6 +12,12 @@ const getRendererEndpoint = () => {
   return endpoint.replace(/\/$/, '').replace(/\/render$/, '/render');
 };
 
+const getOutputExtension = (output) => {
+  if (output === 'png') return 'png';
+  if (output === 'webm') return 'webm';
+  return 'mp4';
+};
+
 const downloadUrl = (url, filename) => {
   const link = document.createElement('a');
   link.href = url;
@@ -50,7 +56,7 @@ export async function downloadHtmlRender({
   settings,
   dish,
 }) {
-  const extension = output === 'png' ? 'png' : 'mp4';
+  const extension = getOutputExtension(output);
   const fallbackMessage = `${extension.toUpperCase()} export failed.`;
   const payload = {
     output,
