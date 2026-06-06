@@ -2,8 +2,10 @@ import express from 'express';
 import { launch } from 'puppeteer-core';
 import { spawn } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import crypto from 'node:crypto';
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -12,6 +14,9 @@ const DEFAULT_CHROMIUM_PATH = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin
 const IMAGE_WAIT_MS = Number(process.env.IMAGE_WAIT_MS || 10000);
 const SCREENCAST_QUALITY = Number(process.env.SCREENCAST_QUALITY || 88);
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
+const JOB_TTL_MS = Number(process.env.JOB_TTL_MS || 20 * 60 * 1000);
+
+const jobs = new Map();
 
 app.use((request, response, next) => {
   response.setHeader('Access-Control-Allow-Origin', CORS_ORIGIN);
@@ -70,16 +75,9 @@ const buildDocument = ({ html, width, height, duration }) => {
         overflow: hidden;
         background: transparent;
       }
-      *, *::before, *::after {
-        box-sizing: border-box;
-      }
-      .promo-scene {
-        transform: none !important;
-        transform-origin: top left !important;
-      }
-      .promo-scene, .promo-scene * {
-        animation-duration: var(--promo-duration, ${duration}s);
-      }
+      *, *::before, *::after { box-sizing: border-box; }
+      .promo-scene { transform: none !important; transform-origin: top left !important; }
+      .promo-scene, .promo-scene * { animation-duration: var(--promo-duration, ${duration}s); }
     </style>
   </head>
   <body>${html}</body>
@@ -279,31 +277,29 @@ const renderVideoViaScreenshotFallback = async ({ page, frameDir, outputPath, ou
   }));
 };
 
-app.get('/health', (request, response) => {
-  response.json({ ok: true });
-});
-
-const handleRender = async (request, response) => {
-  const payload = request.body || {};
+const normalizeRenderPayload = (payload = {}) => {
   const format = payload.format || {};
-  const width = getNumber(format.width, 1920, 320, 3840);
-  const height = getNumber(format.height, 1080, 320, 3840);
-  const duration = getNumber(payload.duration, 8, 1, 30);
-  const fps = getNumber(payload.fps, 24, 12, 30);
   const output = getOutput(payload.output);
   const fallbackName = output === 'png' ? 'promo.png' : `promo.${output}`;
-  const filename = sanitizeFilename(payload.filename || fallbackName).replace(/\.[^.]+$/, `.${output}`);
-  const html = String(payload.html || '').trim();
+  return {
+    width: getNumber(format.width, 1920, 320, 3840),
+    height: getNumber(format.height, 1080, 320, 3840),
+    duration: getNumber(payload.duration, 8, 1, 30),
+    fps: getNumber(payload.fps, 24, 12, 30),
+    output,
+    filename: sanitizeFilename(payload.filename || fallbackName).replace(/\.[^.]+$/, `.${output}`),
+    html: String(payload.html || '').trim(),
+  };
+};
 
-  if (!html) {
-    response.status(400).json({ error: 'Invalid render payload.', detail: 'Missing HTML.' });
-    return;
-  }
+const renderToFile = async (payload) => {
+  const render = normalizeRenderPayload(payload);
+  if (!render.html) throw new Error('Missing HTML.');
 
   let browser;
   const workdir = await mkdtemp(path.join(tmpdir(), 'promo-render-'));
   const frameDir = path.join(workdir, 'frames');
-  const outputPath = path.join(workdir, filename);
+  const outputPath = path.join(workdir, render.filename);
 
   try {
     await mkdir(frameDir, { recursive: true });
@@ -317,62 +313,181 @@ const handleRender = async (request, response) => {
         '--hide-scrollbars',
         '--autoplay-policy=no-user-gesture-required',
       ],
-      defaultViewport: { width, height, deviceScaleFactor: 1 },
+      defaultViewport: { width: render.width, height: render.height, deviceScaleFactor: 1 },
       executablePath: DEFAULT_CHROMIUM_PATH,
       headless: 'new',
     });
 
-    const page = await createPage(browser, { html, width, height, duration });
+    const page = await createPage(browser, render);
 
-    if (output === 'png') {
+    if (render.output === 'png') {
       await freezeAnimationsAt(page, 0);
       const imageBuffer = await page.screenshot({
         type: 'png',
         omitBackground: false,
-        clip: { x: 0, y: 0, width, height },
+        clip: { x: 0, y: 0, width: render.width, height: render.height },
       });
-
-      response.status(200);
-      response.setHeader('Content-Type', getContentType(output));
-      response.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-      response.end(imageBuffer);
-      return;
+      await writeFile(outputPath, imageBuffer);
+    } else {
+      try {
+        await renderVideoViaScreencast({
+          page,
+          frameDir,
+          outputPath,
+          output: render.output,
+          duration: render.duration,
+          fps: render.fps,
+          width: render.width,
+          height: render.height,
+        });
+      } catch (screencastError) {
+        console.warn('Screencast render failed, using screenshot fallback:', screencastError instanceof Error ? screencastError.message : String(screencastError));
+        await rm(frameDir, { recursive: true, force: true }).catch(() => {});
+        await mkdir(frameDir, { recursive: true });
+        await renderVideoViaScreenshotFallback({
+          page,
+          frameDir,
+          outputPath,
+          output: render.output,
+          duration: render.duration,
+          fps: render.fps,
+        });
+      }
     }
 
-    try {
-      await renderVideoViaScreencast({ page, frameDir, outputPath, output, duration, fps, width, height });
-    } catch (screencastError) {
-      console.warn('Screencast render failed, using screenshot fallback:', screencastError instanceof Error ? screencastError.message : String(screencastError));
-      await rm(frameDir, { recursive: true, force: true }).catch(() => {});
-      await mkdir(frameDir, { recursive: true });
-      await renderVideoViaScreenshotFallback({ page, frameDir, outputPath, output, duration, fps });
-    }
-
-    const videoBuffer = await readFile(outputPath);
-    response.status(200);
-    response.setHeader('Content-Type', getContentType(output));
-    response.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    response.end(videoBuffer);
-  } catch (error) {
-    console.error(error);
-    response.status(500).json({
-      error: `Unable to render ${output.toUpperCase()}.`,
-      detail: error instanceof Error ? error.message : String(error),
-    });
+    return {
+      output: render.output,
+      filename: render.filename,
+      contentType: getContentType(render.output),
+      filePath: outputPath,
+      workdir,
+    };
   } finally {
     if (browser) await browser.close().catch(() => {});
-    await rm(workdir, { recursive: true, force: true }).catch(() => {});
   }
 };
 
-app.post('/render', handleRender);
+const cleanupJob = async (jobId) => {
+  const job = jobs.get(jobId);
+  if (!job) return;
+  if (job.workdir) await rm(job.workdir, { recursive: true, force: true }).catch(() => {});
+  jobs.delete(jobId);
+};
+
+const scheduleCleanup = (jobId) => {
+  setTimeout(() => cleanupJob(jobId), JOB_TTL_MS).unref?.();
+};
+
+const serializeJob = (job) => ({
+  id: job.id,
+  status: job.status,
+  output: job.output,
+  filename: job.filename,
+  error: job.error,
+  createdAt: job.createdAt,
+  updatedAt: job.updatedAt,
+  downloadUrl: job.status === 'done' ? `/jobs/${job.id}/file` : null,
+});
+
+const runJob = async (jobId, payload) => {
+  const job = jobs.get(jobId);
+  if (!job) return;
+
+  job.status = 'rendering';
+  job.updatedAt = new Date().toISOString();
+
+  try {
+    const result = await renderToFile(payload);
+    Object.assign(job, result, {
+      status: 'done',
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    job.status = 'failed';
+    job.error = error instanceof Error ? error.message : String(error);
+    job.updatedAt = new Date().toISOString();
+  }
+};
+
+app.get('/health', (request, response) => {
+  response.json({ ok: true });
+});
+
+app.post('/jobs', (request, response) => {
+  const payload = request.body || {};
+  const render = normalizeRenderPayload(payload);
+  if (!render.html) {
+    response.status(400).json({ error: 'Invalid render payload.', detail: 'Missing HTML.' });
+    return;
+  }
+
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+  jobs.set(id, {
+    id,
+    status: 'queued',
+    output: render.output,
+    filename: render.filename,
+    createdAt: now,
+    updatedAt: now,
+  });
+  scheduleCleanup(id);
+  setImmediate(() => runJob(id, payload));
+  response.status(202).json(serializeJob(jobs.get(id)));
+});
+
+app.get('/jobs/:id', (request, response) => {
+  const job = jobs.get(request.params.id);
+  if (!job) {
+    response.status(404).json({ error: 'Render job not found.' });
+    return;
+  }
+  response.json(serializeJob(job));
+});
+
+app.get('/jobs/:id/file', async (request, response) => {
+  const job = jobs.get(request.params.id);
+  if (!job) {
+    response.status(404).json({ error: 'Render job not found.' });
+    return;
+  }
+  if (job.status !== 'done' || !job.filePath || !existsSync(job.filePath)) {
+    response.status(409).json({ error: 'Render job is not ready.', detail: `Current status: ${job.status}.` });
+    return;
+  }
+
+  const buffer = await readFile(job.filePath);
+  response.status(200);
+  response.setHeader('Content-Type', job.contentType);
+  response.setHeader('Content-Disposition', `attachment; filename="${job.filename}"`);
+  response.end(buffer);
+});
+
+app.post('/render', async (request, response) => {
+  try {
+    const result = await renderToFile(request.body || {});
+    const buffer = await readFile(result.filePath);
+    response.status(200);
+    response.setHeader('Content-Type', result.contentType);
+    response.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    response.end(buffer);
+    await rm(result.workdir, { recursive: true, force: true }).catch(() => {});
+  } catch (error) {
+    console.error(error);
+    response.status(500).json({
+      error: 'Unable to render export.',
+      detail: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
+
 app.post('/html-to-mp4', (request, response) => {
   request.body = { ...(request.body || {}), output: 'mp4' };
-  return handleRender(request, response);
+  return app._router.handle(request, response, () => {});
 });
 app.post('/html-to-webm', (request, response) => {
   request.body = { ...(request.body || {}), output: 'webm' };
-  return handleRender(request, response);
+  return app._router.handle(request, response, () => {});
 });
 
 app.listen(PORT, () => {
