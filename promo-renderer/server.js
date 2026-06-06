@@ -11,7 +11,19 @@ const MAX_BODY_SIZE = process.env.MAX_BODY_SIZE || '25mb';
 const DEFAULT_CHROMIUM_PATH = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium';
 const IMAGE_WAIT_MS = Number(process.env.IMAGE_WAIT_MS || 10000);
 const SCREENCAST_QUALITY = Number(process.env.SCREENCAST_QUALITY || 88);
+const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
 
+app.use((request, response, next) => {
+  response.setHeader('Access-Control-Allow-Origin', CORS_ORIGIN);
+  response.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  response.setHeader('Access-Control-Expose-Headers', 'Content-Disposition,Content-Type');
+  if (request.method === 'OPTIONS') {
+    response.status(204).end();
+    return;
+  }
+  next();
+});
 app.use(express.json({ limit: MAX_BODY_SIZE }));
 
 const sanitizeFilename = (filename = 'promo.mp4') => String(filename)
