@@ -1,0 +1,177 @@
+/* Extra promo/UI polish. Loaded last. */
+
+button,
+.secondary-action,
+.secondary-button,
+.action-row button,
+.page-actions button,
+.print-action-row button,
+.badge-row button,
+.image-menu-category-actions button,
+.image-menu-order button,
+.image-menu-page-list button,
+.image-menu-grid-buttons button,
+.promo-format-buttons button,
+.promo-duration-buttons button,
+.project-actions button {
+  background: #1c1f29 !important;
+  color: #f7f4ee !important;
+  border-color: rgba(255,255,255,0.13) !important;
+}
+
+button:hover,
+.secondary-action:hover,
+.secondary-button:hover,
+.action-row button:hover,
+.page-actions button:hover,
+.print-action-row button:hover,
+.badge-row button:hover,
+.image-menu-category-actions button:hover,
+.image-menu-order button:hover,
+.image-menu-page-list button:hover,
+.image-menu-grid-buttons button:hover,
+.promo-format-buttons button:hover,
+.promo-duration-buttons button:hover,
+.project-actions button:hover {
+  background: #2a2e3b !important;
+  color: #ffffff !important;
+  border-color: rgba(185,92,255,0.46) !important;
+}
+
+.primary-action,
+.project-actions button.primary-action,
+button.primary-action,
+.promo-format-buttons button.active,
+.promo-duration-buttons button.active,
+.image-menu-grid-buttons button.active,
+.image-menu-page-list button.selected {
+  background: linear-gradient(180deg, #8c3dff, #6f26e8) !important;
+  color: #ffffff !important;
+  border-color: rgba(190,120,255,0.72) !important;
+}
+
+.promo-format-buttons,
+.promo-duration-buttons {
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.promo-format-buttons {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+
+.promo-format-buttons-clean button {
+  min-height: 56px !important;
+  border-radius: 16px !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 12px !important;
+}
+
+.promo-format-buttons-clean button strong {
+  color: inherit !important;
+  font-size: 1rem !important;
+  letter-spacing: -0.03em !important;
+}
+
+.promo-format-buttons-clean button small {
+  display: none !important;
+}
+
+.promo-toggle-field {
+  background: #1c1f29 !important;
+  color: #f7f4ee !important;
+  border-color: rgba(255,255,255,0.13) !important;
+}
+
+.promo-copy-block,
+.promo-price-card,
+.promo-cta {
+  text-shadow: var(--promo-text-shadow, 0 18px 38px rgba(0,0,0,0.28));
+}
+
+.promo-spotlight {
+  position: absolute;
+  inset: -18%;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 70% 28%, rgba(255,255,255,0.26), transparent 28%),
+    radial-gradient(circle at 28% 80%, rgba(255,255,255,0.13), transparent 34%);
+  mix-blend-mode: screen;
+  opacity: 0;
+}
+
+.promo-effect-text-rise .promo-copy-block {
+  animation: promoTextRise var(--promo-duration) cubic-bezier(.16,1,.3,1) infinite;
+}
+
+.promo-effect-dish-pulse .promo-dish-image {
+  animation-name: promoDishPulse, promoFloat !important;
+  animation-duration: var(--promo-duration), var(--promo-duration) !important;
+  animation-timing-function: ease-in-out, ease-in-out !important;
+  animation-iteration-count: infinite, infinite !important;
+}
+
+.promo-effect-price-shake .promo-price-card {
+  animation: promoPriceShake var(--promo-duration) ease-in-out infinite;
+}
+
+.promo-effect-background-orbit .promo-background::before {
+  content: '';
+  position: absolute;
+  inset: -25%;
+  background:
+    radial-gradient(circle at 22% 24%, rgba(255,255,255,0.18), transparent 22%),
+    radial-gradient(circle at 78% 72%, rgba(0,0,0,0.16), transparent 25%);
+  animation: promoBackgroundOrbit var(--promo-duration) linear infinite;
+  mix-blend-mode: soft-light;
+}
+
+.promo-effect-spotlight-pulse .promo-spotlight {
+  animation: promoSpotlightPulse var(--promo-duration) ease-in-out infinite;
+}
+
+@keyframes promoTextRise {
+  0%, 15%, 100% { opacity: 1; transform: translateY(0); }
+  3% { opacity: 0; transform: translateY(34px); }
+  12% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes promoDishPulse {
+  0%, 55%, 100% { filter: saturate(1) contrast(1); }
+  64% { filter: saturate(1.18) contrast(1.08); }
+  72% { filter: saturate(1.04) contrast(1.02); }
+}
+
+@keyframes promoPriceShake {
+  0%, 58%, 100% { transform: translateX(0) rotate(0deg); }
+  62% { transform: translateX(-9px) rotate(-1.3deg); }
+  66% { transform: translateX(8px) rotate(1.1deg); }
+  70% { transform: translateX(-5px) rotate(-0.7deg); }
+  76% { transform: translateX(0) rotate(0deg); }
+}
+
+@keyframes promoBackgroundOrbit {
+  0% { transform: rotate(0deg) scale(1); opacity: 0.55; }
+  50% { transform: rotate(180deg) scale(1.08); opacity: 0.9; }
+  100% { transform: rotate(360deg) scale(1); opacity: 0.55; }
+}
+
+@keyframes promoSpotlightPulse {
+  0%, 30%, 100% { opacity: 0; transform: scale(1); }
+  48% { opacity: 0.9; transform: scale(1.05); }
+  66% { opacity: 0.2; transform: scale(1.02); }
+}
+
+@media (max-width: 920px) {
+  .promo-format-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .promo-format-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
