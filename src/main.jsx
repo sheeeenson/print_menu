@@ -18,6 +18,7 @@ import './ui/appTheme.css';
 import './mobileFixes.css';
 import './advancedResponsiveFix.css';
 import './unifiedAppTheme.css';
+import './mobileUxEnhancements.css';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>
