@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ContentSection } from './components/ContentSection.jsx';
 import { LayoutPrintSection } from './components/LayoutPrintSection.jsx';
 import { MainNavigation } from './components/MainNavigation.jsx';
 import { ImageMenuSection } from './image-menu/ImageMenuSection.jsx';
 import { APP_SECTIONS } from './models/menu.js';
+import { installPromoHtmlDownloadButton } from './promo-generator/promoHtmlDownload.js';
 import { PromoSection } from './promo-generator/PromoSection.jsx';
 import { createProjectStore } from './state/projectStore.js';
 import { useProjectStore } from './state/useProjectStore.js';
@@ -13,6 +14,10 @@ export function App() {
   const snapshot = useProjectStore(store);
   const [searchTerm, setSearchTerm] = useState('');
   const { project } = snapshot;
+
+  useEffect(() => {
+    installPromoHtmlDownloadButton();
+  }, []);
 
   const renderSection = () => {
     if (project.selectedSection === APP_SECTIONS.CONTENT) {
