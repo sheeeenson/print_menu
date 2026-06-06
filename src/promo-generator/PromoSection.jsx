@@ -77,64 +77,22 @@ const getPromoSceneHtml = () => {
   `;
 };
 
-async function downloadPromoPng(format, selectedDish) {
+async function downloadPromoExport(format, selectedDish, settings, output) {
   const html = getPromoSceneHtml();
   if (!html) throw new Error('Could not find the promo scene.');
 
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${format.width}" height="${format.height}" viewBox="0 0 ${format.width} ${format.height}">
-      <foreignObject width="100%" height="100%">
-        <div xmlns="http://www.w3.org/1999/xhtml">${html}</div>
-      </foreignObject>
-    </svg>
-  `;
-  const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
-  const svgUrl = URL.createObjectURL(svgBlob);
-
-  await new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = format.width;
-      canvas.height = format.height;
-      const context = canvas.getContext('2d');
-      context.drawImage(image, 0, 0, format.width, format.height);
-      URL.revokeObjectURL(svgUrl);
-      const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-${format.label.replace(':', 'x')}.png`;
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          reject(new Error('Could not create PNG file.'));
-          return;
-        }
-        const pngUrl = URL.createObjectURL(blob);
-        downloadUrl(pngUrl, filename);
-        setTimeout(() => URL.revokeObjectURL(pngUrl), 1000);
-        resolve();
-      }, 'image/png');
-    };
-    image.onerror = () => {
-      URL.revokeObjectURL(svgUrl);
-      reject(new Error('Could not render the promo preview as PNG.'));
-    };
-    image.src = svgUrl;
-  });
-}
-
-async function downloadPromoMp4(format, selectedDish, settings) {
-  const html = getPromoSceneHtml();
-  if (!html) throw new Error('Could not find the promo scene.');
-
-  const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-${format.label.replace(':', 'x')}.mp4`;
+  const extension = output === 'png' ? 'png' : 'mp4';
+  const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-${format.label.replace(':', 'x')}.${extension}`;
   const response = await fetch('/api/promo-render', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      output: 'mp4',
+      output,
       filename,
       format,
-      duration: settings.duration || 8,
+      duration: settings?.duration || 8,
       fps: 30,
       settings,
       dish: selectedDish,
@@ -143,7 +101,7 @@ async function downloadPromoMp4(format, selectedDish, settings) {
   });
 
   if (!response.ok) {
-    let message = 'MP4 export failed.';
+    let message = `${extension.toUpperCase()} export failed.`;
     try {
       const payload = await response.json();
       message = payload.detail || payload.error || message;
@@ -153,12 +111,20 @@ async function downloadPromoMp4(format, selectedDish, settings) {
     throw new Error(message);
   }
 
-  const videoBlob = await response.blob();
-  if (!videoBlob.size) throw new Error('Renderer returned an empty MP4 file.');
+  const fileBlob = await response.blob();
+  if (!fileBlob.size) throw new Error(`Renderer returned an empty ${extension.toUpperCase()} file.`);
 
-  const videoUrl = URL.createObjectURL(videoBlob);
-  downloadUrl(videoUrl, filename);
-  setTimeout(() => URL.revokeObjectURL(videoUrl), 1000);
+  const fileUrl = URL.createObjectURL(fileBlob);
+  downloadUrl(fileUrl, filename);
+  setTimeout(() => URL.revokeObjectURL(fileUrl), 1000);
+}
+
+async function downloadPromoPng(format, selectedDish, settings) {
+  return downloadPromoExport(format, selectedDish, settings, 'png');
+}
+
+async function downloadPromoMp4(format, selectedDish, settings) {
+  return downloadPromoExport(format, selectedDish, settings, 'mp4');
 }
 
 function PromoControlGroup({ title, children }) {
@@ -320,13 +286,18 @@ export function PromoSection({ project }) {
   };
 
   const handleDownloadPng = async () => {
+    if (!selectedDish) {
+      setExportStatus('Select a dish with an image before exporting PNG.');
+      return;
+    }
+
     try {
-      setExportStatus('Preparing PNG...');
-      await downloadPromoPng(activeFormat, selectedDish);
+      setExportStatus('Rendering PNG on server...');
+      await downloadPromoPng(activeFormat, selectedDish, settings);
       setExportStatus('PNG downloaded.');
     } catch (error) {
       console.error(error);
-      setExportStatus('PNG export failed. Try again after images finish loading.');
+      setExportStatus(error instanceof Error ? error.message : 'PNG export failed.');
     }
   };
 
