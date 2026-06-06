@@ -118,13 +118,19 @@ async function downloadPromoExport(format, selectedDish, settings, output) {
   });
 
   if (!response.ok) {
-    let message = `${extension.toUpperCase()} export failed.`;
-    try {
-      const payload = await response.json();
-      message = payload.detail || payload.error || message;
-    } catch (error) {
-      message = await response.text();
+    const fallbackMessage = `${extension.toUpperCase()} export failed.`;
+    const responseText = await response.text();
+    let message = responseText || fallbackMessage;
+
+    if (responseText) {
+      try {
+        const payload = JSON.parse(responseText);
+        message = payload.detail || payload.error || responseText;
+      } catch (error) {
+        message = responseText;
+      }
     }
+
     throw new Error(message);
   }
 
