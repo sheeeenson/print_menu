@@ -27,9 +27,7 @@ const EFFECT_GROUPS = [
   },
   {
     title: 'Media',
-    items: [
-      ['gifOverlay', 'GIF Overlay'],
-    ],
+    items: [['gifOverlay', 'GIF Overlay']],
   },
 ];
 
@@ -41,12 +39,11 @@ const LAYOUT_CONTROL_GROUPS = [
   { title: 'GIF', x: 'gifX', y: 'gifY' },
 ];
 
-const GLOBAL_PROMO_KEYS = new Set(['gifUrl', 'gifPosition', 'gifSize', 'gifBorderRadius', 'gifLibrary']);
+const GLOBAL_PROMO_KEYS = new Set(['gifUrl', 'gifPosition', 'gifSize', 'gifBorderRadius', 'gifLibrary', 'selectedDishId', 'formatId']);
 const getDishTitle = (dish) => dish?.nameEn || dish?.nameGe || 'Untitled dish';
-const getActiveFormatSettings = (settings, formatId = settings.formatId) => settings.formats?.[formatId] ?? {};
 const getSafeFilename = (value) => String(value || 'promo').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'promo';
-const withFallback = (value, fallback) => value === undefined || value === null ? fallback : value;
 const normalizeGifUrl = (value) => String(value || '').trim();
+const withFallback = (value, fallback) => value === undefined || value === null ? fallback : value;
 
 const getDocumentCss = () => Array.from(document.styleSheets)
   .map((sheet) => {
@@ -93,9 +90,7 @@ async function downloadPromoExport(format, selectedDish, settings, output) {
   const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-${format.label.replace(':', 'x')}.${extension}`;
   const response = await fetch('/api/promo-render', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       output,
       filename,
@@ -125,14 +120,6 @@ async function downloadPromoExport(format, selectedDish, settings, output) {
   const fileUrl = URL.createObjectURL(fileBlob);
   downloadUrl(fileUrl, filename);
   setTimeout(() => URL.revokeObjectURL(fileUrl), 1000);
-}
-
-async function downloadPromoPng(format, selectedDish, settings) {
-  return downloadPromoExport(format, selectedDish, settings, 'png');
-}
-
-async function downloadPromoMp4(format, selectedDish, settings) {
-  return downloadPromoExport(format, selectedDish, settings, 'mp4');
 }
 
 function PromoControlGroup({ title, children }) {
@@ -210,17 +197,12 @@ function LayoutOffsetControls({ settings, updateLayoutOffset, resetLayoutOffsets
 }
 
 function TextShadowControls({ settings, updateSettings }) {
-  const showTextShadow = withFallback(settings.showTextShadow, true);
-  const textShadowColor = withFallback(settings.textShadowColor, '#000000');
-  const textShadowOpacity = withFallback(settings.textShadowOpacity, 34);
-  const textShadowBlur = withFallback(settings.textShadowBlur, 38);
-
   return (
     <div className="promo-style-block">
-      <ToggleField label="Enable text shadow" checked={Boolean(showTextShadow)} onChange={(value) => updateSettings({ showTextShadow: value })} />
-      <ColorControl label="Shadow color" value={textShadowColor} onChange={(value) => updateSettings({ textShadowColor: value })} />
-      <RangeControl label="Shadow opacity" value={textShadowOpacity} min={0} max={100} onChange={(value) => updateSettings({ textShadowOpacity: value })} suffix="%" />
-      <RangeControl label="Shadow blur" value={textShadowBlur} min={0} max={90} onChange={(value) => updateSettings({ textShadowBlur: value })} suffix="px" />
+      <ToggleField label="Enable text shadow" checked={Boolean(withFallback(settings.showTextShadow, true))} onChange={(showTextShadow) => updateSettings({ showTextShadow })} />
+      <ColorControl label="Shadow color" value={withFallback(settings.textShadowColor, '#000000')} onChange={(textShadowColor) => updateSettings({ textShadowColor })} />
+      <RangeControl label="Shadow opacity" value={withFallback(settings.textShadowOpacity, 34)} min={0} max={100} onChange={(textShadowOpacity) => updateSettings({ textShadowOpacity })} suffix="%" />
+      <RangeControl label="Shadow blur" value={withFallback(settings.textShadowBlur, 38)} min={0} max={90} onChange={(textShadowBlur) => updateSettings({ textShadowBlur })} suffix="px" />
     </div>
   );
 }
@@ -234,19 +216,11 @@ function GifLibraryControls({ settings, updateSettings }) {
     const url = normalizeGifUrl(settings.gifUrl);
     if (!url) return;
     const existing = gifLibrary.find((item) => item.url === url);
-    const nextItem = existing || {
-      id: `gif_${Date.now()}`,
-      name: `GIF ${gifLibrary.length + 1}`,
-      url,
-    };
+    const nextItem = existing || { id: `gif_${Date.now()}`, name: `GIF ${gifLibrary.length + 1}`, url };
     updateSettings({
       gifLibrary: [nextItem, ...gifLibrary.filter((item) => item.url !== url)].slice(0, 60),
       gifUrl: url,
     });
-  };
-
-  const selectGif = (url) => {
-    updateSettings({ gifUrl: url });
   };
 
   const deleteGif = (url) => {
@@ -265,7 +239,7 @@ function GifLibraryControls({ settings, updateSettings }) {
       <div className="promo-gif-library-actions">
         <button type="button" onClick={saveCurrentGif} disabled={!gifUrl}>Save current GIF</button>
         {gifLibrary.length ? (
-          <select value={selectedLibraryUrl} onChange={(event) => event.target.value && selectGif(event.target.value)}>
+          <select value={selectedLibraryUrl} onChange={(event) => event.target.value && updateSettings({ gifUrl: event.target.value })}>
             <option value="">Choose saved GIF</option>
             {gifLibrary.map((item) => <option key={item.id || item.url} value={item.url}>{item.name}</option>)}
           </select>
@@ -275,7 +249,7 @@ function GifLibraryControls({ settings, updateSettings }) {
         <div className="promo-gif-library-list">
           {gifLibrary.map((item) => (
             <div key={item.id || item.url} className={item.url === gifUrl ? 'active' : ''}>
-              <button type="button" onClick={() => selectGif(item.url)}>
+              <button type="button" onClick={() => updateSettings({ gifUrl: item.url })}>
                 <span>{item.name}</span>
                 <small>{item.url}</small>
               </button>
@@ -313,20 +287,25 @@ export function PromoSection({ project }) {
   const selectedIndex = Math.max(0, dishesWithImages.findIndex((dish) => dish.id === selectedDish?.id));
   const activeFormat = getPromoFormat(settings.formatId);
 
+  const syncFormats = (current, changes = {}) => {
+    const formatChanges = Object.fromEntries(Object.entries(changes).filter(([key]) => !GLOBAL_PROMO_KEYS.has(key)));
+    const currentFormatSettings = current.formats?.[current.formatId] ?? {};
+    const syncedFormatSettings = { ...currentFormatSettings, ...formatChanges };
+    return Object.fromEntries(PROMO_FORMATS.map((format) => [
+      format.id,
+      {
+        ...(current.formats?.[format.id] ?? {}),
+        ...syncedFormatSettings,
+      },
+    ]));
+  };
+
   const updateSettings = (changes) => {
-    setSettings((current) => {
-      const activeFormatSettings = getActiveFormatSettings(current);
-      const formatChanges = Object.fromEntries(Object.entries(changes).filter(([key]) => !GLOBAL_PROMO_KEYS.has(key)));
-      const nextFormatSettings = { ...activeFormatSettings, ...formatChanges };
-      return {
-        ...current,
-        ...changes,
-        formats: {
-          ...(current.formats ?? {}),
-          [current.formatId]: nextFormatSettings,
-        },
-      };
-    });
+    setSettings((current) => ({
+      ...current,
+      ...changes,
+      formats: syncFormats(current, changes),
+    }));
   };
 
   const updateLayoutOffset = (key, value) => {
@@ -339,40 +318,18 @@ export function PromoSection({ project }) {
     });
   };
 
-  const resetLayoutOffsets = () => {
-    updateSettings({ layoutOffsets: { ...DEFAULT_PROMO_LAYOUT_OFFSETS } });
-  };
+  const resetLayoutOffsets = () => updateSettings({ layoutOffsets: { ...DEFAULT_PROMO_LAYOUT_OFFSETS } });
 
   const switchFormat = (formatId) => {
-    setSettings((current) => {
-      const currentFormatSettings = getActiveFormatSettings(current);
-      const nextFormatSettings = getActiveFormatSettings(current, formatId);
-      const gifOverlay = Boolean(current.effects?.gifOverlay);
-      return {
-        ...current,
-        ...nextFormatSettings,
-        gifUrl: current.gifUrl || '',
-        gifPosition: current.gifPosition || 'textLeft',
-        gifSize: current.gifSize || 18,
-        gifBorderRadius: current.gifBorderRadius ?? 0,
-        gifLibrary: current.gifLibrary || [],
-        effects: {
-          ...(nextFormatSettings.effects ?? DEFAULT_PROMO_EFFECTS),
-          gifOverlay,
-        },
-        formatId,
-        formats: {
-          ...(current.formats ?? {}),
-          [current.formatId]: currentFormatSettings,
-        },
-      };
-    });
+    setSettings((current) => ({
+      ...current,
+      formatId,
+      formats: syncFormats(current),
+    }));
   };
 
   const updateEffect = (key, value) => {
-    updateSettings({
-      effects: { ...DEFAULT_PROMO_EFFECTS, ...(settings.effects ?? {}), [key]: value },
-    });
+    updateSettings({ effects: { ...DEFAULT_PROMO_EFFECTS, ...(settings.effects ?? {}), [key]: value } });
   };
 
   const handleDownloadPng = async () => {
@@ -380,10 +337,9 @@ export function PromoSection({ project }) {
       setExportStatus('Select a dish with an image before exporting PNG.');
       return;
     }
-
     try {
       setExportStatus('Rendering PNG on server...');
-      await downloadPromoPng(activeFormat, selectedDish, settings);
+      await downloadPromoExport(activeFormat, selectedDish, settings, 'png');
       setExportStatus('PNG downloaded.');
     } catch (error) {
       console.error(error);
@@ -396,10 +352,9 @@ export function PromoSection({ project }) {
       setExportStatus('Select a dish with an image before exporting MP4.');
       return;
     }
-
     try {
       setExportStatus('Rendering MP4 on server...');
-      await downloadPromoMp4(activeFormat, selectedDish, settings);
+      await downloadPromoExport(activeFormat, selectedDish, settings, 'mp4');
       setExportStatus('MP4 video downloaded.');
     } catch (error) {
       console.error(error);
@@ -472,7 +427,7 @@ export function PromoSection({ project }) {
                           return (
                             <div key={dish.id} className={selected ? 'selected' : ''}>
                               <label>
-                                <input type="radio" name="tv-promo-dish" checked={selected} onChange={() => setSettings((current) => ({ ...current, selectedDishId: dish.id }))} />
+                                <input type="radio" name="tv-promo-dish" checked={selected} onChange={() => updateSettings({ selectedDishId: dish.id })} />
                                 {dish.imageUrl ? <img src={dish.imageUrl} alt="" /> : <span className="image-menu-mini-placeholder" />}
                                 <span><strong>{dish.nameEn}</strong><small>{dish.nameGe}</small></span>
                               </label>
