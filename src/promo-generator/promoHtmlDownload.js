@@ -28,7 +28,9 @@ const downloadBlob = (blob, filename) => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
-const getSceneSize = (scene) => {
+export const getCurrentPromoSceneSize = () => {
+  const scene = document.querySelector('.promo-scene');
+  if (!scene) return { width: 1920, height: 1080 };
   const scale = Number(scene.style.transform?.match(/scale\(([^)]+)\)/)?.[1] || 1) || 1;
   const rect = scene.getBoundingClientRect();
   return {
@@ -130,7 +132,7 @@ const embedImagesInClone = async (scene, clone) => {
   return failures;
 };
 
-const getSceneHtmlDocument = async () => {
+export const getCurrentPromoHtmlDocument = async () => {
   const scene = document.querySelector('.promo-scene');
   if (!scene) throw new Error('Could not find the promo scene.');
 
@@ -142,7 +144,7 @@ const getSceneHtmlDocument = async () => {
   clone.style.top = '0';
 
   const imageFailures = await embedImagesInClone(scene, clone);
-  const { width, height } = getSceneSize(scene);
+  const { width, height } = getCurrentPromoSceneSize();
   const diagnostics = imageFailures.length
     ? `<!-- Image embed diagnostics: ${JSON.stringify(imageFailures).replace(/--/g, '')} -->`
     : '<!-- Image embed diagnostics: all images embedded as data URLs. -->';
@@ -178,16 +180,13 @@ const setDownloadStatus = (downloadGroup, message) => {
 };
 
 const downloadCurrentPromoHtml = async () => {
-  const html = await getSceneHtmlDocument();
+  const html = await getCurrentPromoHtmlDocument();
   downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), `${getSafeFilename(getCurrentPromoTitle())}.html`);
 };
 
 const downloadCurrentPromoWebm = async (downloadGroup) => {
-  const scene = document.querySelector('.promo-scene');
-  if (!scene) throw new Error('Could not find the promo scene.');
-
-  const html = await getSceneHtmlDocument();
-  const { width, height } = getSceneSize(scene);
+  const html = await getCurrentPromoHtmlDocument();
+  const { width, height } = getCurrentPromoSceneSize();
   const filename = `${getSafeFilename(getCurrentPromoTitle())}.webm`;
 
   await downloadHtmlRender({
