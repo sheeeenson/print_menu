@@ -39,7 +39,53 @@ const getSceneSize = (scene) => {
 
 const getCurrentPromoTitle = () => document.querySelector('.promo-generator-toolbar h2')?.textContent || 'tv-promo';
 
-const getSceneHtmlDocument = () => {
+const blobToDataUrl = (blob) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = () => reject(reader.error || new Error('Could not read image blob.'));
+  reader.readAsDataURL(blob);
+});
+
+const imageElementToDataUrl = async (sourceImage) => {
+  const currentSrc = sourceImage.currentSrc || sourceImage.src || sourceImage.getAttribute('src') || '';
+  if (!currentSrc || currentSrc.startsWith('data:')) return currentSrc;
+
+  if (currentSrc.startsWith('blob:')) {
+    const canvas = document.createElement('canvas');
+    canvas.width = sourceImage.naturalWidth || sourceImage.width;
+    canvas.height = sourceImage.naturalHeight || sourceImage.height;
+    if (!canvas.width || !canvas.height) return currentSrc;
+    const context = canvas.getContext('2d');
+    context.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/png');
+  }
+
+  const response = await fetch(currentSrc, { mode: 'cors', cache: 'force-cache' });
+  if (!response.ok) return currentSrc;
+  return blobToDataUrl(await response.blob());
+};
+
+const embedImagesInClone = async (scene, clone) => {
+  const sourceImages = Array.from(scene.querySelectorAll('img'));
+  const clonedImages = Array.from(clone.querySelectorAll('img'));
+
+  await Promise.all(sourceImages.map(async (sourceImage, index) => {
+    const clonedImage = clonedImages[index];
+    if (!clonedImage) return;
+
+    try {
+      const dataUrl = await imageElementToDataUrl(sourceImage);
+      if (!dataUrl) return;
+      clonedImage.setAttribute('src', dataUrl);
+      clonedImage.removeAttribute('srcset');
+      clonedImage.removeAttribute('crossorigin');
+    } catch (error) {
+      console.warn('Could not embed promo image in HTML export:', error instanceof Error ? error.message : String(error));
+    }
+  }));
+};
+
+const getSceneHtmlDocument = async () => {
   const scene = document.querySelector('.promo-scene');
   if (!scene) throw new Error('Could not find the promo scene.');
 
@@ -49,6 +95,8 @@ const getSceneHtmlDocument = () => {
   clone.style.position = 'relative';
   clone.style.left = '0';
   clone.style.top = '0';
+
+  await embedImagesInClone(scene, clone);
 
   const { width, height } = getSceneSize(scene);
 
@@ -80,8 +128,8 @@ const setDownloadStatus = (downloadGroup, message) => {
   if (status) status.textContent = message;
 };
 
-const downloadCurrentPromoHtml = () => {
-  const html = getSceneHtmlDocument();
+const downloadCurrentPromoHtml = async () => {
+  const html = await getSceneHtmlDocument();
   downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), `${getSafeFilename(getCurrentPromoTitle())}.html`);
 };
 
@@ -89,7 +137,7 @@ const downloadCurrentPromoWebm = async (downloadGroup) => {
   const scene = document.querySelector('.promo-scene');
   if (!scene) throw new Error('Could not find the promo scene.');
 
-  const html = getSceneHtmlDocument();
+  const html = await getSceneHtmlDocument();
   const { width, height } = getSceneSize(scene);
   const filename = `${getSafeFilename(getCurrentPromoTitle())}.webm`;
 
@@ -144,9 +192,10 @@ const ensureDownloadButtons = () => {
     downloadGroup,
     label: 'HTML',
     dataAttribute: 'data-promo-html-download',
-    onClick: () => {
-      downloadCurrentPromoHtml();
-      setDownloadStatus(downloadGroup, 'HTML downloaded.');
+    onClick: async (group) => {
+      setDownloadStatus(group, 'Preparing HTML with embedded images...');
+      await downloadCurrentPromoHtml();
+      setDownloadStatus(group, 'HTML downloaded.');
     },
   });
 };
