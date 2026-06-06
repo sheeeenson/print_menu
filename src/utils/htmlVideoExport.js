@@ -1,8 +1,16 @@
+const DEFAULT_RENDERER_ENDPOINT = 'https://print-menu.onrender.com/render';
+
 export const getSafeRenderFilename = (value, fallback = 'html-video') => String(value || fallback)
   .trim()
   .toLowerCase()
   .replace(/[^a-z0-9]+/g, '-')
   .replace(/^-|-$/g, '') || fallback;
+
+const getRendererEndpoint = () => {
+  const configuredEndpoint = import.meta.env?.VITE_PROMO_RENDERER_URL || import.meta.env?.VITE_RENDERER_URL || '';
+  const endpoint = configuredEndpoint || DEFAULT_RENDERER_ENDPOINT;
+  return endpoint.replace(/\/$/, '').replace(/\/render$/, '/render');
+};
 
 const downloadUrl = (url, filename) => {
   const link = document.createElement('a');
@@ -25,8 +33,14 @@ const getRenderErrorMessage = async (response, fallbackMessage) => {
   }
 };
 
+const fetchRender = async (endpoint, payload) => fetch(endpoint, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(payload),
+});
+
 export async function downloadHtmlRender({
-  endpoint = '/api/promo-render',
+  endpoint,
   output = 'mp4',
   filename,
   format,
@@ -38,21 +52,27 @@ export async function downloadHtmlRender({
 }) {
   const extension = output === 'png' ? 'png' : 'mp4';
   const fallbackMessage = `${extension.toUpperCase()} export failed.`;
+  const payload = {
+    output,
+    filename,
+    format,
+    duration,
+    fps,
+    settings,
+    dish,
+    html,
+  };
 
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      output,
-      filename,
-      format,
-      duration,
-      fps,
-      settings,
-      dish,
-      html,
-    }),
-  });
+  const primaryEndpoint = endpoint || getRendererEndpoint();
+  const fallbackEndpoint = '/api/promo-render';
+  let response;
+
+  try {
+    response = await fetchRender(primaryEndpoint, payload);
+  } catch (error) {
+    if (primaryEndpoint === fallbackEndpoint) throw error;
+    response = await fetchRender(fallbackEndpoint, payload);
+  }
 
   if (!response.ok) {
     throw new Error(await getRenderErrorMessage(response, fallbackMessage));
