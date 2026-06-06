@@ -94,6 +94,30 @@ const waitForImages = async (page) => {
   }
 };
 
+const freezeAnimationsAt = async (page, seconds) => {
+  await page.evaluate((time) => {
+    const elements = [document.documentElement, document.body, ...document.querySelectorAll('*')];
+    elements.forEach((element) => {
+      const style = window.getComputedStyle(element);
+      if (!style.animationName || style.animationName === 'none') return;
+      const count = style.animationName.split(',').length;
+      element.style.animationPlayState = Array.from({ length: count }, () => 'paused').join(',');
+      element.style.animationDelay = Array.from({ length: count }, () => `-${time}s`).join(',');
+    });
+  }, seconds);
+};
+
+const createPage = async (browser, { html, width, height, duration }) => {
+  const page = await browser.newPage();
+  page.setDefaultNavigationTimeout(0);
+  page.setDefaultTimeout(0);
+  await page.setViewport({ width, height, deviceScaleFactor: 1 });
+  await page.setContent(buildDocument({ html, width, height, duration }), { waitUntil: 'domcontentloaded', timeout: 0 });
+  await waitForImages(page);
+  await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
+  return page;
+};
+
 app.get('/health', (request, response) => {
   response.json({ ok: true });
 });
@@ -105,7 +129,9 @@ app.post('/render', async (request, response) => {
   const height = getNumber(format.height, 1080, 320, 3840);
   const duration = getNumber(payload.duration, 8, 1, 30);
   const fps = getNumber(payload.fps, 30, 12, 60);
-  const filename = sanitizeFilename(payload.filename || 'promo.mp4').replace(/\.[^.]+$/, '.mp4');
+  const output = payload.output === 'png' ? 'png' : 'mp4';
+  const fallbackName = output === 'png' ? 'promo.png' : 'promo.mp4';
+  const filename = sanitizeFilename(payload.filename || fallbackName).replace(/\.[^.]+$/, `.${output}`);
   const html = String(payload.html || '');
 
   if (!html.includes('promo-scene')) {
@@ -134,27 +160,27 @@ app.post('/render', async (request, response) => {
       headless: 'new',
     });
 
-    const page = await browser.newPage();
-    page.setDefaultNavigationTimeout(0);
-    page.setDefaultTimeout(0);
-    await page.setViewport({ width, height, deviceScaleFactor: 1 });
-    await page.setContent(buildDocument({ html, width, height, duration }), { waitUntil: 'domcontentloaded', timeout: 0 });
-    await waitForImages(page);
-    await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
+    const page = await createPage(browser, { html, width, height, duration });
+
+    if (output === 'png') {
+      await freezeAnimationsAt(page, 0);
+      const imageBuffer = await page.screenshot({
+        type: 'png',
+        omitBackground: false,
+        clip: { x: 0, y: 0, width, height },
+      });
+
+      response.status(200);
+      response.setHeader('Content-Type', 'image/png');
+      response.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      response.end(imageBuffer);
+      return;
+    }
 
     const frameCount = Math.max(1, Math.round(duration * fps));
     for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
       const seconds = frameIndex / fps;
-      await page.evaluate((time) => {
-        const elements = [document.documentElement, document.body, ...document.querySelectorAll('*')];
-        elements.forEach((element) => {
-          const style = window.getComputedStyle(element);
-          if (!style.animationName || style.animationName === 'none') return;
-          const count = style.animationName.split(',').length;
-          element.style.animationPlayState = Array.from({ length: count }, () => 'paused').join(',');
-          element.style.animationDelay = Array.from({ length: count }, () => `-${time}s`).join(',');
-        });
-      }, seconds);
+      await freezeAnimationsAt(page, seconds);
 
       await page.screenshot({
         path: path.join(frameDir, `frame-${String(frameIndex).padStart(5, '0')}.png`),
@@ -183,7 +209,7 @@ app.post('/render', async (request, response) => {
   } catch (error) {
     console.error(error);
     response.status(500).json({
-      error: 'Unable to render MP4.',
+      error: `Unable to render ${output.toUpperCase()}.`,
       detail: error instanceof Error ? error.message : String(error),
     });
   } finally {
