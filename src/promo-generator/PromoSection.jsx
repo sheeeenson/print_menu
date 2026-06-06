@@ -12,8 +12,14 @@ const EFFECT_GROUPS = [
       ['stopMotion', 'Stop Motion'],
       ['pricePunch', 'Price Punch'],
       ['textRise', 'Text Rise'],
+      ['headlineSplit', 'Headline Split'],
+      ['textWave', 'Text Wave'],
+      ['textGlitch', 'Text Glitch'],
+      ['dishSlide', 'Dish Slide'],
       ['dishPulse', 'Dish Pulse'],
+      ['dishRotate', 'Dish Rotate'],
       ['priceShake', 'Price Shake'],
+      ['priceFlip', 'Price Flip'],
     ],
   },
   {
@@ -22,12 +28,20 @@ const EFFECT_GROUPS = [
       ['glow', 'Glow'],
       ['lightSweep', 'Light Sweep'],
       ['backgroundOrbit', 'Background Orbit'],
+      ['backgroundPulse', 'Background Pulse'],
       ['spotlightPulse', 'Spotlight Pulse'],
+      ['priceGlow', 'Price Glow'],
+      ['confetti', 'Confetti'],
+      ['vignette', 'Vignette'],
     ],
   },
   {
-    title: 'Media',
-    items: [['gifOverlay', 'GIF Overlay']],
+    title: 'GIF Motion',
+    items: [
+      ['gifOverlay', 'GIF Overlay'],
+      ['gifSpin', 'GIF Spin'],
+      ['gifBounce', 'GIF Bounce'],
+    ],
   },
 ];
 
