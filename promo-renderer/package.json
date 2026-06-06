@@ -1,0 +1,14 @@
+{
+  "name": "promo-renderer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@sparticuz/chromium": "latest",
+    "express": "latest",
+    "puppeteer-core": "latest"
+  }
+}
