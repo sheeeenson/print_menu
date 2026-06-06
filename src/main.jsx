@@ -20,6 +20,7 @@ import './advancedResponsiveFix.css';
 import './unifiedAppTheme.css';
 import './mobileUxEnhancements.css';
 import './promoEnhancements.css';
+import './removeGifCornerRadius.css';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>
