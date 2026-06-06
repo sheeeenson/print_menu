@@ -41,7 +41,7 @@ const LAYOUT_CONTROL_GROUPS = [
   { title: 'GIF', x: 'gifX', y: 'gifY' },
 ];
 
-const GLOBAL_PROMO_KEYS = new Set(['gifUrl', 'gifPosition', 'gifSize', 'gifLibrary']);
+const GLOBAL_PROMO_KEYS = new Set(['gifUrl', 'gifPosition', 'gifSize', 'gifBorderRadius', 'gifLibrary']);
 const getDishTitle = (dish) => dish?.nameEn || dish?.nameGe || 'Untitled dish';
 const getActiveFormatSettings = (settings, formatId = settings.formatId) => settings.formats?.[formatId] ?? {};
 const getSafeFilename = (value) => String(value || 'promo').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'promo';
@@ -354,6 +354,7 @@ export function PromoSection({ project }) {
         gifUrl: current.gifUrl || '',
         gifPosition: current.gifPosition || 'textLeft',
         gifSize: current.gifSize || 18,
+        gifBorderRadius: current.gifBorderRadius ?? 0,
         gifLibrary: current.gifLibrary || [],
         effects: {
           ...(nextFormatSettings.effects ?? DEFAULT_PROMO_EFFECTS),
@@ -424,10 +425,10 @@ export function PromoSection({ project }) {
           <span>{activeFormat.label} scene</span>
         </header>
 
-        <PromoControlGroup title="Export">
+        <PromoControlGroup title="Download">
           <div className="promo-duration-buttons">
-            <button type="button" onClick={handleDownloadPng}>Download PNG</button>
-            <button type="button" onClick={handleDownloadMp4}>Download MP4</button>
+            <button type="button" onClick={handleDownloadPng}>PNG</button>
+            <button type="button" onClick={handleDownloadMp4}>MP4</button>
           </div>
           {exportStatus ? <small className="promo-preview-size">{exportStatus}</small> : null}
         </PromoControlGroup>
@@ -548,6 +549,7 @@ export function PromoSection({ project }) {
               </select>
             </label>
             <RangeControl label="Size" value={settings.gifSize} min={6} max={42} onChange={(gifSize) => updateSettings({ gifSize })} suffix="%" />
+            <RangeControl label="Corner radius" value={settings.gifBorderRadius ?? 0} min={0} max={160} onChange={(gifBorderRadius) => updateSettings({ gifBorderRadius })} suffix="px" />
           </PromoControlGroup>
         ) : null}
       </aside>
