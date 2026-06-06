@@ -46,6 +46,14 @@ const blobToDataUrl = (blob) => new Promise((resolve, reject) => {
   reader.readAsDataURL(blob);
 });
 
+const loadImage = (src) => new Promise((resolve, reject) => {
+  const image = new Image();
+  image.onload = () => resolve(image);
+  image.onerror = () => reject(new Error('Image failed to load.'));
+  image.crossOrigin = 'anonymous';
+  image.src = src;
+});
+
 const imageElementToDataUrl = async (sourceImage) => {
   const currentSrc = sourceImage.currentSrc || sourceImage.src || sourceImage.getAttribute('src') || '';
   if (!currentSrc || currentSrc.startsWith('data:')) return currentSrc;
@@ -54,35 +62,72 @@ const imageElementToDataUrl = async (sourceImage) => {
     const canvas = document.createElement('canvas');
     canvas.width = sourceImage.naturalWidth || sourceImage.width;
     canvas.height = sourceImage.naturalHeight || sourceImage.height;
-    if (!canvas.width || !canvas.height) return currentSrc;
+    if (!canvas.width || !canvas.height) return '';
     const context = canvas.getContext('2d');
     context.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
     return canvas.toDataURL('image/png');
   }
 
-  const response = await fetch(currentSrc, { mode: 'cors', cache: 'force-cache' });
-  if (!response.ok) return currentSrc;
-  return blobToDataUrl(await response.blob());
+  try {
+    const response = await fetch(currentSrc, { mode: 'cors', cache: 'force-cache' });
+    if (response.ok) return blobToDataUrl(await response.blob());
+  } catch (error) {
+    // Fall back to canvas below.
+  }
+
+  const loadedImage = await loadImage(currentSrc);
+  const canvas = document.createElement('canvas');
+  canvas.width = loadedImage.naturalWidth || loadedImage.width;
+  canvas.height = loadedImage.naturalHeight || loadedImage.height;
+  if (!canvas.width || !canvas.height) return '';
+  const context = canvas.getContext('2d');
+  context.drawImage(loadedImage, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/png');
+};
+
+const replaceImageWithPlaceholder = (clonedImage, reason = 'Image could not be embedded') => {
+  const placeholder = document.createElement('div');
+  placeholder.className = clonedImage.className || 'promo-dish-placeholder';
+  placeholder.setAttribute('data-image-export-error', reason);
+  placeholder.style.cssText = clonedImage.getAttribute('style') || '';
+  placeholder.style.display = 'grid';
+  placeholder.style.placeItems = 'center';
+  placeholder.style.background = 'rgba(255,255,255,0.18)';
+  placeholder.style.color = 'rgba(255,250,242,0.82)';
+  placeholder.style.fontSize = '42px';
+  placeholder.style.fontWeight = '950';
+  placeholder.style.textAlign = 'center';
+  placeholder.style.padding = '32px';
+  placeholder.textContent = 'Image not embedded';
+  clonedImage.replaceWith(placeholder);
 };
 
 const embedImagesInClone = async (scene, clone) => {
   const sourceImages = Array.from(scene.querySelectorAll('img'));
   const clonedImages = Array.from(clone.querySelectorAll('img'));
+  const failures = [];
 
   await Promise.all(sourceImages.map(async (sourceImage, index) => {
     const clonedImage = clonedImages[index];
     if (!clonedImage) return;
 
+    clonedImage.removeAttribute('srcset');
+    clonedImage.removeAttribute('crossorigin');
+    clonedImage.removeAttribute('loading');
+    clonedImage.removeAttribute('decoding');
+
     try {
       const dataUrl = await imageElementToDataUrl(sourceImage);
-      if (!dataUrl) return;
+      if (!dataUrl || !dataUrl.startsWith('data:')) throw new Error('Image could not be converted to data URL.');
       clonedImage.setAttribute('src', dataUrl);
-      clonedImage.removeAttribute('srcset');
-      clonedImage.removeAttribute('crossorigin');
     } catch (error) {
-      console.warn('Could not embed promo image in HTML export:', error instanceof Error ? error.message : String(error));
+      const reason = error instanceof Error ? error.message : String(error);
+      failures.push({ index, src: sourceImage.currentSrc || sourceImage.src || '', reason });
+      replaceImageWithPlaceholder(clonedImage, reason);
     }
   }));
+
+  return failures;
 };
 
 const getSceneHtmlDocument = async () => {
@@ -96,9 +141,11 @@ const getSceneHtmlDocument = async () => {
   clone.style.left = '0';
   clone.style.top = '0';
 
-  await embedImagesInClone(scene, clone);
-
+  const imageFailures = await embedImagesInClone(scene, clone);
   const { width, height } = getSceneSize(scene);
+  const diagnostics = imageFailures.length
+    ? `<!-- Image embed diagnostics: ${JSON.stringify(imageFailures).replace(/--/g, '')} -->`
+    : '<!-- Image embed diagnostics: all images embedded as data URLs. -->';
 
   return `<!doctype html>
 <html>
@@ -106,6 +153,7 @@ const getSceneHtmlDocument = async () => {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=${width}, initial-scale=1" />
     <title>TV Promo Export</title>
+    ${diagnostics}
     <style>
       html, body {
         width: ${width}px;
@@ -116,6 +164,7 @@ const getSceneHtmlDocument = async () => {
         background: #231f20;
       }
       *, *::before, *::after { box-sizing: border-box; }
+      img[src^="data:"] { -webkit-user-select: none; user-select: none; }
       ${getDocumentCss()}
     </style>
   </head>
