@@ -171,7 +171,7 @@ const normalizeDishSize = (value) => {
   const raw = Number(value ?? DEFAULT_PROMO_FORMAT_SETTINGS.dishSize);
   if (!Number.isFinite(raw)) return DEFAULT_PROMO_FORMAT_SETTINGS.dishSize;
   const migratedFromPercent = raw <= 180 ? Math.round((raw / 100) * 650) : raw;
-  return normalizeNumber(migratedFromPercent, DEFAULT_PROMO_FORMAT_SETTINGS.dishSize, 100, 650);
+  return normalizeNumber(migratedFromPercent, DEFAULT_PROMO_FORMAT_SETTINGS.dishSize, 100, 900);
 };
 
 const pickFormatSettings = (project = {}) => Object.fromEntries(
