@@ -1,4 +1,8 @@
+import html2canvas from 'html2canvas';
 import { downloadHtmlRender } from '../utils/htmlVideoExport.js';
+
+const CLIENT_WEBM_DURATION_SECONDS = 8;
+const CLIENT_WEBM_FPS = 12;
 
 const getDocumentCss = () => Array.from(document.styleSheets)
   .map((sheet) => {
@@ -27,6 +31,8 @@ const downloadBlob = (blob, filename) => {
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
+
+const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 export const getCurrentPromoSceneSize = () => {
   const scene = document.querySelector('.promo-scene');
@@ -181,6 +187,102 @@ const setDownloadStatus = (downloadGroup, message) => {
 
 const getPromoFormatLabel = () => document.querySelector('.promo-output-pill')?.textContent?.trim() || 'promo';
 
+const getPromoFilename = (extension) => `${getSafeFilename(getCurrentPromoTitle())}-${getSafeFilename(getPromoFormatLabel())}.${extension}`;
+
+const withUnscaledPromoScene = async (callback) => {
+  const scene = document.querySelector('.promo-scene');
+  if (!scene) throw new Error('Could not find the promo scene.');
+
+  const originalTransform = scene.style.transform;
+  const originalTransformOrigin = scene.style.transformOrigin;
+  const originalPosition = scene.style.position;
+  const originalZIndex = scene.style.zIndex;
+
+  scene.style.transform = 'none';
+  scene.style.transformOrigin = 'top left';
+  scene.style.position = 'relative';
+  scene.style.zIndex = '1';
+
+  try {
+    return await callback(scene);
+  } finally {
+    scene.style.transform = originalTransform;
+    scene.style.transformOrigin = originalTransformOrigin;
+    scene.style.position = originalPosition;
+    scene.style.zIndex = originalZIndex;
+  }
+};
+
+const renderSceneToCanvas = async () => {
+  const { width, height } = getCurrentPromoSceneSize();
+  return withUnscaledPromoScene((scene) => html2canvas(scene, {
+    backgroundColor: '#231f20',
+    width,
+    height,
+    windowWidth: width,
+    windowHeight: height,
+    scale: 1,
+    useCORS: true,
+    allowTaint: true,
+    logging: false,
+  }));
+};
+
+const downloadClientPng = async (downloadGroup) => {
+  setDownloadStatus(downloadGroup, 'Renderer unavailable. Creating PNG in browser...');
+  const canvas = await renderSceneToCanvas();
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+  if (!blob) throw new Error('Browser could not create PNG.');
+  downloadBlob(blob, getPromoFilename('png'));
+  setDownloadStatus(downloadGroup, 'PNG downloaded using browser fallback.');
+};
+
+const getSupportedWebmMimeType = () => {
+  const types = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+  return types.find((type) => window.MediaRecorder?.isTypeSupported(type)) || '';
+};
+
+const downloadClientWebm = async (downloadGroup) => {
+  if (!window.MediaRecorder) throw new Error('Browser WebM fallback is not supported here. Try Chrome or Edge.');
+
+  setDownloadStatus(downloadGroup, 'Renderer unavailable. Creating WebM in browser...');
+  const { width, height } = getCurrentPromoSceneSize();
+  const outputCanvas = document.createElement('canvas');
+  outputCanvas.width = width;
+  outputCanvas.height = height;
+  const context = outputCanvas.getContext('2d');
+  const stream = outputCanvas.captureStream(CLIENT_WEBM_FPS);
+  const mimeType = getSupportedWebmMimeType();
+  const chunks = [];
+  const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+
+  const done = new Promise((resolve, reject) => {
+    recorder.ondataavailable = (event) => {
+      if (event.data?.size) chunks.push(event.data);
+    };
+    recorder.onerror = () => reject(new Error('Browser WebM fallback failed.'));
+    recorder.onstop = resolve;
+  });
+
+  recorder.start(250);
+  const frameCount = CLIENT_WEBM_DURATION_SECONDS * CLIENT_WEBM_FPS;
+  for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
+    setDownloadStatus(downloadGroup, `Renderer unavailable. Creating WebM in browser... ${frameIndex + 1}/${frameCount}`);
+    const frameCanvas = await renderSceneToCanvas();
+    context.drawImage(frameCanvas, 0, 0, width, height);
+    await wait(1000 / CLIENT_WEBM_FPS);
+  }
+
+  if (recorder.state !== 'inactive') recorder.stop();
+  await done;
+  stream.getTracks().forEach((track) => track.stop());
+
+  const blob = new Blob(chunks, { type: mimeType || 'video/webm' });
+  if (!blob.size) throw new Error('Browser returned an empty WebM.');
+  downloadBlob(blob, getPromoFilename('webm'));
+  setDownloadStatus(downloadGroup, 'WebM downloaded using browser fallback.');
+};
+
 const downloadCurrentPromoHtml = async () => {
   const html = await getCurrentPromoHtmlDocument();
   downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), `${getSafeFilename(getCurrentPromoTitle())}.html`);
@@ -190,19 +292,31 @@ const downloadCurrentPromoRender = async (downloadGroup, output) => {
   const html = await getCurrentPromoHtmlDocument();
   const { width, height } = getCurrentPromoSceneSize();
   const extension = output === 'png' ? 'png' : output === 'webm' ? 'webm' : 'mp4';
-  const filename = `${getSafeFilename(getCurrentPromoTitle())}-${getSafeFilename(getPromoFormatLabel())}.${extension}`;
+  const filename = getPromoFilename(extension);
 
-  await downloadHtmlRender({
-    output,
-    filename,
-    format: { id: 'current', label: `${width}x${height}`, width, height },
-    duration: 8,
-    fps: 24,
-    html,
-    onStatus: (message) => setDownloadStatus(downloadGroup, message),
-  });
-
-  setDownloadStatus(downloadGroup, `${extension.toUpperCase()} downloaded.`);
+  try {
+    await downloadHtmlRender({
+      output,
+      filename,
+      format: { id: 'current', label: `${width}x${height}`, width, height },
+      duration: 8,
+      fps: 24,
+      html,
+      onStatus: (message) => setDownloadStatus(downloadGroup, message),
+    });
+    setDownloadStatus(downloadGroup, `${extension.toUpperCase()} downloaded.`);
+  } catch (error) {
+    console.error(error);
+    if (output === 'png') {
+      await downloadClientPng(downloadGroup);
+      return;
+    }
+    if (output === 'webm') {
+      await downloadClientWebm(downloadGroup);
+      return;
+    }
+    throw error;
+  }
 };
 
 const overrideBuiltInDownloadButton = ({ button, downloadGroup, output }) => {
