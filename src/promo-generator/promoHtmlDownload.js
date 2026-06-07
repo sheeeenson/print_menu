@@ -179,18 +179,21 @@ const setDownloadStatus = (downloadGroup, message) => {
   if (status) status.textContent = message;
 };
 
+const getPromoFormatLabel = () => document.querySelector('.promo-output-pill')?.textContent?.trim() || 'promo';
+
 const downloadCurrentPromoHtml = async () => {
   const html = await getCurrentPromoHtmlDocument();
   downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), `${getSafeFilename(getCurrentPromoTitle())}.html`);
 };
 
-const downloadCurrentPromoWebm = async (downloadGroup) => {
+const downloadCurrentPromoRender = async (downloadGroup, output) => {
   const html = await getCurrentPromoHtmlDocument();
   const { width, height } = getCurrentPromoSceneSize();
-  const filename = `${getSafeFilename(getCurrentPromoTitle())}.webm`;
+  const extension = output === 'png' ? 'png' : output === 'webm' ? 'webm' : 'mp4';
+  const filename = `${getSafeFilename(getCurrentPromoTitle())}-${getSafeFilename(getPromoFormatLabel())}.${extension}`;
 
   await downloadHtmlRender({
-    output: 'webm',
+    output,
     filename,
     format: { id: 'current', label: `${width}x${height}`, width, height },
     duration: 8,
@@ -199,7 +202,24 @@ const downloadCurrentPromoWebm = async (downloadGroup) => {
     onStatus: (message) => setDownloadStatus(downloadGroup, message),
   });
 
-  setDownloadStatus(downloadGroup, 'WebM downloaded.');
+  setDownloadStatus(downloadGroup, `${extension.toUpperCase()} downloaded.`);
+};
+
+const overrideBuiltInDownloadButton = ({ button, downloadGroup, output }) => {
+  if (!button || button.dataset.promoRenderOverride === 'true') return;
+  button.dataset.promoRenderOverride = 'true';
+  button.addEventListener('click', async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    try {
+      setDownloadStatus(downloadGroup, `Preparing ${output.toUpperCase()} export...`);
+      await downloadCurrentPromoRender(downloadGroup, output);
+    } catch (error) {
+      console.error(error);
+      setDownloadStatus(downloadGroup, error instanceof Error ? error.message : `${output.toUpperCase()} export failed.`);
+    }
+  }, true);
 };
 
 const addDownloadButton = ({ buttonRow, downloadGroup, label, dataAttribute, onClick }) => {
@@ -227,12 +247,16 @@ const ensureDownloadButtons = () => {
   const buttonRow = downloadGroup?.querySelector('.promo-duration-buttons');
   if (!buttonRow) return;
 
+  const existingButtons = Array.from(buttonRow.querySelectorAll('button'));
+  overrideBuiltInDownloadButton({ button: existingButtons.find((button) => button.textContent?.trim() === 'PNG'), downloadGroup, output: 'png' });
+  overrideBuiltInDownloadButton({ button: existingButtons.find((button) => button.textContent?.trim() === 'MP4'), downloadGroup, output: 'mp4' });
+
   addDownloadButton({
     buttonRow,
     downloadGroup,
     label: 'WebM',
     dataAttribute: 'data-promo-webm-download',
-    onClick: downloadCurrentPromoWebm,
+    onClick: (group) => downloadCurrentPromoRender(group, 'webm'),
   });
 
   addDownloadButton({
