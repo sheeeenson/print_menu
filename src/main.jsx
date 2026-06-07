@@ -23,6 +23,7 @@ import './promoEnhancements.css';
 import './removeGifCornerRadius.css';
 import './gifOverlayControls.css';
 import './dishSizeBoost.js';
+import './promoExtraEffects.js';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>
