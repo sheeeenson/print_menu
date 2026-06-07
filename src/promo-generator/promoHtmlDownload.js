@@ -1,6 +1,10 @@
 import html2canvas from 'html2canvas';
 import { downloadHtmlRender } from '../utils/htmlVideoExport.js';
 
+const LOCAL_RENDERER_RELEASES_URL = 'https://github.com/sheeeenson/print_menu/releases';
+const LOCAL_RENDERER_MAC_URL = 'https://github.com/sheeeenson/print_menu/releases/latest/download/Print-Menu-Renderer-Mac.zip';
+const LOCAL_RENDERER_WINDOWS_URL = 'https://github.com/sheeeenson/print_menu/releases/latest/download/Print-Menu-Renderer-Windows.zip';
+
 const getDocumentCss = () => Array.from(document.styleSheets)
   .map((sheet) => {
     try {
@@ -225,6 +229,72 @@ const hideBuiltInButton = (buttonRow, label, dataAttribute) => {
   if (builtInButton) builtInButton.style.display = 'none';
 };
 
+const getRendererPlatform = () => {
+  const platform = navigator.platform?.toLowerCase() || '';
+  const userAgent = navigator.userAgent?.toLowerCase() || '';
+  if (platform.includes('win') || userAgent.includes('windows')) return 'windows';
+  if (platform.includes('mac') || userAgent.includes('mac os')) return 'mac';
+  return 'unknown';
+};
+
+const createRendererLink = ({ label, href }) => {
+  const link = document.createElement('a');
+  link.href = href;
+  link.target = '_blank';
+  link.rel = 'noreferrer';
+  link.textContent = label;
+  link.className = 'promo-local-renderer-link';
+  return link;
+};
+
+const ensureLocalRendererInstallPanel = (downloadGroup) => {
+  if (downloadGroup.querySelector('[data-promo-local-renderer-panel]')) return;
+
+  const panel = document.createElement('div');
+  panel.setAttribute('data-promo-local-renderer-panel', 'true');
+  panel.style.marginTop = '12px';
+  panel.style.padding = '12px';
+  panel.style.border = '1px solid rgba(255,255,255,0.14)';
+  panel.style.borderRadius = '14px';
+  panel.style.background = 'rgba(255,255,255,0.06)';
+  panel.style.display = 'grid';
+  panel.style.gap = '8px';
+
+  const title = document.createElement('div');
+  title.textContent = 'Local Renderer for MP4/WebM';
+  title.style.fontWeight = '800';
+  title.style.fontSize = '13px';
+
+  const description = document.createElement('div');
+  description.textContent = 'For reliable CSS video export, run the local renderer on Mac or Windows. PNG and HTML work without it.';
+  description.style.fontSize = '12px';
+  description.style.opacity = '0.72';
+  description.style.lineHeight = '1.35';
+
+  const linkRow = document.createElement('div');
+  linkRow.style.display = 'flex';
+  linkRow.style.flexWrap = 'wrap';
+  linkRow.style.gap = '8px';
+
+  const platform = getRendererPlatform();
+  if (platform === 'mac') {
+    linkRow.appendChild(createRendererLink({ label: 'Download for Mac', href: LOCAL_RENDERER_MAC_URL }));
+    linkRow.appendChild(createRendererLink({ label: 'Windows', href: LOCAL_RENDERER_WINDOWS_URL }));
+  } else if (platform === 'windows') {
+    linkRow.appendChild(createRendererLink({ label: 'Download for Windows', href: LOCAL_RENDERER_WINDOWS_URL }));
+    linkRow.appendChild(createRendererLink({ label: 'Mac', href: LOCAL_RENDERER_MAC_URL }));
+  } else {
+    linkRow.appendChild(createRendererLink({ label: 'Download for Mac', href: LOCAL_RENDERER_MAC_URL }));
+    linkRow.appendChild(createRendererLink({ label: 'Download for Windows', href: LOCAL_RENDERER_WINDOWS_URL }));
+  }
+  linkRow.appendChild(createRendererLink({ label: 'All releases', href: LOCAL_RENDERER_RELEASES_URL }));
+
+  panel.appendChild(title);
+  panel.appendChild(description);
+  panel.appendChild(linkRow);
+  downloadGroup.appendChild(panel);
+};
+
 const ensureDownloadButtons = () => {
   const downloadGroup = Array.from(document.querySelectorAll('.promo-panel-group'))
     .find((group) => group.querySelector('h3')?.textContent?.trim() === 'Download');
@@ -278,6 +348,8 @@ const ensureDownloadButtons = () => {
       setDownloadStatus(group, 'HTML downloaded.');
     },
   });
+
+  ensureLocalRendererInstallPanel(downloadGroup);
 };
 
 export const installPromoHtmlDownloadButton = () => {
