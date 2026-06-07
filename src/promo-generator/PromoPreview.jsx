@@ -78,6 +78,17 @@ const textShadowCss = (settings) => {
   return `0 18px ${blur}px ${rgbToCss(rgb, alpha)}`;
 };
 
+const gifShadowCss = (settings) => {
+  if (!settings.gifShadow) return 'none';
+  const color = rgbToCss(hexToRgb(settings.gifShadowColor || '#000000'), 0.52);
+  return `drop-shadow(0 24px 34px ${color})`;
+};
+
+const getGifMotionDuration = (settings) => {
+  const speed = clamp(settings.gifPlaybackSpeed ?? 100, 25, 300);
+  return `${100 / speed}s`;
+};
+
 const getGifLayout = (layout, position, showCta) => {
   if (position === 'bottomLeft') return showCta ? layout.gif.bottomLeft : layout.gif.ctaLeft;
   return ({ textLeft: layout.gif.headlineLeft, topLeft: layout.gif.headlineLeft, topRight: layout.gif.priceRight, bottomRight: layout.gif.bottomRight }[position] ?? layout.gif.headlineLeft);
@@ -97,9 +108,9 @@ const getGifShapeStyle = (settings) => {
   const shape = settings.gifShape || 'rectangle';
   if (shape === 'circle') return { borderRadius: '9999px', aspectRatio: '1 / 1', objectFit: 'cover' };
   if (shape === 'rounded') return { borderRadius: '36px' };
-  if (shape === 'rectangle') return { borderRadius: 0 };
+  if (shape === 'rectangle') return { borderRadius: `${settings.gifBorderRadius || 0}px` };
   const clipPath = GIF_SHAPE_CLIPS[shape];
-  return clipPath ? { clipPath, WebkitClipPath: clipPath, borderRadius: 0, aspectRatio: '1 / 1', objectFit: 'cover' } : { borderRadius: 0 };
+  return clipPath ? { clipPath, WebkitClipPath: clipPath, borderRadius: 0, aspectRatio: '1 / 1', objectFit: 'cover' } : { borderRadius: `${settings.gifBorderRadius || 0}px` };
 };
 
 export function PromoPreview({ dish, settings, index = 0 }) {
@@ -125,6 +136,8 @@ export function PromoPreview({ dish, settings, index = 0 }) {
   const ctaLayout = offsetPosition(layout.cta, offsets.ctaX, offsets.ctaY);
   const gifLayout = offsetPosition(getGifLayout(layout, settings.gifPosition, settings.showCta), offsets.gifX, offsets.gifY);
   const textShadow = textShadowCss(settings);
+  const gifFilter = gifShadowCss(settings);
+  const gifMotionDuration = getGifMotionDuration(settings);
 
   useEffect(() => {
     let cancelled = false;
@@ -175,6 +188,7 @@ export function PromoPreview({ dish, settings, index = 0 }) {
             height: `${format.height}px`,
             transform: `scale(${previewScale})`,
             '--promo-duration': `${settings.duration || 8}s`,
+            '--promo-gif-motion-duration': gifMotionDuration,
             '--promo-edge-color': tunedBackground,
             '--promo-text-shadow': textShadow,
           }}
@@ -208,7 +222,7 @@ export function PromoPreview({ dish, settings, index = 0 }) {
           ) : null}
 
           {settings.showCta ? <div className="promo-cta" style={{ ...layoutStyle(ctaLayout), color: settings.ctaColor, fontFamily: settings.ctaFont, fontSize: `${settings.ctaSize}px`, textShadow }}>{settings.ctaText || 'ORDER NOW'}</div> : null}
-          {effects.gifOverlay && settings.gifUrl ? <img className="promo-gif-overlay" src={settings.gifUrl} alt="" aria-hidden="true" style={{ ...layoutStyle(gifLayout), width: `${settings.gifSize || 18}%`, ...getGifShapeStyle(settings) }} /> : null}
+          {effects.gifOverlay && settings.gifUrl ? <img className="promo-gif-overlay" src={settings.gifUrl} alt="" aria-hidden="true" style={{ ...layoutStyle(gifLayout), width: `${settings.gifSize || 18}%`, filter: gifFilter, ...getGifShapeStyle(settings) }} /> : null}
         </article>
       </div>
       <small className="promo-preview-size">Output format: {format.label}</small>
