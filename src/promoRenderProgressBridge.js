@@ -1,5 +1,5 @@
 const STYLE_ID = 'promo-render-progress-bridge-styles';
-const BAR_SELECTOR = '[data-promo-render-progress-bridge]';
+const BAR_ID = 'promo-render-progress-floating';
 
 const injectStyles = () => {
   if (document.getElementById(STYLE_ID)) return;
@@ -7,38 +7,42 @@ const injectStyles = () => {
   style.id = STYLE_ID;
   style.textContent = `
     .promo-render-progress-bridge {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      z-index: 2147483000;
       display: none;
-      margin-top: 12px;
-      padding: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      border-radius: 16px;
-      background: rgba(18, 18, 18, 0.34);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+      width: min(420px, calc(100vw - 32px));
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      border-radius: 18px;
+      background: rgba(20, 18, 16, 0.94);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(255,255,255,0.12);
+      backdrop-filter: blur(12px);
+      color: #fffaf2;
     }
-    .promo-render-progress-bridge.is-visible { display: grid; gap: 9px; }
+    .promo-render-progress-bridge.is-visible { display: grid; gap: 10px; }
     .promo-render-progress-bridge__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .promo-render-progress-bridge__title { color: #fffaf2; font-size: 12px; font-weight: 900; line-height: 1.25; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-    .promo-render-progress-bridge__percent { color: #fffaf2; font-size: 12px; font-weight: 950; font-variant-numeric: tabular-nums; }
-    .promo-render-progress-bridge__track { width: 100%; height: 12px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,0.18); }
+    .promo-render-progress-bridge__title { color: #fffaf2; font-size: 13px; font-weight: 900; line-height: 1.25; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .promo-render-progress-bridge__percent { color: #fffaf2; font-size: 13px; font-weight: 950; font-variant-numeric: tabular-nums; }
+    .promo-render-progress-bridge__track { width: 100%; height: 13px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,0.20); }
     .promo-render-progress-bridge__fill { height: 100%; width: 0%; border-radius: inherit; background: linear-gradient(90deg, #f97316, #facc15); transition: width 220ms ease; }
     .promo-render-progress-bridge__track.is-indeterminate .promo-render-progress-bridge__fill { width: 36%; animation: promo-render-progress-bridge-slide 1.1s ease-in-out infinite; }
     @keyframes promo-render-progress-bridge-slide { 0% { transform: translateX(-120%); } 100% { transform: translateX(300%); } }
+    @media (max-width: 640px) {
+      .promo-render-progress-bridge { left: 16px; right: 16px; bottom: 16px; width: auto; }
+    }
   `;
   document.head.appendChild(style);
 };
 
-const getDownloadGroup = () => Array.from(document.querySelectorAll('.promo-panel-group'))
-  .find((group) => group.querySelector('h3')?.textContent?.trim() === 'Download');
-
 const ensureBar = () => {
   injectStyles();
-  const group = getDownloadGroup();
-  if (!group) return null;
-
-  let bar = group.querySelector(BAR_SELECTOR);
+  let bar = document.getElementById(BAR_ID);
   if (bar) return bar;
 
   bar = document.createElement('div');
+  bar.id = BAR_ID;
   bar.className = 'promo-render-progress-bridge';
   bar.setAttribute('data-promo-render-progress-bridge', 'true');
   bar.innerHTML = `
@@ -50,10 +54,7 @@ const ensureBar = () => {
       <div class="promo-render-progress-bridge__fill"></div>
     </div>
   `;
-
-  const installPanel = group.querySelector('[data-promo-local-renderer-panel]');
-  if (installPanel) group.insertBefore(bar, installPanel);
-  else group.appendChild(bar);
+  document.body.appendChild(bar);
   return bar;
 };
 
@@ -106,8 +107,14 @@ const updateBar = ({ status = 'queued', progress = {}, output = 'mp4' } = {}) =>
   fill.style.width = '';
 };
 
-const isJobCreateUrl = (url) => typeof url === 'string' && /\/jobs\/?$/.test(url);
-const isJobStatusUrl = (url) => typeof url === 'string' && /\/jobs\/[^/]+\/?$/.test(url) && !url.endsWith('/file');
+const getUrlString = (input) => {
+  if (typeof input === 'string') return input;
+  if (input?.url) return input.url;
+  return '';
+};
+
+const isJobCreateUrl = (url) => typeof url === 'string' && /\/jobs\/?(?:\?.*)?$/.test(url);
+const isJobStatusUrl = (url) => typeof url === 'string' && /\/jobs\/[^/]+\/?(?:\?.*)?$/.test(url) && !url.includes('/file');
 
 const installFetchBridge = () => {
   if (window.__promoRenderProgressBridgeInstalled) return;
@@ -116,7 +123,7 @@ const installFetchBridge = () => {
   const originalFetch = window.fetch.bind(window);
   window.fetch = async (input, init) => {
     const response = await originalFetch(input, init);
-    const url = typeof input === 'string' ? input : input?.url;
+    const url = getUrlString(input);
 
     if (!isJobCreateUrl(url) && !isJobStatusUrl(url)) return response;
 
@@ -138,7 +145,5 @@ if (typeof window !== 'undefined') {
   injectStyles();
   installFetchBridge();
   window.addEventListener('load', ensureBar);
-  const observer = new MutationObserver(() => window.requestAnimationFrame(ensureBar));
-  observer.observe(document.documentElement, { childList: true, subtree: true });
   window.requestAnimationFrame(ensureBar);
 }
