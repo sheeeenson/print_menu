@@ -26,6 +26,7 @@ import './dishSizeBoost.js';
 import './promoExtraEffects.js';
 import './promoWideMovement.js';
 import './promoSafeAreaOverlay.js';
+import './promoDurationExportFix.js';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>
