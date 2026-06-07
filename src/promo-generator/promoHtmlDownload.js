@@ -178,16 +178,16 @@ const downloadCurrentPromoHtml = async () => {
   downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), `${getSafeFilename(getCurrentPromoTitle())}.html`);
 };
 
-const downloadCurrentPromoWebm = async (downloadGroup) => {
+const downloadCurrentPromoVideo = async (downloadGroup, output) => {
   const scene = document.querySelector('.promo-scene');
   if (!scene) throw new Error('Could not find the promo scene.');
 
   const html = await getSceneHtmlDocument();
   const { width, height } = getSceneSize(scene);
-  const filename = getOutputFilename('webm');
+  const filename = getOutputFilename(output);
 
   await downloadHtmlRender({
-    output: 'webm',
+    output,
     filename,
     format: { id: 'current', label: `${width}x${height}`, width, height },
     duration: 8,
@@ -196,7 +196,7 @@ const downloadCurrentPromoWebm = async (downloadGroup) => {
     onStatus: (message) => setDownloadStatus(downloadGroup, message),
   });
 
-  setDownloadStatus(downloadGroup, 'WebM downloaded.');
+  setDownloadStatus(downloadGroup, `${output.toUpperCase()} downloaded.`);
 };
 
 const addDownloadButton = ({ buttonRow, downloadGroup, label, dataAttribute, onClick, prepend = false }) => {
@@ -219,10 +219,10 @@ const addDownloadButton = ({ buttonRow, downloadGroup, label, dataAttribute, onC
   else buttonRow.appendChild(button);
 };
 
-const hideBuiltInServerPngButton = (buttonRow) => {
-  const serverPngButton = Array.from(buttonRow.querySelectorAll('button'))
-    .find((button) => button.textContent?.trim() === 'PNG' && button.getAttribute('data-promo-browser-png-download') !== 'true');
-  if (serverPngButton) serverPngButton.style.display = 'none';
+const hideBuiltInButton = (buttonRow, label, dataAttribute) => {
+  const builtInButton = Array.from(buttonRow.querySelectorAll('button'))
+    .find((button) => button.textContent?.trim() === label && button.getAttribute(dataAttribute) !== 'true');
+  if (builtInButton) builtInButton.style.display = 'none';
 };
 
 const ensureDownloadButtons = () => {
@@ -231,7 +231,8 @@ const ensureDownloadButtons = () => {
   const buttonRow = downloadGroup?.querySelector('.promo-duration-buttons');
   if (!buttonRow) return;
 
-  hideBuiltInServerPngButton(buttonRow);
+  hideBuiltInButton(buttonRow, 'PNG', 'data-promo-browser-png-download');
+  hideBuiltInButton(buttonRow, 'MP4', 'data-promo-job-mp4-download');
 
   addDownloadButton({
     buttonRow,
@@ -247,11 +248,22 @@ const ensureDownloadButtons = () => {
   addDownloadButton({
     buttonRow,
     downloadGroup,
+    label: 'MP4',
+    dataAttribute: 'data-promo-job-mp4-download',
+    onClick: async (group) => {
+      setDownloadStatus(group, 'Preparing MP4 export...');
+      await downloadCurrentPromoVideo(group, 'mp4');
+    },
+  });
+
+  addDownloadButton({
+    buttonRow,
+    downloadGroup,
     label: 'WebM',
     dataAttribute: 'data-promo-webm-download',
     onClick: async (group) => {
       setDownloadStatus(group, 'Preparing WebM export...');
-      await downloadCurrentPromoWebm(group);
+      await downloadCurrentPromoVideo(group, 'webm');
     },
   });
 
