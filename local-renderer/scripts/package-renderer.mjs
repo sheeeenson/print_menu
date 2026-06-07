@@ -8,6 +8,7 @@ const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const distDir = path.join(rootDir, 'dist');
 const macPackageName = 'Print Menu Renderer Mac';
 const windowsPackageName = 'Print Menu Renderer Windows';
+const includeFfmpeg = process.env.INCLUDE_FFMPEG === '1';
 
 const run = (command, args, options = {}) => new Promise((resolve, reject) => {
   const child = execFile(command, args, { cwd: options.cwd || rootDir }, (error, stdout, stderr) => {
@@ -41,14 +42,16 @@ const writePackageNotes = async (targetDir, platform) => {
   const launcher = platform === 'mac'
     ? 'Start Print Menu Renderer.command'
     : 'Start Print Menu Renderer.bat';
+  const ffmpegName = platform === 'mac' ? 'ffmpeg' : 'ffmpeg.exe';
 
   await writeFile(path.join(targetDir, 'START_HERE.txt'), [
     'Print Menu Local Renderer',
     '=========================',
     '',
     `1. Open this folder: ${path.basename(targetDir)}`,
-    `2. Double-click: ${launcher}`,
-    '3. Keep the launcher window open while exporting MP4/WebM from the website.',
+    `2. Put ${ffmpegName} into the bin folder if it is not already there.`,
+    `3. Double-click: ${launcher}`,
+    '4. Keep the launcher window open while exporting MP4/WebM from the website.',
     '',
     'Health check:',
     'http://localhost:3020/health',
@@ -75,14 +78,18 @@ const packageMac = async () => {
   await copyFile(path.join(rootDir, 'Start Print Menu Renderer.command'), path.join(targetDir, 'Start Print Menu Renderer.command'));
   await mkdir(path.join(targetDir, 'bin'), { recursive: true });
 
-  const hasFfmpeg = await copyIfExists(path.join(rootDir, 'bin', 'ffmpeg'), path.join(targetDir, 'bin', 'ffmpeg'));
+  const ffmpegTarget = path.join(targetDir, 'bin', 'ffmpeg');
+  const hasFfmpeg = includeFfmpeg
+    ? await copyIfExists(path.join(rootDir, 'bin', 'ffmpeg'), ffmpegTarget)
+    : false;
+
   if (!hasFfmpeg) {
     await writeFile(path.join(targetDir, 'bin', 'PUT_FFMPEG_HERE.txt'), 'Put the Mac ffmpeg executable here and name it ffmpeg.\n');
   }
 
   await run('chmod', ['+x', path.join(targetDir, 'Start Print Menu Renderer.command')]);
-  if (existsSync(path.join(targetDir, 'bin', 'ffmpeg'))) {
-    await run('chmod', ['+x', path.join(targetDir, 'bin', 'ffmpeg')]);
+  if (existsSync(ffmpegTarget)) {
+    await run('chmod', ['+x', ffmpegTarget]);
   }
 
   await zipFolder('Print-Menu-Renderer-Mac.zip', macPackageName);
@@ -97,7 +104,10 @@ const packageWindows = async () => {
   await copyFile(path.join(rootDir, 'Start Print Menu Renderer.ps1'), path.join(targetDir, 'Start Print Menu Renderer.ps1'));
   await mkdir(path.join(targetDir, 'bin'), { recursive: true });
 
-  const hasFfmpeg = await copyIfExists(path.join(rootDir, 'bin', 'ffmpeg.exe'), path.join(targetDir, 'bin', 'ffmpeg.exe'));
+  const hasFfmpeg = includeFfmpeg
+    ? await copyIfExists(path.join(rootDir, 'bin', 'ffmpeg.exe'), path.join(targetDir, 'bin', 'ffmpeg.exe'))
+    : false;
+
   if (!hasFfmpeg) {
     await writeFile(path.join(targetDir, 'bin', 'PUT_FFMPEG_EXE_HERE.txt'), 'Put the Windows ffmpeg.exe executable here and name it ffmpeg.exe.\n');
   }
@@ -109,6 +119,8 @@ const printDistSummary = async () => {
   const entries = await readdir(distDir);
   console.log('\nPackages created in:');
   console.log(distDir);
+  console.log('');
+  console.log(includeFfmpeg ? 'Mode: bundled FFmpeg' : 'Mode: lightweight packages without bundled FFmpeg');
   console.log('');
 
   for (const entry of entries.sort()) {
