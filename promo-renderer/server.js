@@ -14,7 +14,7 @@ const IMAGE_WAIT_MS = Number(process.env.IMAGE_WAIT_MS || 10000);
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
 const JOB_TTL_MS = Number(process.env.JOB_TTL_MS || 20 * 60 * 1000);
 const MAX_VIDEO_FPS = Number(process.env.MAX_VIDEO_FPS || 15);
-const MAX_VIDEO_DURATION = Number(process.env.MAX_VIDEO_DURATION || 10);
+const MAX_VIDEO_DURATION = Number(process.env.MAX_VIDEO_DURATION || 32);
 const MAX_VIDEO_WIDTH = Number(process.env.MAX_VIDEO_WIDTH || 1280);
 const JPEG_FRAME_QUALITY = Number(process.env.JPEG_FRAME_QUALITY || 82);
 
@@ -42,6 +42,14 @@ const getNumber = (value, fallback, min, max) => {
   const number = Number(value);
   if (!Number.isFinite(number)) return fallback;
   return Math.min(max, Math.max(min, number));
+};
+
+const getRequestedDuration = (payload = {}) => {
+  const directDuration = Number(payload.duration);
+  if (Number.isFinite(directDuration)) return directDuration;
+  const settingsDuration = Number(payload.settings?.duration);
+  if (Number.isFinite(settingsDuration)) return settingsDuration;
+  return 8;
 };
 
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -87,8 +95,8 @@ const buildDocument = ({ html, width, height, duration }) => {
         background: transparent;
       }
       *, *::before, *::after { box-sizing: border-box; }
-      .promo-scene { transform: none !important; transform-origin: top left !important; }
-      .promo-scene, .promo-scene * { animation-duration: var(--promo-duration, ${duration}s); }
+      .promo-scene { transform: none !important; transform-origin: top left !important; --promo-duration: ${duration}s !important; }
+      .promo-scene, .promo-scene * { animation-duration: ${duration}s !important; }
     </style>
   </head>
   <body>${html}</body>
@@ -250,11 +258,12 @@ const normalizeRenderPayload = (payload = {}) => {
   const videoSize = output === 'png'
     ? { width: requestedWidth, height: requestedHeight }
     : getVideoRenderSize({ width: requestedWidth, height: requestedHeight });
+  const duration = getNumber(getRequestedDuration(payload), 8, 1, MAX_VIDEO_DURATION);
 
   return {
     width: videoSize.width,
     height: videoSize.height,
-    duration: getNumber(payload.duration, 8, 1, MAX_VIDEO_DURATION),
+    duration,
     fps: getNumber(payload.fps, 15, 8, MAX_VIDEO_FPS),
     output,
     filename: sanitizeFilename(payload.filename || fallbackName).replace(/\.[^.]+$/, `.${output}`),
@@ -288,6 +297,7 @@ const renderToFile = async (payload) => {
     if (render.output === 'png') {
       await capturePng({ page, outputPath, width: render.width, height: render.height });
     } else {
+      console.log(`Rendering ${render.filename}: ${render.duration}s at ${render.fps}fps`);
       await captureVideo({
         page,
         frameDir,
