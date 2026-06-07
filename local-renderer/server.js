@@ -6,6 +6,7 @@ import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 
 const app = express();
 const PORT = Number(process.env.PORT || 3020);
@@ -16,6 +17,11 @@ const MAX_VIDEO_DURATION = Number(process.env.MAX_VIDEO_DURATION || 20);
 const MAX_VIDEO_WIDTH = Number(process.env.MAX_VIDEO_WIDTH || 1920);
 const JPEG_FRAME_QUALITY = Number(process.env.JPEG_FRAME_QUALITY || 86);
 const IMAGE_WAIT_MS = Number(process.env.IMAGE_WAIT_MS || 10000);
+const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
+const BUNDLED_FFMPEG_PATH = process.platform === 'win32'
+  ? path.join(ROOT_DIR, 'bin', 'ffmpeg.exe')
+  : path.join(ROOT_DIR, 'bin', 'ffmpeg');
+const FFMPEG_PATH = process.env.FFMPEG_PATH || (existsSync(BUNDLED_FFMPEG_PATH) ? BUNDLED_FFMPEG_PATH : 'ffmpeg');
 
 const jobs = new Map();
 
@@ -125,9 +131,9 @@ const writeFrame = (ffmpeg, buffer) => new Promise((resolve, reject) => {
 
 const renderVideo = async ({ page, render, outputPath }) => {
   const frameCount = Math.max(1, Math.round(render.duration * render.fps));
-  log(`Rendering ${frameCount} frames for ${render.filename} (${render.width}x${render.height}, ${render.fps}fps, ${render.duration}s)`);
+  log(`Rendering ${frameCount} frames for ${render.filename} (${render.width}x${render.height}, ${render.fps}fps, ${render.duration}s) using ${FFMPEG_PATH}`);
 
-  const ffmpeg = spawn('ffmpeg', ffmpegArgs({ output: render.output, outputPath, fps: render.fps }), { stdio: ['pipe', 'ignore', 'pipe'] });
+  const ffmpeg = spawn(FFMPEG_PATH, ffmpegArgs({ output: render.output, outputPath, fps: render.fps }), { stdio: ['pipe', 'ignore', 'pipe'] });
   let stderr = '';
   const done = new Promise((resolve, reject) => {
     ffmpeg.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
@@ -188,7 +194,7 @@ const runJob = async (id, payload) => {
   }
 };
 
-app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION }));
+app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION }));
 
 app.post('/jobs', (request, response) => {
   const render = normalizePayload(request.body || {});
