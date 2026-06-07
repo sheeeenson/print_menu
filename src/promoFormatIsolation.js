@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'restaurant-menu-studio:tv-promo-generator:v1';
-const ISOLATION_KEY = 'restaurant-menu-studio:tv-promo-generator:format-isolation:v2';
+const ISOLATION_KEY = 'restaurant-menu-studio:tv-promo-generator:format-isolation:v3';
 
 const FORMAT_IDS = ['landscape', 'square', 'portrait', 'story'];
 
@@ -56,6 +56,8 @@ const FORMAT_KEYS = [
   'gifShadowColor',
 ];
 
+let writingInternally = false;
+
 const readJson = (key, fallback = {}) => {
   try {
     const raw = window.localStorage.getItem(key);
@@ -65,11 +67,18 @@ const readJson = (key, fallback = {}) => {
   }
 };
 
+const writeRaw = (key, value) => {
+  window.localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
+};
+
 const writeJson = (key, value) => {
   try {
-    window.localStorage.setItem(key, JSON.stringify(value));
+    writingInternally = true;
+    writeRaw(key, value);
   } catch (error) {
     console.warn('Could not save promo format isolation state:', error);
+  } finally {
+    writingInternally = false;
   }
 };
 
@@ -85,25 +94,13 @@ const pickKeys = (source = {}, keys = []) => Object.fromEntries(
 );
 
 const pickGlobalSettings = (project = {}) => pickKeys(project, [...GLOBAL_KEYS]);
-
 const pickFormatSettings = (project = {}, formatId = getActiveFormatId(project)) => ({
   ...(project.formats?.[formatId] || {}),
   ...pickKeys(project, FORMAT_KEYS),
 });
 
-const getClickedFormatId = (target) => {
-  const button = target?.closest?.('.promo-format-buttons button');
-  if (!button) return '';
-  const label = button.textContent?.trim();
-  if (label === '16:9') return 'landscape';
-  if (label === '1:1') return 'square';
-  if (label === '4:5') return 'portrait';
-  if (label === '9:16') return 'story';
-  return '';
-};
-
-const persistCurrentFormat = () => {
-  const project = getProject();
+const saveFormatSnapshot = (project) => {
+  if (!project || typeof project !== 'object') return;
   const formatId = getActiveFormatId(project);
   const isolation = getIsolation();
   const formatSettings = pickFormatSettings(project, formatId);
@@ -117,12 +114,25 @@ const persistCurrentFormat = () => {
   });
 };
 
+const persistCurrentFormat = () => saveFormatSnapshot(getProject());
+
 const ensureCurrentFormatPersisted = () => {
   const project = getProject();
   const formatId = getActiveFormatId(project);
   const isolation = getIsolation();
   if (isolation[formatId]) return;
-  persistCurrentFormat();
+  saveFormatSnapshot(project);
+};
+
+const getClickedFormatId = (target) => {
+  const button = target?.closest?.('.promo-format-buttons button');
+  if (!button) return '';
+  const label = button.textContent?.trim();
+  if (label === '16:9') return 'landscape';
+  if (label === '1:1') return 'square';
+  if (label === '4:5') return 'portrait';
+  if (label === '9:16') return 'story';
+  return '';
 };
 
 const buildProjectForFormat = (targetFormatId) => {
@@ -162,18 +172,32 @@ const switchToFormat = (formatId) => {
   window.setTimeout(() => window.location.reload(), 40);
 };
 
+const installStorageAutosave = () => {
+  const originalSetItem = window.localStorage.setItem.bind(window.localStorage);
+  window.localStorage.setItem = (key, value) => {
+    originalSetItem(key, value);
+    if (writingInternally || key !== STORAGE_KEY) return;
+    try {
+      saveFormatSnapshot(JSON.parse(value));
+    } catch (error) {
+      // Ignore unrelated or partial writes.
+    }
+  };
+};
+
 if (typeof window !== 'undefined') {
+  installStorageAutosave();
   ensureCurrentFormatPersisted();
 
   document.addEventListener('input', (event) => {
     if (event.target?.closest?.('.promo-generator-panel')) {
-      window.requestAnimationFrame(persistCurrentFormat);
+      window.setTimeout(persistCurrentFormat, 0);
     }
   }, true);
 
   document.addEventListener('change', (event) => {
     if (event.target?.closest?.('.promo-generator-panel')) {
-      window.requestAnimationFrame(persistCurrentFormat);
+      window.setTimeout(persistCurrentFormat, 0);
     }
   }, true);
 
