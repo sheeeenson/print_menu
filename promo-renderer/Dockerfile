@@ -2,6 +2,7 @@ FROM mcr.microsoft.com/playwright:v1.49.1-jammy
 
 ENV NODE_ENV=production
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ffmpeg \
