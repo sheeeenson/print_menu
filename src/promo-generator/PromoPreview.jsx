@@ -124,7 +124,7 @@ export function PromoPreview({ dish, settings, index = 0 }) {
   const headline = settings.headline || dish?.nameEn || 'TV Promo';
   const offerText = settings.offerText || (dish?.badges?.[0]?.label ?? dish?.badges?.[0]?.name ?? 'Fresh today');
   const descriptionLines = [dish?.descriptionEn, dish?.descriptionGe].filter(Boolean);
-  const dishScale = ((settings.dishSize || 650) / 650) * (layout.dish.scale || 1);
+  const dishImageSize = clamp(settings.dishSize || 650, 100, 900);
   const copyLayout = offsetPosition(layout.copy, offsets.copyX, offsets.copyY);
   const dishLayout = offsetPosition(layout.dish, offsets.dishX, offsets.dishY);
   const priceLayout = offsetPosition(layout.price, offsets.priceX, offsets.priceY);
@@ -204,8 +204,16 @@ export function PromoPreview({ dish, settings, index = 0 }) {
             ) : null}
           </div>
 
-          <div className="promo-dish-stage" style={{ ...layoutPositionStyle(dishLayout), transform: `scale(${dishScale})` }}>
-            {dish?.imageUrl ? <img className="promo-dish-image" src={dish.imageUrl} alt={dish.nameEn || dish.nameGe || 'Dish'} crossOrigin="anonymous" /> : <div className="promo-dish-placeholder">Select dish with image</div>}
+          <div className="promo-dish-stage" style={layoutPositionStyle(dishLayout)}>
+            {dish?.imageUrl ? (
+              <img
+                className="promo-dish-image"
+                src={dish.imageUrl}
+                alt={dish.nameEn || dish.nameGe || 'Dish'}
+                crossOrigin="anonymous"
+                style={{ width: `${dishImageSize}px`, maxWidth: 'none', maxHeight: 'none' }}
+              />
+            ) : <div className="promo-dish-placeholder">Select dish with image</div>}
           </div>
 
           {hasPrice ? (
