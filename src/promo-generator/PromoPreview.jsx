@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { decompressFrames, parseGIF } from 'gifuct-js';
 import { getPromoFormat } from './promoStorage.js';
 import { getFallbackImageBackground, sampleImageColor } from '../utils/imageColor.js';
 
@@ -89,6 +90,12 @@ const getGifMotionDuration = (settings) => {
   return `${100 / speed}s`;
 };
 
+const getGifFrameDelay = (frame, speed) => {
+  const rawDelay = Number(frame.delay || 10) * 10;
+  const safeDelay = Number.isFinite(rawDelay) && rawDelay > 0 ? rawDelay : 100;
+  return Math.max(16, safeDelay / (clamp(speed, 25, 300) / 100));
+};
+
 const getGifLayout = (layout, position, showCta) => {
   if (position === 'bottomLeft') return showCta ? layout.gif.bottomLeft : layout.gif.ctaLeft;
   return ({ textLeft: layout.gif.headlineLeft, topLeft: layout.gif.headlineLeft, topRight: layout.gif.priceRight, bottomRight: layout.gif.bottomRight }[position] ?? layout.gif.headlineLeft);
@@ -112,6 +119,62 @@ const getGifShapeStyle = (settings) => {
   const clipPath = GIF_SHAPE_CLIPS[shape];
   return clipPath ? { clipPath, WebkitClipPath: clipPath, borderRadius: 0, aspectRatio: '1 / 1', objectFit: 'cover' } : { borderRadius: `${settings.gifBorderRadius || 0}px` };
 };
+
+function GifOverlayPlayer({ src, speed, style }) {
+  const canvasRef = useRef(null);
+  const [fallback, setFallback] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    let timeoutId = 0;
+
+    const renderGif = async () => {
+      setFallback(false);
+      try {
+        const response = await fetch(src, { mode: 'cors', cache: 'force-cache' });
+        if (!response.ok) throw new Error('Could not load GIF.');
+        const buffer = await response.arrayBuffer();
+        const gif = parseGIF(buffer);
+        const frames = decompressFrames(gif, true);
+        const canvas = canvasRef.current;
+        if (!canvas || !frames.length || cancelled) return;
+        const context = canvas.getContext('2d');
+        const width = gif.lsd.width;
+        const height = gif.lsd.height;
+        canvas.width = width;
+        canvas.height = height;
+        let frameIndex = 0;
+
+        const drawFrame = () => {
+          if (cancelled || !canvasRef.current) return;
+          const frame = frames[frameIndex];
+          const imageData = context.createImageData(frame.dims.width, frame.dims.height);
+          imageData.data.set(frame.patch);
+          if (frame.disposalType === 2) context.clearRect(0, 0, width, height);
+          context.putImageData(imageData, frame.dims.left, frame.dims.top);
+          frameIndex = (frameIndex + 1) % frames.length;
+          timeoutId = window.setTimeout(drawFrame, getGifFrameDelay(frame, speed));
+        };
+
+        context.clearRect(0, 0, width, height);
+        drawFrame();
+      } catch (error) {
+        console.warn('Falling back to native GIF playback:', error instanceof Error ? error.message : String(error));
+        if (!cancelled) setFallback(true);
+      }
+    };
+
+    if (src) renderGif();
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [src, speed]);
+
+  if (fallback) return <img className="promo-gif-overlay" src={src} alt="" aria-hidden="true" style={style} />;
+  return <canvas ref={canvasRef} className="promo-gif-overlay" aria-hidden="true" style={style} />;
+}
 
 export function PromoPreview({ dish, settings, index = 0 }) {
   const [sampledColor, setSampledColor] = useState('');
@@ -178,6 +241,8 @@ export function PromoPreview({ dish, settings, index = 0 }) {
     effects.gifBounce ? 'promo-effect-gif-bounce' : '',
   ].filter(Boolean).join(' ');
 
+  const gifStyle = { ...layoutStyle(gifLayout), width: `${settings.gifSize || 18}%`, filter: gifFilter, ...getGifShapeStyle(settings) };
+
   return (
     <section className="promo-preview-shell" aria-label={`TV Promo ${format.label} preview`}>
       <div className="promo-canvas-wrap" style={{ width: `${format.previewWidth}px`, aspectRatio: `${format.width} / ${format.height}` }}>
@@ -222,7 +287,7 @@ export function PromoPreview({ dish, settings, index = 0 }) {
           ) : null}
 
           {settings.showCta ? <div className="promo-cta" style={{ ...layoutStyle(ctaLayout), color: settings.ctaColor, fontFamily: settings.ctaFont, fontSize: `${settings.ctaSize}px`, textShadow }}>{settings.ctaText || 'ORDER NOW'}</div> : null}
-          {effects.gifOverlay && settings.gifUrl ? <img className="promo-gif-overlay" src={settings.gifUrl} alt="" aria-hidden="true" style={{ ...layoutStyle(gifLayout), width: `${settings.gifSize || 18}%`, filter: gifFilter, ...getGifShapeStyle(settings) }} /> : null}
+          {effects.gifOverlay && settings.gifUrl ? <GifOverlayPlayer src={settings.gifUrl} speed={settings.gifPlaybackSpeed ?? 100} style={gifStyle} /> : null}
         </article>
       </div>
       <small className="promo-preview-size">Output format: {format.label}</small>
