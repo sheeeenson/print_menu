@@ -82,6 +82,31 @@ const isLocalRendererAvailable = async (baseUrl) => {
   }
 };
 
+const getProgressText = ({ status, extension, rendererLabel, progress }) => {
+  const label = rendererLabel || 'renderer';
+  const percent = Number(progress?.percent);
+  const currentFrame = Number(progress?.currentFrame);
+  const totalFrames = Number(progress?.totalFrames);
+
+  if (status === 'queued') return `Render job queued via ${label}...`;
+  if (status === 'done') return `Finishing ${extension.toUpperCase()}... 100%`;
+  if (status !== 'rendering') return `Render job ${status}...`;
+
+  if (Number.isFinite(percent) && percent > 0) {
+    const frameText = Number.isFinite(currentFrame) && Number.isFinite(totalFrames) && totalFrames > 0
+      ? ` (${currentFrame}/${totalFrames} frames)`
+      : '';
+    return `Rendering ${extension.toUpperCase()} via ${label}... ${percent}%${frameText}`;
+  }
+
+  const stage = progress?.stage === 'opening_browser'
+    ? 'opening browser'
+    : progress?.stage === 'encoding_video'
+      ? 'encoding video'
+      : 'starting render';
+  return `Rendering ${extension.toUpperCase()} via ${label}... ${stage}`;
+};
+
 const downloadViaJob = async ({ baseUrl, payload, filename, extension, fallbackMessage, onStatus, rendererLabel }) => {
   onStatus?.(`Creating ${rendererLabel || 'render'} job...`);
   const createResponse = await postJson(`${baseUrl}/jobs`, payload);
@@ -90,6 +115,7 @@ const downloadViaJob = async ({ baseUrl, payload, filename, extension, fallbackM
   const job = await createResponse.json();
   const jobId = job.id;
   if (!jobId) throw new Error('Renderer did not return a job id.');
+  onStatus?.(getProgressText({ status: job.status, extension, rendererLabel, progress: job.progress }));
 
   const startedAt = Date.now();
   while (Date.now() - startedAt < JOB_TIMEOUT_MS) {
@@ -98,7 +124,7 @@ const downloadViaJob = async ({ baseUrl, payload, filename, extension, fallbackM
     if (!statusResponse.ok) throw new Error(await getRenderErrorMessage(statusResponse, fallbackMessage));
 
     const status = await statusResponse.json();
-    onStatus?.(status.status === 'rendering' ? `Rendering ${extension.toUpperCase()} via ${rendererLabel || 'renderer'}...` : `Render job ${status.status}...`);
+    onStatus?.(getProgressText({ status: status.status, extension, rendererLabel, progress: status.progress }));
 
     if (status.status === 'failed') throw new Error(status.error || fallbackMessage);
     if (status.status === 'done') {
