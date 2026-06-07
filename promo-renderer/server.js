@@ -13,8 +13,10 @@ const MAX_BODY_SIZE = process.env.MAX_BODY_SIZE || '35mb';
 const IMAGE_WAIT_MS = Number(process.env.IMAGE_WAIT_MS || 10000);
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
 const JOB_TTL_MS = Number(process.env.JOB_TTL_MS || 20 * 60 * 1000);
-const MAX_VIDEO_FPS = Number(process.env.MAX_VIDEO_FPS || 24);
-const MAX_VIDEO_DURATION = Number(process.env.MAX_VIDEO_DURATION || 15);
+const MAX_VIDEO_FPS = Number(process.env.MAX_VIDEO_FPS || 15);
+const MAX_VIDEO_DURATION = Number(process.env.MAX_VIDEO_DURATION || 10);
+const MAX_VIDEO_WIDTH = Number(process.env.MAX_VIDEO_WIDTH || 1280);
+const JPEG_FRAME_QUALITY = Number(process.env.JPEG_FRAME_QUALITY || 82);
 
 const jobs = new Map();
 
@@ -56,6 +58,15 @@ const getContentType = (output) => {
   if (output === 'png') return 'image/png';
   if (output === 'webm') return 'video/webm';
   return 'video/mp4';
+};
+
+const getVideoRenderSize = ({ width, height }) => {
+  if (width <= MAX_VIDEO_WIDTH) return { width, height };
+  const ratio = MAX_VIDEO_WIDTH / width;
+  return {
+    width: Math.max(320, Math.round(width * ratio)),
+    height: Math.max(320, Math.round(height * ratio)),
+  };
 };
 
 const buildDocument = ({ html, width, height, duration }) => {
@@ -180,8 +191,10 @@ const getVideoFfmpegArgs = ({ output, inputPattern, outputPath, fps }) => {
       '-i', inputPattern,
       '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
       '-c:v', 'libvpx-vp9',
+      '-deadline', 'realtime',
+      '-cpu-used', '6',
       '-b:v', '0',
-      '-crf', '32',
+      '-crf', '36',
       '-pix_fmt', 'yuv420p',
       outputPath,
     ];
@@ -193,8 +206,8 @@ const getVideoFfmpegArgs = ({ output, inputPattern, outputPath, fps }) => {
     '-i', inputPattern,
     '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
     '-c:v', 'libx264',
-    '-preset', 'veryfast',
-    '-crf', '23',
+    '-preset', 'ultrafast',
+    '-crf', '25',
     '-pix_fmt', 'yuv420p',
     '-movflags', '+faststart',
     outputPath,
@@ -209,8 +222,9 @@ const captureVideoFrames = async ({ page, frameDir, duration, fps, width, height
     const milliseconds = (frameIndex / fps) * 1000;
     await seekAnimations(page, milliseconds);
     await page.screenshot({
-      path: path.join(frameDir, `frame-${String(frameIndex).padStart(5, '0')}.png`),
-      type: 'png',
+      path: path.join(frameDir, `frame-${String(frameIndex).padStart(5, '0')}.jpg`),
+      type: 'jpeg',
+      quality: getNumber(JPEG_FRAME_QUALITY, 82, 50, 92),
       omitBackground: false,
       clip: { x: 0, y: 0, width, height },
     });
@@ -221,7 +235,7 @@ const captureVideo = async ({ page, frameDir, outputPath, output, duration, fps,
   await captureVideoFrames({ page, frameDir, duration, fps, width, height });
   await runFfmpeg(getVideoFfmpegArgs({
     output,
-    inputPattern: path.join(frameDir, 'frame-%05d.png'),
+    inputPattern: path.join(frameDir, 'frame-%05d.jpg'),
     outputPath,
     fps,
   }));
@@ -231,11 +245,17 @@ const normalizeRenderPayload = (payload = {}) => {
   const format = payload.format || {};
   const output = getOutput(payload.output);
   const fallbackName = output === 'png' ? 'promo.png' : `promo.${output}`;
+  const requestedWidth = getNumber(format.width, 1920, 320, 3840);
+  const requestedHeight = getNumber(format.height, 1080, 320, 3840);
+  const videoSize = output === 'png'
+    ? { width: requestedWidth, height: requestedHeight }
+    : getVideoRenderSize({ width: requestedWidth, height: requestedHeight });
+
   return {
-    width: getNumber(format.width, 1920, 320, 3840),
-    height: getNumber(format.height, 1080, 320, 3840),
+    width: videoSize.width,
+    height: videoSize.height,
     duration: getNumber(payload.duration, 8, 1, MAX_VIDEO_DURATION),
-    fps: getNumber(payload.fps, 24, 8, MAX_VIDEO_FPS),
+    fps: getNumber(payload.fps, 15, 8, MAX_VIDEO_FPS),
     output,
     filename: sanitizeFilename(payload.filename || fallbackName).replace(/\.[^.]+$/, `.${output}`),
     html: String(payload.html || '').trim(),
@@ -353,7 +373,13 @@ const handleRenderRequest = async (request, response) => {
 };
 
 app.get('/health', (request, response) => {
-  response.json({ ok: true, renderer: 'playwright-frame-capture' });
+  response.json({
+    ok: true,
+    renderer: 'playwright-jpeg-frame-capture',
+    maxVideoWidth: MAX_VIDEO_WIDTH,
+    maxVideoFps: MAX_VIDEO_FPS,
+    maxVideoDuration: MAX_VIDEO_DURATION,
+  });
 });
 
 app.post('/jobs', (request, response) => {
