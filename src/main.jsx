@@ -27,6 +27,7 @@ import './promoExtraEffects.js';
 import './promoWideMovement.js';
 import './promoSafeAreaOverlay.js';
 import './promoDurationExportFix.js';
+import './promoRenderProgressBar.js';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>
