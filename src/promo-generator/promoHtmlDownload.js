@@ -1,3 +1,4 @@
+import html2canvas from 'html2canvas';
 import { downloadHtmlRender } from '../utils/htmlVideoExport.js';
 
 const getDocumentCss = () => Array.from(document.styleSheets)
@@ -132,6 +133,46 @@ const getSceneHtmlDocument = async () => {
 
 const getOutputFilename = (extension) => `${getSafeFilename(getCurrentPromoTitle())}-${getSafeFilename(getPromoFormatLabel())}.${extension}`;
 
+const withUnscaledScene = async (callback) => {
+  const scene = document.querySelector('.promo-scene');
+  if (!scene) throw new Error('Could not find the promo scene.');
+
+  const originalTransform = scene.style.transform;
+  const originalTransformOrigin = scene.style.transformOrigin;
+  scene.style.transform = 'none';
+  scene.style.transformOrigin = 'top left';
+
+  try {
+    return await callback(scene);
+  } finally {
+    scene.style.transform = originalTransform;
+    scene.style.transformOrigin = originalTransformOrigin;
+  }
+};
+
+const downloadCurrentPromoFastPng = async (downloadGroup) => {
+  const scene = document.querySelector('.promo-scene');
+  if (!scene) throw new Error('Could not find the promo scene.');
+
+  const { width, height } = getSceneSize(scene);
+  setDownloadStatus(downloadGroup, 'Creating PNG in browser...');
+  const canvas = await withUnscaledScene((unscaledScene) => html2canvas(unscaledScene, {
+    backgroundColor: '#231f20',
+    width,
+    height,
+    windowWidth: width,
+    windowHeight: height,
+    scale: 1,
+    useCORS: true,
+    allowTaint: true,
+    logging: false,
+  }));
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+  if (!blob) throw new Error('Browser could not create PNG.');
+  downloadBlob(blob, getOutputFilename('png'));
+  setDownloadStatus(downloadGroup, 'Fast PNG downloaded.');
+};
+
 const downloadCurrentPromoHtml = async () => {
   const html = await getSceneHtmlDocument();
   downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), `${getSafeFilename(getCurrentPromoTitle())}.html`);
@@ -158,7 +199,7 @@ const downloadCurrentPromoWebm = async (downloadGroup) => {
   setDownloadStatus(downloadGroup, 'WebM downloaded.');
 };
 
-const addDownloadButton = ({ buttonRow, downloadGroup, label, dataAttribute, onClick }) => {
+const addDownloadButton = ({ buttonRow, downloadGroup, label, dataAttribute, onClick, prepend = false }) => {
   if (buttonRow.querySelector(`[${dataAttribute}]`)) return;
 
   const button = document.createElement('button');
@@ -174,7 +215,8 @@ const addDownloadButton = ({ buttonRow, downloadGroup, label, dataAttribute, onC
     }
   });
 
-  buttonRow.appendChild(button);
+  if (prepend) buttonRow.prepend(button);
+  else buttonRow.appendChild(button);
 };
 
 const ensureDownloadButtons = () => {
@@ -182,6 +224,17 @@ const ensureDownloadButtons = () => {
     .find((group) => group.querySelector('h3')?.textContent?.trim() === 'Download');
   const buttonRow = downloadGroup?.querySelector('.promo-duration-buttons');
   if (!buttonRow) return;
+
+  addDownloadButton({
+    buttonRow,
+    downloadGroup,
+    label: 'Fast PNG',
+    dataAttribute: 'data-promo-fast-png-download',
+    prepend: true,
+    onClick: async (group) => {
+      await downloadCurrentPromoFastPng(group);
+    },
+  });
 
   addDownloadButton({
     buttonRow,
