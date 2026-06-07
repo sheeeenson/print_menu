@@ -9,7 +9,6 @@
     "lint": "node scripts/check-syntax.js"
   },
   "dependencies": {
-    "gifuct-js": "^2.1.2",
     "html2canvas": "latest",
     "vite": "latest",
     "react": "latest",
