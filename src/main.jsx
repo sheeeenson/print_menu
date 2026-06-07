@@ -21,6 +21,7 @@ import './unifiedAppTheme.css';
 import './mobileUxEnhancements.css';
 import './promoEnhancements.css';
 import './removeGifCornerRadius.css';
+import './gifOverlayControls.css';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>
