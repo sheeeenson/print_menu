@@ -1,0 +1,24 @@
+/* GIF Overlay controls and motion overrides. Loaded after legacy GIF fixes. */
+
+.promo-generator-panel .promo-panel-group:last-of-type > .image-menu-control,
+.promo-generator-panel .promo-panel-group:last-of-type > .field-label,
+.promo-generator-panel .promo-panel-group:last-of-type > .promo-toggle-field {
+  display: grid !important;
+}
+
+.promo-generator-panel .promo-panel-group:last-of-type > .promo-toggle-field {
+  display: flex !important;
+}
+
+.promo-gif-overlay {
+  transform-origin: center;
+  animation-duration: var(--promo-gif-motion-duration, 1s) !important;
+}
+
+.promo-effect-gif-spin .promo-gif-overlay {
+  animation-duration: var(--promo-gif-motion-duration, 1s) !important;
+}
+
+.promo-effect-gif-bounce .promo-gif-overlay {
+  animation-duration: var(--promo-gif-motion-duration, 1s) !important;
+}
