@@ -1,8 +1,4 @@
-import html2canvas from 'html2canvas';
 import { downloadHtmlRender } from '../utils/htmlVideoExport.js';
-
-const CLIENT_WEBM_DURATION_SECONDS = 8;
-const CLIENT_WEBM_FPS = 12;
 
 const getDocumentCss = () => Array.from(document.styleSheets)
   .map((sheet) => {
@@ -32,11 +28,15 @@ const downloadBlob = (blob, filename) => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
-const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+const getCurrentPromoTitle = () => document.querySelector('.promo-generator-toolbar h2')?.textContent || 'tv-promo';
+const getPromoFormatLabel = () => document.querySelector('.promo-output-pill')?.textContent?.trim() || 'promo';
 
-export const getCurrentPromoSceneSize = () => {
-  const scene = document.querySelector('.promo-scene');
-  if (!scene) return { width: 1920, height: 1080 };
+const setDownloadStatus = (downloadGroup, message) => {
+  const status = downloadGroup?.querySelector('.promo-preview-size');
+  if (status) status.textContent = message;
+};
+
+const getSceneSize = (scene) => {
   const scale = Number(scene.style.transform?.match(/scale\(([^)]+)\)/)?.[1] || 1) || 1;
   const rect = scene.getBoundingClientRect();
   return {
@@ -45,21 +45,11 @@ export const getCurrentPromoSceneSize = () => {
   };
 };
 
-const getCurrentPromoTitle = () => document.querySelector('.promo-generator-toolbar h2')?.textContent || 'tv-promo';
-
 const blobToDataUrl = (blob) => new Promise((resolve, reject) => {
   const reader = new FileReader();
   reader.onload = () => resolve(reader.result);
   reader.onerror = () => reject(reader.error || new Error('Could not read image blob.'));
   reader.readAsDataURL(blob);
-});
-
-const loadImage = (src) => new Promise((resolve, reject) => {
-  const image = new Image();
-  image.onload = () => resolve(image);
-  image.onerror = () => reject(new Error('Image failed to load.'));
-  image.crossOrigin = 'anonymous';
-  image.src = src;
 });
 
 const imageElementToDataUrl = async (sourceImage) => {
@@ -76,49 +66,18 @@ const imageElementToDataUrl = async (sourceImage) => {
     return canvas.toDataURL('image/png');
   }
 
-  try {
-    const response = await fetch(currentSrc, { mode: 'cors', cache: 'force-cache' });
-    if (response.ok) return blobToDataUrl(await response.blob());
-  } catch (error) {
-    // Fall back to canvas below.
-  }
-
-  const loadedImage = await loadImage(currentSrc);
-  const canvas = document.createElement('canvas');
-  canvas.width = loadedImage.naturalWidth || loadedImage.width;
-  canvas.height = loadedImage.naturalHeight || loadedImage.height;
-  if (!canvas.width || !canvas.height) return '';
-  const context = canvas.getContext('2d');
-  context.drawImage(loadedImage, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL('image/png');
-};
-
-const replaceImageWithPlaceholder = (clonedImage, reason = 'Image could not be embedded') => {
-  const placeholder = document.createElement('div');
-  placeholder.className = clonedImage.className || 'promo-dish-placeholder';
-  placeholder.setAttribute('data-image-export-error', reason);
-  placeholder.style.cssText = clonedImage.getAttribute('style') || '';
-  placeholder.style.display = 'grid';
-  placeholder.style.placeItems = 'center';
-  placeholder.style.background = 'rgba(255,255,255,0.18)';
-  placeholder.style.color = 'rgba(255,250,242,0.82)';
-  placeholder.style.fontSize = '42px';
-  placeholder.style.fontWeight = '950';
-  placeholder.style.textAlign = 'center';
-  placeholder.style.padding = '32px';
-  placeholder.textContent = 'Image not embedded';
-  clonedImage.replaceWith(placeholder);
+  const response = await fetch(currentSrc, { mode: 'cors', cache: 'force-cache' });
+  if (!response.ok) return '';
+  return blobToDataUrl(await response.blob());
 };
 
 const embedImagesInClone = async (scene, clone) => {
   const sourceImages = Array.from(scene.querySelectorAll('img'));
   const clonedImages = Array.from(clone.querySelectorAll('img'));
-  const failures = [];
 
   await Promise.all(sourceImages.map(async (sourceImage, index) => {
     const clonedImage = clonedImages[index];
     if (!clonedImage) return;
-
     clonedImage.removeAttribute('srcset');
     clonedImage.removeAttribute('crossorigin');
     clonedImage.removeAttribute('loading');
@@ -126,19 +85,14 @@ const embedImagesInClone = async (scene, clone) => {
 
     try {
       const dataUrl = await imageElementToDataUrl(sourceImage);
-      if (!dataUrl || !dataUrl.startsWith('data:')) throw new Error('Image could not be converted to data URL.');
-      clonedImage.setAttribute('src', dataUrl);
+      if (dataUrl?.startsWith('data:')) clonedImage.setAttribute('src', dataUrl);
     } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      failures.push({ index, src: sourceImage.currentSrc || sourceImage.src || '', reason });
-      replaceImageWithPlaceholder(clonedImage, reason);
+      console.warn('Could not embed promo image in HTML export:', error instanceof Error ? error.message : String(error));
     }
   }));
-
-  return failures;
 };
 
-export const getCurrentPromoHtmlDocument = async () => {
+const getSceneHtmlDocument = async () => {
   const scene = document.querySelector('.promo-scene');
   if (!scene) throw new Error('Could not find the promo scene.');
 
@@ -149,11 +103,9 @@ export const getCurrentPromoHtmlDocument = async () => {
   clone.style.left = '0';
   clone.style.top = '0';
 
-  const imageFailures = await embedImagesInClone(scene, clone);
-  const { width, height } = getCurrentPromoSceneSize();
-  const diagnostics = imageFailures.length
-    ? `<!-- Image embed diagnostics: ${JSON.stringify(imageFailures).replace(/--/g, '')} -->`
-    : '<!-- Image embed diagnostics: all images embedded as data URLs. -->';
+  await embedImagesInClone(scene, clone);
+
+  const { width, height } = getSceneSize(scene);
 
   return `<!doctype html>
 <html>
@@ -161,7 +113,6 @@ export const getCurrentPromoHtmlDocument = async () => {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=${width}, initial-scale=1" />
     <title>TV Promo Export</title>
-    ${diagnostics}
     <style>
       html, body {
         width: ${width}px;
@@ -172,7 +123,6 @@ export const getCurrentPromoHtmlDocument = async () => {
         background: #231f20;
       }
       *, *::before, *::after { box-sizing: border-box; }
-      img[src^="data:"] { -webkit-user-select: none; user-select: none; }
       ${getDocumentCss()}
     </style>
   </head>
@@ -180,160 +130,32 @@ export const getCurrentPromoHtmlDocument = async () => {
 </html>`;
 };
 
-const setDownloadStatus = (downloadGroup, message) => {
-  const status = downloadGroup?.querySelector('.promo-preview-size');
-  if (status) status.textContent = message;
-};
-
-const getPromoFormatLabel = () => document.querySelector('.promo-output-pill')?.textContent?.trim() || 'promo';
-
-const getPromoFilename = (extension) => `${getSafeFilename(getCurrentPromoTitle())}-${getSafeFilename(getPromoFormatLabel())}.${extension}`;
-
-const withUnscaledPromoScene = async (callback) => {
-  const scene = document.querySelector('.promo-scene');
-  if (!scene) throw new Error('Could not find the promo scene.');
-
-  const originalTransform = scene.style.transform;
-  const originalTransformOrigin = scene.style.transformOrigin;
-  const originalPosition = scene.style.position;
-  const originalZIndex = scene.style.zIndex;
-
-  scene.style.transform = 'none';
-  scene.style.transformOrigin = 'top left';
-  scene.style.position = 'relative';
-  scene.style.zIndex = '1';
-
-  try {
-    return await callback(scene);
-  } finally {
-    scene.style.transform = originalTransform;
-    scene.style.transformOrigin = originalTransformOrigin;
-    scene.style.position = originalPosition;
-    scene.style.zIndex = originalZIndex;
-  }
-};
-
-const renderSceneToCanvas = async () => {
-  const { width, height } = getCurrentPromoSceneSize();
-  return withUnscaledPromoScene((scene) => html2canvas(scene, {
-    backgroundColor: '#231f20',
-    width,
-    height,
-    windowWidth: width,
-    windowHeight: height,
-    scale: 1,
-    useCORS: true,
-    allowTaint: true,
-    logging: false,
-  }));
-};
-
-const downloadClientPng = async (downloadGroup) => {
-  setDownloadStatus(downloadGroup, 'Renderer unavailable. Creating PNG in browser...');
-  const canvas = await renderSceneToCanvas();
-  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
-  if (!blob) throw new Error('Browser could not create PNG.');
-  downloadBlob(blob, getPromoFilename('png'));
-  setDownloadStatus(downloadGroup, 'PNG downloaded using browser fallback.');
-};
-
-const getSupportedWebmMimeType = () => {
-  const types = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
-  return types.find((type) => window.MediaRecorder?.isTypeSupported(type)) || '';
-};
-
-const downloadClientWebm = async (downloadGroup) => {
-  if (!window.MediaRecorder) throw new Error('Browser WebM fallback is not supported here. Try Chrome or Edge.');
-
-  setDownloadStatus(downloadGroup, 'Renderer unavailable. Creating WebM in browser...');
-  const { width, height } = getCurrentPromoSceneSize();
-  const outputCanvas = document.createElement('canvas');
-  outputCanvas.width = width;
-  outputCanvas.height = height;
-  const context = outputCanvas.getContext('2d');
-  const stream = outputCanvas.captureStream(CLIENT_WEBM_FPS);
-  const mimeType = getSupportedWebmMimeType();
-  const chunks = [];
-  const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-
-  const done = new Promise((resolve, reject) => {
-    recorder.ondataavailable = (event) => {
-      if (event.data?.size) chunks.push(event.data);
-    };
-    recorder.onerror = () => reject(new Error('Browser WebM fallback failed.'));
-    recorder.onstop = resolve;
-  });
-
-  recorder.start(250);
-  const frameCount = CLIENT_WEBM_DURATION_SECONDS * CLIENT_WEBM_FPS;
-  for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
-    setDownloadStatus(downloadGroup, `Renderer unavailable. Creating WebM in browser... ${frameIndex + 1}/${frameCount}`);
-    const frameCanvas = await renderSceneToCanvas();
-    context.drawImage(frameCanvas, 0, 0, width, height);
-    await wait(1000 / CLIENT_WEBM_FPS);
-  }
-
-  if (recorder.state !== 'inactive') recorder.stop();
-  await done;
-  stream.getTracks().forEach((track) => track.stop());
-
-  const blob = new Blob(chunks, { type: mimeType || 'video/webm' });
-  if (!blob.size) throw new Error('Browser returned an empty WebM.');
-  downloadBlob(blob, getPromoFilename('webm'));
-  setDownloadStatus(downloadGroup, 'WebM downloaded using browser fallback.');
-};
+const getOutputFilename = (extension) => `${getSafeFilename(getCurrentPromoTitle())}-${getSafeFilename(getPromoFormatLabel())}.${extension}`;
 
 const downloadCurrentPromoHtml = async () => {
-  const html = await getCurrentPromoHtmlDocument();
+  const html = await getSceneHtmlDocument();
   downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), `${getSafeFilename(getCurrentPromoTitle())}.html`);
 };
 
-const downloadCurrentPromoRender = async (downloadGroup, output) => {
-  const html = await getCurrentPromoHtmlDocument();
-  const { width, height } = getCurrentPromoSceneSize();
-  const extension = output === 'png' ? 'png' : output === 'webm' ? 'webm' : 'mp4';
-  const filename = getPromoFilename(extension);
+const downloadCurrentPromoWebm = async (downloadGroup) => {
+  const scene = document.querySelector('.promo-scene');
+  if (!scene) throw new Error('Could not find the promo scene.');
 
-  try {
-    await downloadHtmlRender({
-      output,
-      filename,
-      format: { id: 'current', label: `${width}x${height}`, width, height },
-      duration: 8,
-      fps: 24,
-      html,
-      onStatus: (message) => setDownloadStatus(downloadGroup, message),
-    });
-    setDownloadStatus(downloadGroup, `${extension.toUpperCase()} downloaded.`);
-  } catch (error) {
-    console.error(error);
-    if (output === 'png') {
-      await downloadClientPng(downloadGroup);
-      return;
-    }
-    if (output === 'webm') {
-      await downloadClientWebm(downloadGroup);
-      return;
-    }
-    throw error;
-  }
-};
+  const html = await getSceneHtmlDocument();
+  const { width, height } = getSceneSize(scene);
+  const filename = getOutputFilename('webm');
 
-const overrideBuiltInDownloadButton = ({ button, downloadGroup, output }) => {
-  if (!button || button.dataset.promoRenderOverride === 'true') return;
-  button.dataset.promoRenderOverride = 'true';
-  button.addEventListener('click', async (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-    try {
-      setDownloadStatus(downloadGroup, `Preparing ${output.toUpperCase()} export...`);
-      await downloadCurrentPromoRender(downloadGroup, output);
-    } catch (error) {
-      console.error(error);
-      setDownloadStatus(downloadGroup, error instanceof Error ? error.message : `${output.toUpperCase()} export failed.`);
-    }
-  }, true);
+  await downloadHtmlRender({
+    output: 'webm',
+    filename,
+    format: { id: 'current', label: `${width}x${height}`, width, height },
+    duration: 8,
+    fps: 24,
+    html,
+    onStatus: (message) => setDownloadStatus(downloadGroup, message),
+  });
+
+  setDownloadStatus(downloadGroup, 'WebM downloaded.');
 };
 
 const addDownloadButton = ({ buttonRow, downloadGroup, label, dataAttribute, onClick }) => {
@@ -361,16 +183,15 @@ const ensureDownloadButtons = () => {
   const buttonRow = downloadGroup?.querySelector('.promo-duration-buttons');
   if (!buttonRow) return;
 
-  const existingButtons = Array.from(buttonRow.querySelectorAll('button'));
-  overrideBuiltInDownloadButton({ button: existingButtons.find((button) => button.textContent?.trim() === 'PNG'), downloadGroup, output: 'png' });
-  overrideBuiltInDownloadButton({ button: existingButtons.find((button) => button.textContent?.trim() === 'MP4'), downloadGroup, output: 'mp4' });
-
   addDownloadButton({
     buttonRow,
     downloadGroup,
     label: 'WebM',
     dataAttribute: 'data-promo-webm-download',
-    onClick: (group) => downloadCurrentPromoRender(group, 'webm'),
+    onClick: async (group) => {
+      setDownloadStatus(group, 'Preparing WebM export...');
+      await downloadCurrentPromoWebm(group);
+    },
   });
 
   addDownloadButton({
