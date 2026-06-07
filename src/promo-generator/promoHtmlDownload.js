@@ -271,6 +271,24 @@ const ensureLocalRendererInstallPanel = (downloadGroup) => {
   description.style.opacity = '0.72';
   description.style.lineHeight = '1.35';
 
+  const instructions = document.createElement('ol');
+  instructions.style.margin = '0';
+  instructions.style.paddingLeft = '18px';
+  instructions.style.fontSize = '12px';
+  instructions.style.opacity = '0.82';
+  instructions.style.lineHeight = '1.45';
+
+  [
+    'Download renderer for your system.',
+    'Unzip the file.',
+    'Run the renderer app.',
+    'Return here and click MP4 or WebM.',
+  ].forEach((step) => {
+    const item = document.createElement('li');
+    item.textContent = step;
+    instructions.appendChild(item);
+  });
+
   const linkRow = document.createElement('div');
   linkRow.style.display = 'flex';
   linkRow.style.flexWrap = 'wrap';
@@ -291,6 +309,7 @@ const ensureLocalRendererInstallPanel = (downloadGroup) => {
 
   panel.appendChild(title);
   panel.appendChild(description);
+  panel.appendChild(instructions);
   panel.appendChild(linkRow);
   downloadGroup.appendChild(panel);
 };
