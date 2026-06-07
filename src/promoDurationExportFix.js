@@ -77,6 +77,23 @@ const patchHtmlDuration = (html, duration) => {
   return `${forceStyle}${nextHtml}`;
 };
 
+const shouldPatchRenderRequest = (url) => {
+  if (typeof url !== 'string') return false;
+  return url.includes('/api/promo-render')
+    || url.endsWith('/jobs')
+    || url.includes('localhost:3020/jobs')
+    || url.endsWith('/render')
+    || url.includes('print-menu.onrender.com/render');
+};
+
+const patchFilename = (filename, duration) => {
+  const value = String(filename || 'tv-promo.mp4');
+  const extensionMatch = value.match(/\.[^.]+$/);
+  const extension = extensionMatch?.[0] || '.mp4';
+  const base = value.replace(/\.[^.]+$/, '').replace(/-(8|16|32)s$/, '');
+  return `${base}-${duration}s${extension}`;
+};
+
 const patchPromoRenderFetch = () => {
   if (window.__promoDurationExportFixInstalled) return;
   window.__promoDurationExportFixInstalled = true;
@@ -84,12 +101,14 @@ const patchPromoRenderFetch = () => {
   const originalFetch = window.fetch.bind(window);
   window.fetch = (input, init = {}) => {
     const url = typeof input === 'string' ? input : input?.url;
-    const isPromoRender = typeof url === 'string' && url.includes('/api/promo-render');
 
-    if (!isPromoRender || !init?.body) return originalFetch(input, init);
+    if (!shouldPatchRenderRequest(url) || !init?.body) return originalFetch(input, init);
 
     try {
       const payload = JSON.parse(init.body);
+      const output = payload.output || '';
+      if (!['mp4', 'webm'].includes(output)) return originalFetch(input, init);
+
       const duration = getSelectedDuration();
       window.localStorage.setItem(DURATION_STORAGE_KEY, String(duration));
       writeProjectDuration(duration);
@@ -97,6 +116,7 @@ const patchPromoRenderFetch = () => {
       const nextPayload = {
         ...payload,
         duration,
+        filename: patchFilename(payload.filename, duration),
         settings: {
           ...(payload.settings || {}),
           duration,
