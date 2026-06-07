@@ -19,6 +19,8 @@ const IMAGE_WAIT_MS = Number(process.env.IMAGE_WAIT_MS || 10000);
 
 const jobs = new Map();
 
+const log = (message) => console.log(`[${new Date().toISOString()}] ${message}`);
+
 app.use((request, response, next) => {
   response.setHeader('Access-Control-Allow-Origin', '*');
   response.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
@@ -122,6 +124,9 @@ const writeFrame = (ffmpeg, buffer) => new Promise((resolve, reject) => {
 });
 
 const renderVideo = async ({ page, render, outputPath }) => {
+  const frameCount = Math.max(1, Math.round(render.duration * render.fps));
+  log(`Rendering ${frameCount} frames for ${render.filename} (${render.width}x${render.height}, ${render.fps}fps, ${render.duration}s)`);
+
   const ffmpeg = spawn('ffmpeg', ffmpegArgs({ output: render.output, outputPath, fps: render.fps }), { stdio: ['pipe', 'ignore', 'pipe'] });
   let stderr = '';
   const done = new Promise((resolve, reject) => {
@@ -131,8 +136,8 @@ const renderVideo = async ({ page, render, outputPath }) => {
   });
 
   try {
-    const frameCount = Math.max(1, Math.round(render.duration * render.fps));
     for (let i = 0; i < frameCount; i += 1) {
+      if (i === 0 || i === frameCount - 1 || i % Math.max(1, Math.round(render.fps)) === 0) log(`Frame ${i + 1}/${frameCount}`);
       await seekAnimations(page, (i / render.fps) * 1000);
       const frame = await page.screenshot({ type: 'jpeg', quality: clampNumber(JPEG_FRAME_QUALITY, 86, 50, 92), omitBackground: false, clip: { x: 0, y: 0, width: render.width, height: render.height } });
       await writeFrame(ffmpeg, frame);
@@ -172,11 +177,14 @@ const runJob = async (id, payload) => {
   const job = jobs.get(id);
   if (!job) return;
   job.status = 'rendering';
+  log(`Job ${id} started`);
   try {
     Object.assign(job, await renderToFile(payload), { status: 'done' });
+    log(`Job ${id} done: ${job.filename}`);
   } catch (error) {
     job.status = 'failed';
     job.error = error instanceof Error ? error.message : String(error);
+    log(`Job ${id} failed: ${job.error}`);
   }
 };
 
@@ -186,6 +194,7 @@ app.post('/jobs', (request, response) => {
   const render = normalizePayload(request.body || {});
   if (!render.html) return response.status(400).json({ error: 'Invalid render payload.', detail: 'Missing HTML.' });
   const id = crypto.randomUUID();
+  log(`Job ${id} queued: ${render.output}, ${render.width}x${render.height}, ${render.fps}fps, ${render.duration}s, html ${render.html.length} chars`);
   jobs.set(id, { id, status: 'queued', output: render.output, filename: render.filename });
   setTimeout(() => cleanupJob(id), JOB_TTL_MS).unref?.();
   setImmediate(() => runJob(id, request.body || {}));
@@ -202,6 +211,7 @@ app.get('/jobs/:id/file', async (request, response) => {
   const job = jobs.get(request.params.id);
   if (!job) return response.status(404).json({ error: 'Render job not found.' });
   if (job.status !== 'done' || !job.filePath || !existsSync(job.filePath)) return response.status(409).json({ error: 'Render job is not ready.', detail: `Current status: ${job.status}.` });
+  log(`Serving file for job ${request.params.id}: ${job.filename}`);
   const buffer = await readFile(job.filePath);
   response.setHeader('Content-Type', job.contentType);
   response.setHeader('Content-Disposition', `attachment; filename="${job.filename}"`);
