@@ -1,6 +1,6 @@
 const STORAGE_KEY = 'restaurant-menu-studio:tv-promo-generator:v1';
 
-export const PROMO_DURATIONS = Object.freeze([6, 8, 12, 16]);
+export const PROMO_DURATIONS = Object.freeze([8, 16, 32]);
 
 export const PROMO_FORMATS = Object.freeze([
   { id: 'landscape', label: '16:9', name: 'Full HD', width: 1920, height: 1080, previewWidth: 1180 },
@@ -164,14 +164,14 @@ const normalizeEffects = (effects = {}) => Object.fromEntries(
 );
 
 const normalizeLayoutOffsets = (layoutOffsets = {}) => Object.fromEntries(
-  Object.entries(DEFAULT_PROMO_LAYOUT_OFFSETS).map(([key, fallback]) => [key, normalizeNumber(layoutOffsets[key], fallback, -600, 600)]),
+  Object.entries(DEFAULT_PROMO_LAYOUT_OFFSETS).map(([key, fallback]) => [key, normalizeNumber(layoutOffsets[key], fallback, -2400, 2400)]),
 );
 
 const normalizeDishSize = (value) => {
   const raw = Number(value ?? DEFAULT_PROMO_FORMAT_SETTINGS.dishSize);
   if (!Number.isFinite(raw)) return DEFAULT_PROMO_FORMAT_SETTINGS.dishSize;
   const migratedFromPercent = raw <= 180 ? Math.round((raw / 100) * 650) : raw;
-  return normalizeNumber(migratedFromPercent, DEFAULT_PROMO_FORMAT_SETTINGS.dishSize, 100, 900);
+  return normalizeNumber(migratedFromPercent, DEFAULT_PROMO_FORMAT_SETTINGS.dishSize, 100, 2400);
 };
 
 const pickFormatSettings = (project = {}) => Object.fromEntries(
