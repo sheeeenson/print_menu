@@ -137,9 +137,17 @@ const writeFrame = (ffmpeg, buffer) => new Promise((resolve, reject) => {
   });
 });
 
-const renderVideo = async ({ page, render, outputPath }) => {
+const createProgress = (stage, currentFrame = 0, totalFrames = 0) => {
+  const safeTotal = Math.max(0, Number(totalFrames) || 0);
+  const safeCurrent = Math.min(safeTotal, Math.max(0, Number(currentFrame) || 0));
+  const percent = safeTotal ? Math.round((safeCurrent / safeTotal) * 100) : 0;
+  return { stage, currentFrame: safeCurrent, totalFrames: safeTotal, percent };
+};
+
+const renderVideo = async ({ page, render, outputPath, onProgress }) => {
   const frameCount = Math.max(1, Math.round(render.duration * render.fps));
   log(`Rendering ${frameCount} frames for ${render.filename} (${render.width}x${render.height}, ${render.fps}fps, ${render.duration}s) using ${FFMPEG_PATH}`);
+  onProgress?.(createProgress('capturing_frames', 0, frameCount));
 
   const ffmpeg = spawn(FFMPEG_PATH, ffmpegArgs({ output: render.output, outputPath, fps: render.fps }), { stdio: ['pipe', 'ignore', 'pipe'] });
   let stderr = '';
@@ -155,9 +163,12 @@ const renderVideo = async ({ page, render, outputPath }) => {
       await seekAnimations(page, (i / render.fps) * 1000);
       const frame = await page.screenshot({ type: 'jpeg', quality: clampNumber(JPEG_FRAME_QUALITY, 86, 50, 92), omitBackground: false, clip: { x: 0, y: 0, width: render.width, height: render.height } });
       await writeFrame(ffmpeg, frame);
+      onProgress?.(createProgress('capturing_frames', i + 1, frameCount));
     }
+    onProgress?.(createProgress('encoding_video', frameCount, frameCount));
     ffmpeg.stdin.end();
     await done;
+    onProgress?.(createProgress('done', frameCount, frameCount));
   } catch (error) {
     ffmpeg.stdin.destroy();
     ffmpeg.kill('SIGKILL');
@@ -165,23 +176,32 @@ const renderVideo = async ({ page, render, outputPath }) => {
   }
 };
 
-const renderToFile = async (payload) => {
+const renderToFile = async (payload, onProgress) => {
   const render = normalizePayload(payload);
   if (!render.html) throw new Error('Missing HTML.');
   let browser;
   const workdir = await mkdtemp(path.join(tmpdir(), 'print-menu-local-render-'));
   const outputPath = path.join(workdir, render.filename);
   try {
+    onProgress?.(createProgress('opening_browser', 0, 0));
     browser = await chromium.launch({ args: ['--no-sandbox', '--disable-dev-shm-usage', '--hide-scrollbars', '--autoplay-policy=no-user-gesture-required'] });
     const page = await createPage(browser, render);
-    await renderVideo({ page, render, outputPath });
+    await renderVideo({ page, render, outputPath, onProgress });
     return { ...render, filePath: outputPath, workdir, contentType: contentType(render.output) };
   } finally {
     if (browser) await browser.close().catch(() => {});
   }
 };
 
-const serializeJob = (job) => ({ id: job.id, status: job.status, output: job.output, filename: job.filename, error: job.error, downloadUrl: job.status === 'done' ? `/jobs/${job.id}/file` : null });
+const serializeJob = (job) => ({
+  id: job.id,
+  status: job.status,
+  output: job.output,
+  filename: job.filename,
+  error: job.error,
+  progress: job.progress || createProgress(job.status || 'queued', 0, 0),
+  downloadUrl: job.status === 'done' ? `/jobs/${job.id}/file` : null,
+});
 const cleanupJob = async (id) => {
   const job = jobs.get(id);
   if (job?.workdir) await rm(job.workdir, { recursive: true, force: true }).catch(() => {});
@@ -191,13 +211,17 @@ const runJob = async (id, payload) => {
   const job = jobs.get(id);
   if (!job) return;
   job.status = 'rendering';
+  job.progress = createProgress('starting', 0, 0);
   log(`Job ${id} started`);
   try {
-    Object.assign(job, await renderToFile(payload), { status: 'done' });
+    Object.assign(job, await renderToFile(payload, (progress) => {
+      job.progress = progress;
+    }), { status: 'done', progress: createProgress('done', 1, 1) });
     log(`Job ${id} done: ${job.filename}`);
   } catch (error) {
     job.status = 'failed';
     job.error = error instanceof Error ? error.message : String(error);
+    job.progress = createProgress('failed', 0, 1);
     log(`Job ${id} failed: ${job.error}`);
   }
 };
@@ -209,7 +233,7 @@ app.post('/jobs', (request, response) => {
   if (!render.html) return response.status(400).json({ error: 'Invalid render payload.', detail: 'Missing HTML.' });
   const id = crypto.randomUUID();
   log(`Job ${id} queued: ${render.output}, ${render.width}x${render.height}, ${render.fps}fps, ${render.duration}s, html ${render.html.length} chars`);
-  jobs.set(id, { id, status: 'queued', output: render.output, filename: render.filename });
+  jobs.set(id, { id, status: 'queued', output: render.output, filename: render.filename, progress: createProgress('queued', 0, 0) });
   setTimeout(() => cleanupJob(id), JOB_TTL_MS).unref?.();
   setImmediate(() => runJob(id, request.body || {}));
   return response.status(202).json(serializeJob(jobs.get(id)));
