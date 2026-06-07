@@ -1,1 +1,15 @@
-{"name":"print-menu-local-renderer","private":true,"version":"0.1.0","type":"module","scripts":{"start":"node server.js","setup":"playwright install chromium"},"dependencies":{"express":"latest","playwright":"1.49.1"}}
+{
+  "name": "print-menu-local-renderer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "setup": "playwright install chromium",
+    "package": "node scripts/package-renderer.mjs"
+  },
+  "dependencies": {
+    "express": "latest",
+    "playwright": "1.49.1"
+  }
+}
