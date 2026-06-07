@@ -22,6 +22,7 @@ import './mobileUxEnhancements.css';
 import './promoEnhancements.css';
 import './removeGifCornerRadius.css';
 import './gifOverlayControls.css';
+import './dishSizeBoost.js';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>
