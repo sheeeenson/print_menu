@@ -13,7 +13,7 @@ const PORT = Number(process.env.PORT || 3020);
 const MAX_BODY_SIZE = process.env.MAX_BODY_SIZE || '80mb';
 const JOB_TTL_MS = Number(process.env.JOB_TTL_MS || 30 * 60 * 1000);
 const MAX_VIDEO_FPS = Number(process.env.MAX_VIDEO_FPS || 24);
-const MAX_VIDEO_DURATION = Number(process.env.MAX_VIDEO_DURATION || 20);
+const MAX_VIDEO_DURATION = Number(process.env.MAX_VIDEO_DURATION || 32);
 const MAX_VIDEO_WIDTH = Number(process.env.MAX_VIDEO_WIDTH || 1920);
 const JPEG_FRAME_QUALITY = Number(process.env.JPEG_FRAME_QUALITY || 86);
 const IMAGE_WAIT_MS = Number(process.env.IMAGE_WAIT_MS || 10000);
@@ -53,6 +53,14 @@ const videoSize = ({ width, height }) => {
   return { width: Math.round(width * ratio), height: Math.round(height * ratio) };
 };
 
+const getRequestedDuration = (payload = {}) => {
+  const directDuration = Number(payload.duration);
+  if (Number.isFinite(directDuration)) return directDuration;
+  const settingsDuration = Number(payload.settings?.duration);
+  if (Number.isFinite(settingsDuration)) return settingsDuration;
+  return 8;
+};
+
 const normalizePayload = (payload = {}) => {
   const format = payload.format || {};
   const requestedWidth = clampNumber(format.width, 1920, 320, 3840);
@@ -63,7 +71,7 @@ const normalizePayload = (payload = {}) => {
     ...size,
     output,
     html: String(payload.html || '').trim(),
-    duration: clampNumber(payload.duration, 8, 1, MAX_VIDEO_DURATION),
+    duration: clampNumber(getRequestedDuration(payload), 8, 1, MAX_VIDEO_DURATION),
     fps: clampNumber(payload.fps, 24, 8, MAX_VIDEO_FPS),
     filename: cleanFilename(payload.filename || `promo.${output}`).replace(/\.[^.]+$/, `.${output}`),
   };
@@ -71,7 +79,7 @@ const normalizePayload = (payload = {}) => {
 
 const buildDocument = ({ html, width, height, duration }) => {
   if (/<!doctype\s+html|<html[\s>]/i.test(html)) return html;
-  return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=${width}, initial-scale=1"/><style>html,body{width:${width}px;height:${height}px;margin:0;padding:0;overflow:hidden;background:#231f20}*,*::before,*::after{box-sizing:border-box}.promo-scene{transform:none!important;transform-origin:top left!important}.promo-scene,.promo-scene *{animation-duration:var(--promo-duration,${duration}s)}</style></head><body>${html}</body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=${width}, initial-scale=1"/><style>html,body{width:${width}px;height:${height}px;margin:0;padding:0;overflow:hidden;background:#231f20}*,*::before,*::after{box-sizing:border-box}.promo-scene{transform:none!important;transform-origin:top left!important;--promo-duration:${duration}s!important}.promo-scene,.promo-scene *{animation-duration:${duration}s!important}</style></head><body>${html}</body></html>`;
 };
 
 const waitForImages = async (page) => {
