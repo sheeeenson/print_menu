@@ -1,8 +1,8 @@
 import html2canvas from 'html2canvas';
 import { downloadHtmlRender } from '../utils/htmlVideoExport.js';
 
-const LOCAL_RENDERER_RELEASES_URL = 'https://github.com/sheeeenson/print_menu/releases';
-const LOCAL_RENDERER_MAC_URL = 'https://github.com/sheeeenson/print_menu/releases/latest/download/Print-Menu-Renderer-Mac.zip';
+const LOCAL_RENDERER_DOWNLOAD_FOLDER_URL = 'https://drive.google.com/drive/folders/1mFt6XpH5MhlYH48TlJ37y9O1VtGU4e3D?usp=sharing';
+const LOCAL_RENDERER_MAC_URL = 'https://drive.google.com/uc?export=download&id=19yrHrnwx2JziRZHJTBN_PJ8MiJxbaspC';
 const LOCAL_RENDERER_WINDOWS_URL = 'https://github.com/sheeeenson/print_menu/releases/latest/download/Print-Menu-Renderer-Windows.zip';
 
 const getDocumentCss = () => Array.from(document.styleSheets)
@@ -287,7 +287,7 @@ const ensureLocalRendererInstallPanel = (downloadGroup) => {
     linkRow.appendChild(createRendererLink({ label: 'Download for Mac', href: LOCAL_RENDERER_MAC_URL }));
     linkRow.appendChild(createRendererLink({ label: 'Download for Windows', href: LOCAL_RENDERER_WINDOWS_URL }));
   }
-  linkRow.appendChild(createRendererLink({ label: 'All releases', href: LOCAL_RENDERER_RELEASES_URL }));
+  linkRow.appendChild(createRendererLink({ label: 'Download folder', href: LOCAL_RENDERER_DOWNLOAD_FOLDER_URL }));
 
   panel.appendChild(title);
   panel.appendChild(description);
