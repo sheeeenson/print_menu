@@ -24,7 +24,6 @@ import './removeGifCornerRadius.css';
 import './gifOverlayControls.css';
 import './dishSizeBoost.js';
 import './promoExtraEffects.js';
-import './promoFormatIsolation.js';
 import './promoWideMovement.js';
 
 createRoot(document.querySelector('#root')).render(
