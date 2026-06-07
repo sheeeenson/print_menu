@@ -150,7 +150,7 @@ const withUnscaledScene = async (callback) => {
   }
 };
 
-const downloadCurrentPromoFastPng = async (downloadGroup) => {
+const downloadCurrentPromoPng = async (downloadGroup) => {
   const scene = document.querySelector('.promo-scene');
   if (!scene) throw new Error('Could not find the promo scene.');
 
@@ -170,7 +170,7 @@ const downloadCurrentPromoFastPng = async (downloadGroup) => {
   const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
   if (!blob) throw new Error('Browser could not create PNG.');
   downloadBlob(blob, getOutputFilename('png'));
-  setDownloadStatus(downloadGroup, 'Fast PNG downloaded.');
+  setDownloadStatus(downloadGroup, 'PNG downloaded.');
 };
 
 const downloadCurrentPromoHtml = async () => {
@@ -219,20 +219,28 @@ const addDownloadButton = ({ buttonRow, downloadGroup, label, dataAttribute, onC
   else buttonRow.appendChild(button);
 };
 
+const hideBuiltInServerPngButton = (buttonRow) => {
+  const serverPngButton = Array.from(buttonRow.querySelectorAll('button'))
+    .find((button) => button.textContent?.trim() === 'PNG' && button.getAttribute('data-promo-browser-png-download') !== 'true');
+  if (serverPngButton) serverPngButton.style.display = 'none';
+};
+
 const ensureDownloadButtons = () => {
   const downloadGroup = Array.from(document.querySelectorAll('.promo-panel-group'))
     .find((group) => group.querySelector('h3')?.textContent?.trim() === 'Download');
   const buttonRow = downloadGroup?.querySelector('.promo-duration-buttons');
   if (!buttonRow) return;
 
+  hideBuiltInServerPngButton(buttonRow);
+
   addDownloadButton({
     buttonRow,
     downloadGroup,
-    label: 'Fast PNG',
-    dataAttribute: 'data-promo-fast-png-download',
+    label: 'PNG',
+    dataAttribute: 'data-promo-browser-png-download',
     prepend: true,
     onClick: async (group) => {
-      await downloadCurrentPromoFastPng(group);
+      await downloadCurrentPromoPng(group);
     },
   });
 
