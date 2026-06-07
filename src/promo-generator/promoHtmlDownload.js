@@ -3,7 +3,7 @@ import { downloadHtmlRender } from '../utils/htmlVideoExport.js';
 
 const LOCAL_RENDERER_DOWNLOAD_FOLDER_URL = 'https://drive.google.com/drive/folders/1mFt6XpH5MhlYH48TlJ37y9O1VtGU4e3D?usp=sharing';
 const LOCAL_RENDERER_MAC_URL = 'https://drive.google.com/uc?export=download&id=19yrHrnwx2JziRZHJTBN_PJ8MiJxbaspC';
-const LOCAL_RENDERER_WINDOWS_URL = 'https://github.com/sheeeenson/print_menu/releases/latest/download/Print-Menu-Renderer-Windows.zip';
+const LOCAL_RENDERER_WINDOWS_URL = 'https://drive.google.com/uc?export=download&id=1SkuHoZssolnEIva_7oJpiGbrQ9SQ14_Q';
 
 const getDocumentCss = () => Array.from(document.styleSheets)
   .map((sheet) => {
