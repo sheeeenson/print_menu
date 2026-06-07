@@ -31,11 +31,13 @@ const LAYOUT_CONTROL_GROUPS = [
 const GLOBAL_PROMO_KEYS = new Set(['selectedDishId', 'formatId', 'headline', 'offerText', 'ctaText', 'gifUrl', 'gifLibrary', 'effects']);
 const FORMAT_EXTRA_KEYS = ['gifPosition', 'gifSize', 'gifBorderRadius', 'gifShape', 'gifShadow', 'gifShadowColor'];
 const FORMAT_KEYS = [...PROMO_FORMAT_SETTING_KEYS, ...FORMAT_EXTRA_KEYS];
+const EXPORT_DURATION_KEY = 'restaurant-menu-studio:tv-promo-generator:selected-duration:v1';
 
 const getDishTitle = (dish) => dish?.nameEn || dish?.nameGe || 'Untitled dish';
 const getSafeFilename = (value) => String(value || 'promo').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'promo';
 const normalizeGifUrl = (value) => String(value || '').trim();
 const withFallback = (value, fallback) => value === undefined || value === null ? fallback : value;
+const normalizeDuration = (value) => PROMO_DURATIONS.includes(Number(value)) ? Number(value) : 8;
 
 const pickKeys = (source = {}, keys = []) => Object.fromEntries(keys.filter((key) => source[key] !== undefined).map((key) => [key, source[key]]));
 const pickFormatState = (settings = {}) => pickKeys(settings, FORMAT_KEYS);
@@ -57,7 +59,14 @@ const downloadUrl = (url, filename) => {
   link.remove();
 };
 
-const getPromoSceneHtml = () => {
+const forceDurationInHtml = (html, duration) => {
+  const seconds = `${normalizeDuration(duration)}s`;
+  const durationStyle = `<style id="promo-export-duration-override">.promo-scene{--promo-duration:${seconds}!important}.promo-scene,.promo-scene *{animation-duration:${seconds}!important}</style>`;
+  const text = String(html || '').replace(/--promo-duration:\s*[^;"']+/g, `--promo-duration:${seconds}`);
+  return text.includes('</style>') ? text.replace('</style>', `${durationStyle}</style>`) : `${durationStyle}${text}`;
+};
+
+const getPromoSceneHtml = (duration = 8) => {
   const scene = document.querySelector('.promo-scene');
   if (!scene) return '';
   const clone = scene.cloneNode(true);
@@ -66,18 +75,20 @@ const getPromoSceneHtml = () => {
   clone.style.position = 'relative';
   clone.style.left = '0';
   clone.style.top = '0';
-  return `<style>${getDocumentCss()}</style>${clone.outerHTML}`;
+  clone.style.setProperty('--promo-duration', `${normalizeDuration(duration)}s`, 'important');
+  return forceDurationInHtml(`<style>${getDocumentCss()}</style>${clone.outerHTML}`, duration);
 };
 
-async function downloadPromoExport(format, selectedDish, settings, output) {
-  const html = getPromoSceneHtml();
+async function downloadPromoExport(format, selectedDish, settings, output, durationOverride) {
+  const exportDuration = normalizeDuration(durationOverride ?? settings?.duration ?? 8);
+  const html = getPromoSceneHtml(exportDuration);
   if (!html) throw new Error('Could not find the promo scene.');
   const extension = output === 'png' ? 'png' : 'mp4';
-  const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-${format.label.replace(':', 'x')}.${extension}`;
+  const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-${format.label.replace(':', 'x')}-${exportDuration}s.${extension}`;
   const response = await fetch('/api/promo-render', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ output, filename, format, duration: settings?.duration || 8, fps: 30, settings, dish: selectedDish, html }),
+    body: JSON.stringify({ output, filename, format, duration: exportDuration, fps: 30, settings: { ...settings, duration: exportDuration }, dish: selectedDish, html }),
   });
   if (!response.ok) {
     const responseText = await response.text();
@@ -190,15 +201,16 @@ export function PromoSectionV2({ project }) {
   const [openCategoryIds, setOpenCategoryIds] = useState(() => new Set());
   const [settings, setSettings] = useState(() => loadPromoProject(dishesWithImages));
   const [exportStatus, setExportStatus] = useState('');
+  const [selectedDuration, setSelectedDuration] = useState(() => normalizeDuration(window.localStorage.getItem(EXPORT_DURATION_KEY) || loadPromoProject(dishesWithImages).duration));
 
   useEffect(() => {
     setSettings((current) => {
       const restored = loadPromoProject(dishesWithImages.length ? dishesWithImages : contentDishes);
-      return { ...restored, ...current, formats: { ...(restored.formats || {}), ...(current.formats || {}) } };
+      return { ...restored, ...current, duration: selectedDuration, formats: { ...(restored.formats || {}), ...(current.formats || {}) } };
     });
-  }, [contentDishes, dishesWithImages]);
+  }, [contentDishes, dishesWithImages, selectedDuration]);
 
-  useEffect(() => { savePromoProject(settings); }, [settings]);
+  useEffect(() => { savePromoProject({ ...settings, duration: selectedDuration }); }, [settings, selectedDuration]);
 
   const selectedDish = dishesWithImages.find((dish) => dish.id === settings.selectedDishId) ?? dishesWithImages[0] ?? null;
   const selectedIndex = Math.max(0, dishesWithImages.findIndex((dish) => dish.id === selectedDish?.id));
@@ -215,15 +227,22 @@ export function PromoSectionV2({ project }) {
     });
   };
 
+  const setDuration = (duration) => {
+    const nextDuration = normalizeDuration(duration);
+    setSelectedDuration(nextDuration);
+    window.localStorage.setItem(EXPORT_DURATION_KEY, String(nextDuration));
+    updateSettings({ duration: nextDuration });
+  };
+
   const switchFormat = (formatId) => {
     setSettings((current) => {
       const currentFormatId = current.formatId;
       const formats = {
         ...(current.formats || {}),
-        [currentFormatId]: { ...(current.formats?.[currentFormatId] || {}), ...pickFormatState(current) },
+        [currentFormatId]: { ...(current.formats?.[currentFormatId] || {}), ...pickFormatState(current), duration: selectedDuration },
       };
       const nextFormatSettings = formats[formatId] || {};
-      return { ...current, ...nextFormatSettings, formatId, formats };
+      return { ...current, ...nextFormatSettings, duration: selectedDuration, formatId, formats };
     });
   };
 
@@ -233,13 +252,13 @@ export function PromoSectionV2({ project }) {
 
   const handleDownloadPng = async () => {
     if (!selectedDish) return setExportStatus('Select a dish with an image before exporting PNG.');
-    try { setExportStatus('Rendering PNG on server...'); await downloadPromoExport(activeFormat, selectedDish, settings, 'png'); setExportStatus('PNG downloaded.'); }
+    try { setExportStatus('Rendering PNG on server...'); await downloadPromoExport(activeFormat, selectedDish, { ...settings, duration: selectedDuration }, 'png', selectedDuration); setExportStatus('PNG downloaded.'); }
     catch (error) { console.error(error); setExportStatus(error instanceof Error ? error.message : 'PNG export failed.'); }
   };
 
   const handleDownloadMp4 = async () => {
     if (!selectedDish) return setExportStatus('Select a dish with an image before exporting MP4.');
-    try { setExportStatus('Rendering MP4 on server...'); await downloadPromoExport(activeFormat, selectedDish, settings, 'mp4'); setExportStatus('MP4 video downloaded.'); }
+    try { setExportStatus(`Rendering ${selectedDuration}s MP4 on server...`); await downloadPromoExport(activeFormat, selectedDish, { ...settings, duration: selectedDuration }, 'mp4', selectedDuration); setExportStatus(`${selectedDuration}s MP4 video downloaded.`); }
     catch (error) { console.error(error); setExportStatus(error instanceof Error ? error.message : 'MP4 export failed.'); }
   };
 
@@ -271,7 +290,7 @@ export function PromoSectionV2({ project }) {
           </div>
         </div>
 
-        <PromoControlGroup title="Duration"><div className="promo-duration-buttons">{PROMO_DURATIONS.map((duration) => <button key={duration} className={settings.duration === duration ? 'active' : ''} type="button" onClick={() => updateSettings({ duration })}>{duration}s</button>)}</div></PromoControlGroup>
+        <PromoControlGroup title="Duration"><div className="promo-duration-buttons">{PROMO_DURATIONS.map((duration) => <button key={duration} className={selectedDuration === duration ? 'active' : ''} type="button" onClick={() => setDuration(duration)}>{duration}s</button>)}</div></PromoControlGroup>
 
         <PromoControlGroup title="Offer"><ToggleField label="Show offer text" checked={Boolean(settings.showOffer)} onChange={(showOffer) => updateSettings({ showOffer })} /><label className="image-menu-control"><span>Headline</span><input value={settings.headline} placeholder={selectedDish ? getDishTitle(selectedDish) : 'Promo headline'} onChange={(event) => updateSettings({ headline: event.target.value })} /></label><label className="image-menu-control"><span>Offer text</span><input value={settings.offerText} placeholder="New, Today only, -20%" onChange={(event) => updateSettings({ offerText: event.target.value })} /></label><ToggleField label="Show CTA" checked={Boolean(settings.showCta)} onChange={(showCta) => updateSettings({ showCta })} /><label className="image-menu-control"><span>CTA</span><input value={settings.ctaText} placeholder="ORDER NOW" onChange={(event) => updateSettings({ ctaText: event.target.value })} /></label></PromoControlGroup>
 
@@ -289,7 +308,7 @@ export function PromoSectionV2({ project }) {
         {settings.effects?.gifOverlay ? <PromoControlGroup title="GIF Overlay"><GifLibraryControls settings={settings} updateSettings={updateSettings} /><label className="image-menu-control"><span>Position</span><select value={settings.gifPosition} onChange={(event) => updateSettings({ gifPosition: event.target.value })}><option value="textLeft">Headline left</option><option value="topLeft">Headline left / top</option><option value="topRight">Price right / top</option><option value="bottomLeft">CTA left / bottom</option><option value="bottomRight">Bottom right</option></select></label><label className="image-menu-control"><span>Shape</span><select value={settings.gifShape || 'rectangle'} onChange={(event) => updateSettings({ gifShape: event.target.value })}>{PROMO_GIF_SHAPES.map((shape) => <option key={shape.id} value={shape.id}>{shape.label}</option>)}</select></label><RangeControl label="Size" value={settings.gifSize} min={6} max={42} onChange={(gifSize) => updateSettings({ gifSize })} suffix="%" /><RangeControl label="Corner radius" value={settings.gifBorderRadius ?? 0} min={0} max={500} onChange={(gifBorderRadius) => updateSettings({ gifBorderRadius })} suffix="px" /><ToggleField label="Enable GIF shadow" checked={Boolean(settings.gifShadow)} onChange={(gifShadow) => updateSettings({ gifShadow })} /><ColorControl label="GIF shadow color" value={settings.gifShadowColor || '#000000'} onChange={(gifShadowColor) => updateSettings({ gifShadowColor })} /></PromoControlGroup> : null}
       </aside>
 
-      <main className="promo-generator-preview-stage"><div className="promo-generator-toolbar"><div><p>Preview</p><h2>{selectedDish ? getDishTitle(selectedDish) : 'Select dish'}</h2></div><div className="promo-output-pill">{activeFormat.label}</div></div><PromoPreview dish={selectedDish} settings={settings} index={selectedIndex} /></main>
+      <main className="promo-generator-preview-stage"><div className="promo-generator-toolbar"><div><p>Preview</p><h2>{selectedDish ? getDishTitle(selectedDish) : 'Select dish'}</h2></div><div className="promo-output-pill">{activeFormat.label}</div></div><PromoPreview dish={selectedDish} settings={{ ...settings, duration: selectedDuration }} index={selectedIndex} /></main>
     </section>
   );
 }
