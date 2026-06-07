@@ -53,7 +53,7 @@ const LAYOUT_CONTROL_GROUPS = [
   { title: 'GIF', x: 'gifX', y: 'gifY' },
 ];
 
-const GLOBAL_PROMO_KEYS = new Set(['gifUrl', 'gifPosition', 'gifSize', 'gifBorderRadius', 'gifShape', 'gifLibrary', 'selectedDishId', 'formatId']);
+const GLOBAL_PROMO_KEYS = new Set(['gifUrl', 'gifPosition', 'gifSize', 'gifBorderRadius', 'gifShape', 'gifPlaybackSpeed', 'gifShadow', 'gifShadowColor', 'gifLibrary', 'selectedDishId', 'formatId']);
 const getDishTitle = (dish) => dish?.nameEn || dish?.nameGe || 'Untitled dish';
 const getSafeFilename = (value) => String(value || 'promo').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'promo';
 const normalizeGifUrl = (value) => String(value || '').trim();
@@ -531,6 +531,9 @@ export function PromoSection({ project }) {
             </label>
             <RangeControl label="Size" value={settings.gifSize} min={6} max={42} onChange={(gifSize) => updateSettings({ gifSize })} suffix="%" />
             <RangeControl label="Corner radius" value={settings.gifBorderRadius ?? 0} min={0} max={500} onChange={(gifBorderRadius) => updateSettings({ gifBorderRadius })} suffix="px" />
+            <RangeControl label="GIF speed" value={settings.gifPlaybackSpeed ?? 100} min={25} max={300} step={5} onChange={(gifPlaybackSpeed) => updateSettings({ gifPlaybackSpeed })} suffix="%" />
+            <ToggleField label="Enable GIF shadow" checked={Boolean(settings.gifShadow)} onChange={(gifShadow) => updateSettings({ gifShadow })} />
+            <ColorControl label="GIF shadow color" value={settings.gifShadowColor || '#000000'} onChange={(gifShadowColor) => updateSettings({ gifShadowColor })} />
           </PromoControlGroup>
         ) : null}
       </aside>
