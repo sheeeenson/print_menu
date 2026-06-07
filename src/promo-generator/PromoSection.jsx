@@ -481,7 +481,7 @@ export function PromoSection({ project }) {
 
         <PromoControlGroup title="Appearance">
           <RangeControl label="Background tone" value={settings.backgroundTone} min={-40} max={40} onChange={(backgroundTone) => updateSettings({ backgroundTone })} />
-          <RangeControl label="Dish size" value={settings.dishSize} min={100} max={650} onChange={(dishSize) => updateSettings({ dishSize })} suffix="px" />
+          <RangeControl label="Dish size" value={settings.dishSize} min={100} max={900} onChange={(dishSize) => updateSettings({ dishSize })} suffix="px" />
           <ToggleField label="Show description" checked={Boolean(settings.showDescription)} onChange={(showDescription) => updateSettings({ showDescription })} />
           <RangeControl label="Description vertical offset" value={settings.descriptionOffsetY} min={-180} max={180} onChange={(descriptionOffsetY) => updateSettings({ descriptionOffsetY })} suffix="px" />
         </PromoControlGroup>
