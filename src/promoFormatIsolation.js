@@ -1,20 +1,60 @@
 const STORAGE_KEY = 'restaurant-menu-studio:tv-promo-generator:v1';
-const ISOLATION_KEY = 'restaurant-menu-studio:tv-promo-generator:format-isolation:v1';
+const ISOLATION_KEY = 'restaurant-menu-studio:tv-promo-generator:format-isolation:v2';
 
 const FORMAT_IDS = ['landscape', 'square', 'portrait', 'story'];
+
 const GLOBAL_KEYS = new Set([
   'selectedDishId',
   'formatId',
   'headline',
   'offerText',
   'ctaText',
-  'showOffer',
-  'showDescription',
-  'showCta',
   'gifUrl',
   'gifLibrary',
   'effects',
 ]);
+
+const FORMAT_KEYS = [
+  'duration',
+  'showOffer',
+  'showDescription',
+  'showCta',
+  'showTextShadow',
+  'textShadowColor',
+  'textShadowOpacity',
+  'textShadowBlur',
+  'descriptionOffsetY',
+  'backgroundTone',
+  'dishSize',
+  'offerColor',
+  'offerFont',
+  'offerSize',
+  'headlineColor',
+  'headlineFont',
+  'headlineSize',
+  'geTitleColor',
+  'geTitleFont',
+  'geTitleSize',
+  'descriptionColor',
+  'descriptionFont',
+  'descriptionSize',
+  'ctaColor',
+  'ctaFont',
+  'ctaSize',
+  'oldPriceColor',
+  'oldPriceFont',
+  'oldPriceSize',
+  'salePriceColor',
+  'salePriceFont',
+  'salePriceSize',
+  'layoutOffsets',
+  'gifPosition',
+  'gifSize',
+  'gifBorderRadius',
+  'gifShape',
+  'gifShadow',
+  'gifShadowColor',
+];
 
 const readJson = (key, fallback = {}) => {
   try {
@@ -33,17 +73,23 @@ const writeJson = (key, value) => {
   }
 };
 
+const isFormatId = (value) => FORMAT_IDS.includes(value);
 const getProject = () => readJson(STORAGE_KEY, {});
 const getIsolation = () => readJson(ISOLATION_KEY, {});
-const isFormatId = (value) => FORMAT_IDS.includes(value);
+const getActiveFormatId = (project = getProject()) => isFormatId(project.formatId) ? project.formatId : 'landscape';
 
-const pickFormatSettings = (project = {}) => Object.fromEntries(
-  Object.entries(project).filter(([key]) => !GLOBAL_KEYS.has(key) && key !== 'formats'),
+const pickKeys = (source = {}, keys = []) => Object.fromEntries(
+  keys
+    .filter((key) => source[key] !== undefined)
+    .map((key) => [key, source[key]]),
 );
 
-const pickGlobalSettings = (project = {}) => Object.fromEntries(
-  Object.entries(project).filter(([key]) => GLOBAL_KEYS.has(key)),
-);
+const pickGlobalSettings = (project = {}) => pickKeys(project, [...GLOBAL_KEYS]);
+
+const pickFormatSettings = (project = {}, formatId = getActiveFormatId(project)) => ({
+  ...(project.formats?.[formatId] || {}),
+  ...pickKeys(project, FORMAT_KEYS),
+});
 
 const getClickedFormatId = (target) => {
   const button = target?.closest?.('.promo-format-buttons button');
@@ -58,32 +104,44 @@ const getClickedFormatId = (target) => {
 
 const persistCurrentFormat = () => {
   const project = getProject();
-  const formatId = isFormatId(project.formatId) ? project.formatId : 'landscape';
+  const formatId = getActiveFormatId(project);
   const isolation = getIsolation();
-  const currentFormatSettings = pickFormatSettings(project);
+  const formatSettings = pickFormatSettings(project, formatId);
 
   writeJson(ISOLATION_KEY, {
     ...isolation,
     [formatId]: {
       ...(isolation[formatId] || {}),
-      ...currentFormatSettings,
+      ...formatSettings,
     },
   });
 };
 
-const buildProjectForFormat = (formatId) => {
+const ensureCurrentFormatPersisted = () => {
+  const project = getProject();
+  const formatId = getActiveFormatId(project);
+  const isolation = getIsolation();
+  if (isolation[formatId]) return;
+  persistCurrentFormat();
+};
+
+const buildProjectForFormat = (targetFormatId) => {
   const project = getProject();
   const isolation = getIsolation();
   const globalSettings = pickGlobalSettings(project);
-  const currentFormatId = isFormatId(project.formatId) ? project.formatId : 'landscape';
-  const targetFormatSettings = isolation[formatId] || project.formats?.[formatId] || isolation[currentFormatId] || pickFormatSettings(project);
+  const currentFormatId = getActiveFormatId(project);
+  const currentFormatSettings = pickFormatSettings(project, currentFormatId);
+  const targetFormatSettings = isolation[targetFormatId]
+    || project.formats?.[targetFormatId]
+    || currentFormatSettings;
 
-  const formats = Object.fromEntries(FORMAT_IDS.map((id) => [
-    id,
+  const nextFormats = Object.fromEntries(FORMAT_IDS.map((formatId) => [
+    formatId,
     {
-      ...(project.formats?.[id] || {}),
-      ...(isolation[id] || {}),
-      ...(id === formatId ? targetFormatSettings : {}),
+      ...(project.formats?.[formatId] || {}),
+      ...(isolation[formatId] || {}),
+      ...(formatId === currentFormatId ? currentFormatSettings : {}),
+      ...(formatId === targetFormatId ? targetFormatSettings : {}),
     },
   ]));
 
@@ -91,8 +149,8 @@ const buildProjectForFormat = (formatId) => {
     ...project,
     ...globalSettings,
     ...targetFormatSettings,
-    formatId,
-    formats,
+    formatId: targetFormatId,
+    formats: nextFormats,
   };
 };
 
@@ -105,6 +163,8 @@ const switchToFormat = (formatId) => {
 };
 
 if (typeof window !== 'undefined') {
+  ensureCurrentFormatPersisted();
+
   document.addEventListener('input', (event) => {
     if (event.target?.closest?.('.promo-generator-panel')) {
       window.requestAnimationFrame(persistCurrentFormat);
@@ -121,7 +181,7 @@ if (typeof window !== 'undefined') {
     const formatId = getClickedFormatId(event.target);
     if (!formatId) return;
     const project = getProject();
-    if (project.formatId === formatId) return;
+    if (getActiveFormatId(project) === formatId) return;
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
@@ -129,5 +189,4 @@ if (typeof window !== 'undefined') {
   }, true);
 
   window.addEventListener('beforeunload', persistCurrentFormat);
-  window.requestAnimationFrame(persistCurrentFormat);
 }
