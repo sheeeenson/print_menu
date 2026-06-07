@@ -10,7 +10,7 @@ http://localhost:3020
 
 The website can use it for video export while keeping PNG and HTML export in the browser.
 
-## Recommended Mac setup
+## Mac setup
 
 1. Put the FFmpeg executable here:
 
@@ -32,9 +32,7 @@ npm install
 npm run setup
 ```
 
-4. Start the renderer:
-
-Double-click:
+4. Start the renderer by double-clicking:
 
 ```txt
 Start Print Menu Renderer.command
@@ -45,6 +43,41 @@ or run:
 ```bash
 npm start
 ```
+
+## Windows setup
+
+1. Put the FFmpeg executable here:
+
+```txt
+local-renderer\bin\ffmpeg.exe
+```
+
+2. Install dependencies once:
+
+```bat
+npm install
+npm run setup
+```
+
+3. Start the renderer by double-clicking:
+
+```txt
+Start Print Menu Renderer.bat
+```
+
+Alternative PowerShell launcher:
+
+```txt
+Start Print Menu Renderer.ps1
+```
+
+If Windows blocks the PowerShell script, right-click it and choose **Run with PowerShell**, or run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File "Start Print Menu Renderer.ps1"
+```
+
+## Health check
 
 When it is running, open:
 
@@ -62,7 +95,7 @@ You should see JSON with:
 
 - Node.js 18+
 - Chromium installed by Playwright via `npm run setup`
-- FFmpeg either in `local-renderer/bin/ffmpeg` or available in PATH
+- FFmpeg either in `local-renderer/bin/ffmpeg`, `local-renderer/bin/ffmpeg.exe`, or available in PATH
 
 ## Render limits
 
