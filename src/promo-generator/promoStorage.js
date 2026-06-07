@@ -115,7 +115,6 @@ export const DEFAULT_PROMO_GLOBAL_SETTINGS = Object.freeze({
   gifSize: 18,
   gifBorderRadius: 0,
   gifShape: 'rectangle',
-  gifPlaybackSpeed: 100,
   gifShadow: false,
   gifShadowColor: '#000000',
   gifLibrary: [],
@@ -251,7 +250,6 @@ export const normalizePromoProject = (project = {}, dishes = []) => {
     gifSize: normalizeNumber(project.gifSize ?? project.stickerSize ?? project.formats?.[formatId]?.gifSize, DEFAULT_PROMO_GLOBAL_SETTINGS.gifSize, 6, 42),
     gifBorderRadius: normalizeNumber(project.gifBorderRadius ?? project.formats?.[formatId]?.gifBorderRadius, DEFAULT_PROMO_GLOBAL_SETTINGS.gifBorderRadius, 0, 500),
     gifShape: normalizeGifShape(project.gifShape || project.formats?.[formatId]?.gifShape),
-    gifPlaybackSpeed: normalizeNumber(project.gifPlaybackSpeed ?? project.formats?.[formatId]?.gifPlaybackSpeed, DEFAULT_PROMO_GLOBAL_SETTINGS.gifPlaybackSpeed, 25, 300),
     gifShadow: project.gifShadow === undefined ? DEFAULT_PROMO_GLOBAL_SETTINGS.gifShadow : Boolean(project.gifShadow),
     gifShadowColor: normalizeColor(project.gifShadowColor || project.formats?.[formatId]?.gifShadowColor, DEFAULT_PROMO_GLOBAL_SETTINGS.gifShadowColor),
     gifLibrary: legacyGifUrl && !gifLibrary.some((item) => item.url === legacyGifUrl)
