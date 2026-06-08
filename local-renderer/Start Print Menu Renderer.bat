@@ -26,14 +26,12 @@ if not exist "node_modules" (
   )
 )
 
-if not exist "%USERPROFILE%\AppData\Local\ms-playwright" (
-  echo Installing Chromium for Playwright...
-  call npm run setup
-  if errorlevel 1 (
-    echo Playwright Chromium install failed.
-    pause
-    exit /b 1
-  )
+echo Checking Playwright Chromium...
+call npx playwright install chromium
+if errorlevel 1 (
+  echo Playwright Chromium install failed.
+  pause
+  exit /b 1
 )
 
 if not exist "bin\ffmpeg.exe" (
