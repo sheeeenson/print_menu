@@ -154,6 +154,19 @@ const createVirtualTimeController = async (page) => {
   return { advance, dispose };
 };
 
+const seekCssAnimations = async (page, milliseconds) => {
+  await page.evaluate((time) => {
+    document.getAnimations({ subtree: true }).forEach((animation) => {
+      try {
+        animation.currentTime = time;
+        animation.pause();
+      } catch (error) {
+        // Ignore non-controllable animations.
+      }
+    });
+  }, milliseconds);
+};
+
 const ffmpegArgs = ({ output, outputPath, fps }) => {
   const input = ['-y', '-f', 'image2pipe', '-framerate', String(fps), '-vcodec', 'mjpeg', '-i', 'pipe:0', '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2'];
   if (output === 'webm') return [...input, '-c:v', 'libvpx-vp9', '-deadline', 'realtime', '-cpu-used', '5', '-b:v', '0', '-crf', '34', '-pix_fmt', 'yuv420p', outputPath];
@@ -193,9 +206,12 @@ const renderVideo = async ({ page, render, outputPath, onProgress }) => {
   let virtualTime;
   try {
     virtualTime = await createVirtualTimeController(page);
+    await seekCssAnimations(page, 0);
     for (let i = 0; i < frameCount; i += 1) {
+      const animationTimeMs = (i / render.fps) * 1000;
       if (i === 0 || i === frameCount - 1 || i % Math.max(1, Math.round(render.fps)) === 0) log(`Frame ${i + 1}/${frameCount}`);
       if (i > 0) await virtualTime.advance(frameDurationMs);
+      await seekCssAnimations(page, animationTimeMs);
       const frame = await page.screenshot({ type: 'jpeg', quality: clampNumber(JPEG_FRAME_QUALITY, 86, 50, 92), omitBackground: false, clip: { x: 0, y: 0, width: render.width, height: render.height } });
       await writeFrame(ffmpeg, frame);
       onProgress?.(createProgress('capturing_frames', i + 1, frameCount));
@@ -263,7 +279,7 @@ const runJob = async (id, payload) => {
   }
 };
 
-app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, virtualTime: true }));
+app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, virtualTime: true, cssTimelineSeek: true }));
 
 app.post('/jobs', (request, response) => {
   const render = normalizePayload(request.body || {});
