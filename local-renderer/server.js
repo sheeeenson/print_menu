@@ -122,6 +122,17 @@ const seekAnimations = async (page, milliseconds) => {
   }, milliseconds);
 };
 
+const runFfmpeg = (args, { stdin } = {}) => new Promise((resolve, reject) => {
+  const ffmpeg = spawn(FFMPEG_PATH, args, { stdio: [stdin ? 'pipe' : 'ignore', 'ignore', 'pipe'] });
+  let stderr = '';
+  ffmpeg.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
+  ffmpeg.on('error', reject);
+  ffmpeg.on('close', (code) => (code === 0 ? resolve() : reject(new Error(stderr || `ffmpeg exited with code ${code}`))));
+  if (stdin) {
+    ffmpeg.stdin.end(stdin);
+  }
+});
+
 const ffmpegArgs = ({ output, outputPath, fps }) => {
   const input = ['-y', '-f', 'image2pipe', '-framerate', String(fps), '-vcodec', 'mjpeg', '-i', 'pipe:0', '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2'];
   if (output === 'webm') return [...input, '-c:v', 'libvpx-vp9', '-deadline', 'realtime', '-cpu-used', '5', '-b:v', '0', '-crf', '34', '-pix_fmt', 'yuv420p', outputPath];
@@ -226,7 +237,55 @@ const runJob = async (id, payload) => {
   }
 };
 
-app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, stableCssTimeline: true }));
+const normalizeGifInputUrl = (value) => {
+  const url = String(value || '').trim();
+  if (!url) throw new Error('Missing GIF URL.');
+  if (!/^https?:\/\//i.test(url)) throw new Error('Only http/https GIF URLs can be converted.');
+  return url;
+};
+
+const convertGifToWebm = async (gifUrl) => {
+  const url = normalizeGifInputUrl(gifUrl);
+  const workdir = await mkdtemp(path.join(tmpdir(), 'print-menu-gif-convert-'));
+  const outputPath = path.join(workdir, 'gif-overlay.webm');
+  try {
+    log(`Converting GIF overlay to WebM: ${url}`);
+    await runFfmpeg([
+      '-y',
+      '-i', url,
+      '-an',
+      '-vf', 'scale=trunc(min(iw,720)/2)*2:trunc(ih*min(720/iw\,1)/2)*2,fps=24',
+      '-c:v', 'libvpx-vp9',
+      '-deadline', 'good',
+      '-cpu-used', '4',
+      '-b:v', '0',
+      '-crf', '32',
+      '-pix_fmt', 'yuva420p',
+      outputPath,
+    ]);
+    const buffer = await readFile(outputPath);
+    return { buffer, workdir };
+  } catch (error) {
+    await rm(workdir, { recursive: true, force: true }).catch(() => {});
+    throw error;
+  }
+};
+
+app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, stableCssTimeline: true, gifConversion: true }));
+
+app.post('/convert-gif', async (request, response) => {
+  let result;
+  try {
+    result = await convertGifToWebm(request.body?.url);
+    response.setHeader('Content-Type', 'video/webm');
+    response.setHeader('Content-Disposition', 'attachment; filename="gif-overlay.webm"');
+    response.end(result.buffer);
+  } catch (error) {
+    response.status(400).json({ error: 'GIF conversion failed.', detail: error instanceof Error ? error.message : String(error) });
+  } finally {
+    if (result?.workdir) await rm(result.workdir, { recursive: true, force: true }).catch(() => {});
+  }
+});
 
 app.post('/jobs', (request, response) => {
   const render = normalizePayload(request.body || {});
