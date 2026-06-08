@@ -81,6 +81,7 @@ const processSpriteOverlay = () => {
 if (typeof window !== 'undefined') {
   injectStyles();
   window.addEventListener('load', processSpriteOverlay);
+  window.addEventListener('promo-gif-sprite-ready', processSpriteOverlay);
   const observer = new MutationObserver(() => window.requestAnimationFrame(processSpriteOverlay));
   observer.observe(document.documentElement, { childList: true, subtree: true });
   window.requestAnimationFrame(processSpriteOverlay);
