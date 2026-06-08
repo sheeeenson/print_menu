@@ -15,6 +15,7 @@ const JOB_TTL_MS = Number(process.env.JOB_TTL_MS || 30 * 60 * 1000);
 const MAX_VIDEO_FPS = Number(process.env.MAX_VIDEO_FPS || 24);
 const MAX_VIDEO_DURATION = Number(process.env.MAX_VIDEO_DURATION || 32);
 const MAX_VIDEO_WIDTH = Number(process.env.MAX_VIDEO_WIDTH || 1920);
+const MAX_GIF_DOWNLOAD_BYTES = Number(process.env.MAX_GIF_DOWNLOAD_BYTES || 25 * 1024 * 1024);
 const JPEG_FRAME_QUALITY = Number(process.env.JPEG_FRAME_QUALITY || 86);
 const IMAGE_WAIT_MS = Number(process.env.IMAGE_WAIT_MS || 10000);
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -244,17 +245,49 @@ const normalizeGifInputUrl = (value) => {
   return url;
 };
 
+const downloadGifBuffer = async (gifUrl) => {
+  const response = await fetch(gifUrl, {
+    redirect: 'follow',
+    headers: {
+      'User-Agent': 'Mozilla/5.0 Print Menu Local Renderer',
+      Accept: 'image/gif,image/*,*/*;q=0.8',
+    },
+  });
+  if (!response.ok) throw new Error(`Could not download GIF: HTTP ${response.status}.`);
+
+  const contentLength = Number(response.headers.get('content-length'));
+  if (Number.isFinite(contentLength) && contentLength > MAX_GIF_DOWNLOAD_BYTES) {
+    throw new Error(`GIF is too large. Maximum is ${Math.round(MAX_GIF_DOWNLOAD_BYTES / 1024 / 1024)} MB.`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  if (!buffer.length) throw new Error('Downloaded GIF is empty.');
+  if (buffer.length > MAX_GIF_DOWNLOAD_BYTES) {
+    throw new Error(`GIF is too large. Maximum is ${Math.round(MAX_GIF_DOWNLOAD_BYTES / 1024 / 1024)} MB.`);
+  }
+
+  const signature = buffer.subarray(0, 6).toString('ascii');
+  if (signature !== 'GIF87a' && signature !== 'GIF89a') {
+    throw new Error('The URL did not return a valid GIF file. Use a direct .gif file URL, not a webpage link.');
+  }
+
+  return buffer;
+};
+
 const convertGifToWebm = async (gifUrl) => {
   const url = normalizeGifInputUrl(gifUrl);
   const workdir = await mkdtemp(path.join(tmpdir(), 'print-menu-gif-convert-'));
   const outputPath = path.join(workdir, 'gif-overlay.webm');
   try {
+    log(`Downloading GIF overlay: ${url}`);
+    const gifBuffer = await downloadGifBuffer(url);
     log(`Converting GIF overlay to WebM: ${url}`);
     await runFfmpeg([
       '-y',
-      '-i', url,
+      '-i', 'pipe:0',
       '-an',
-      '-vf', 'scale=trunc(min(iw,720)/2)*2:trunc(ih*min(720/iw\,1)/2)*2,fps=24',
+      '-vf', 'scale=trunc(min(iw,720)/2)*2:trunc(ih*min(720/iw\\,1)/2)*2,fps=24',
       '-c:v', 'libvpx-vp9',
       '-deadline', 'good',
       '-cpu-used', '4',
@@ -262,7 +295,7 @@ const convertGifToWebm = async (gifUrl) => {
       '-crf', '32',
       '-pix_fmt', 'yuva420p',
       outputPath,
-    ]);
+    ], { stdin: gifBuffer });
     const buffer = await readFile(outputPath);
     return { buffer, workdir };
   } catch (error) {
@@ -271,7 +304,7 @@ const convertGifToWebm = async (gifUrl) => {
   }
 };
 
-app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, stableCssTimeline: true, gifConversion: true }));
+app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, stableCssTimeline: true, gifConversion: true, gifConversionPipe: true }));
 
 app.post('/convert-gif', async (request, response) => {
   let result;
