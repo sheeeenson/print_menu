@@ -30,6 +30,7 @@ import './promoDurationExportFix.js';
 import './promoRenderProgressBar.js';
 import './promoRenderProgressBridge.js';
 import './promoRenderProgressInlineOverride.js';
+import './promoVideoOverlaySupport.js';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>
