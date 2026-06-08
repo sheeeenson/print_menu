@@ -16,10 +16,8 @@ if (-not (Test-Path "node_modules")) {
   npm install
 }
 
-if (-not (Test-Path "$env:LOCALAPPDATA\ms-playwright")) {
-  Write-Host "Installing Chromium for Playwright..."
-  npm run setup
-}
+Write-Host "Checking Playwright Chromium..."
+npx playwright install chromium
 
 if (-not (Test-Path "bin\ffmpeg.exe") -and -not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
   Write-Host "FFmpeg was not found."
