@@ -109,52 +109,7 @@ const createPage = async (browser, render) => {
   return page;
 };
 
-const createVirtualTimeController = async (page) => {
-  const cdp = await page.context().newCDPSession(page);
-  await cdp.send('Emulation.setVirtualTimePolicy', { policy: 'pause' });
-
-  const advance = async (milliseconds) => {
-    if (milliseconds <= 0) return;
-    await new Promise((resolve, reject) => {
-      let settled = false;
-      const timeout = setTimeout(() => {
-        if (!settled) {
-          settled = true;
-          resolve();
-        }
-      }, Math.max(1000, milliseconds + 1000));
-
-      cdp.once('Emulation.virtualTimeBudgetExpired', () => {
-        if (!settled) {
-          settled = true;
-          clearTimeout(timeout);
-          resolve();
-        }
-      });
-
-      cdp.send('Emulation.setVirtualTimePolicy', {
-        policy: 'advance',
-        budget: milliseconds,
-        maxVirtualTimeTaskStarvationCount: 10000,
-      }).catch((error) => {
-        if (!settled) {
-          settled = true;
-          clearTimeout(timeout);
-          reject(error);
-        }
-      });
-    });
-    await cdp.send('Emulation.setVirtualTimePolicy', { policy: 'pause' });
-  };
-
-  const dispose = async () => {
-    await cdp.detach().catch(() => {});
-  };
-
-  return { advance, dispose };
-};
-
-const seekCssAnimations = async (page, milliseconds) => {
+const seekAnimations = async (page, milliseconds) => {
   await page.evaluate((time) => {
     document.getAnimations({ subtree: true }).forEach((animation) => {
       try {
@@ -191,7 +146,6 @@ const createProgress = (stage, currentFrame = 0, totalFrames = 0) => {
 
 const renderVideo = async ({ page, render, outputPath, onProgress }) => {
   const frameCount = Math.max(1, Math.round(render.duration * render.fps));
-  const frameDurationMs = 1000 / render.fps;
   log(`Rendering ${frameCount} frames for ${render.filename} (${render.width}x${render.height}, ${render.fps}fps, ${render.duration}s) using ${FFMPEG_PATH}`);
   onProgress?.(createProgress('capturing_frames', 0, frameCount));
 
@@ -203,15 +157,10 @@ const renderVideo = async ({ page, render, outputPath, onProgress }) => {
     ffmpeg.on('close', (code) => (code === 0 ? resolve() : reject(new Error(stderr || `ffmpeg exited with code ${code}`))));
   });
 
-  let virtualTime;
   try {
-    virtualTime = await createVirtualTimeController(page);
-    await seekCssAnimations(page, 0);
     for (let i = 0; i < frameCount; i += 1) {
-      const animationTimeMs = (i / render.fps) * 1000;
       if (i === 0 || i === frameCount - 1 || i % Math.max(1, Math.round(render.fps)) === 0) log(`Frame ${i + 1}/${frameCount}`);
-      if (i > 0) await virtualTime.advance(frameDurationMs);
-      await seekCssAnimations(page, animationTimeMs);
+      await seekAnimations(page, (i / render.fps) * 1000);
       const frame = await page.screenshot({ type: 'jpeg', quality: clampNumber(JPEG_FRAME_QUALITY, 86, 50, 92), omitBackground: false, clip: { x: 0, y: 0, width: render.width, height: render.height } });
       await writeFrame(ffmpeg, frame);
       onProgress?.(createProgress('capturing_frames', i + 1, frameCount));
@@ -224,8 +173,6 @@ const renderVideo = async ({ page, render, outputPath, onProgress }) => {
     ffmpeg.stdin.destroy();
     ffmpeg.kill('SIGKILL');
     throw error;
-  } finally {
-    await virtualTime?.dispose();
   }
 };
 
@@ -279,7 +226,7 @@ const runJob = async (id, payload) => {
   }
 };
 
-app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, virtualTime: true, cssTimelineSeek: true }));
+app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, stableCssTimeline: true }));
 
 app.post('/jobs', (request, response) => {
   const render = normalizePayload(request.body || {});
