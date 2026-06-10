@@ -4,6 +4,7 @@ import { downloadHtmlRender } from '../utils/htmlVideoExport.js';
 const LOCAL_RENDERER_DOWNLOAD_FOLDER_URL = 'https://drive.google.com/drive/folders/1mFt6XpH5MhlYH48TlJ37y9O1VtGU4e3D?usp=sharing';
 const LOCAL_RENDERER_MAC_URL = 'https://drive.google.com/uc?export=download&id=19yrHrnwx2JziRZHJTBN_PJ8MiJxbaspC';
 const LOCAL_RENDERER_WINDOWS_URL = 'https://drive.google.com/uc?export=download&id=1SkuHoZssolnEIva_7oJpiGbrQ9SQ14_Q';
+const ALLOWED_DURATIONS = [8, 16, 32];
 
 const getDocumentCss = () => Array.from(document.styleSheets)
   .map((sheet) => {
@@ -35,6 +36,15 @@ const downloadBlob = (blob, filename) => {
 
 const getCurrentPromoTitle = () => document.querySelector('.promo-generator-toolbar h2')?.textContent || 'tv-promo';
 const getPromoFormatLabel = () => document.querySelector('.promo-output-pill')?.textContent?.trim() || 'promo';
+
+const getSelectedDuration = () => {
+  const durationGroup = Array.from(document.querySelectorAll('.promo-panel-group'))
+    .find((group) => group.querySelector('h3')?.textContent?.trim() === 'Duration');
+  const activeButton = durationGroup?.querySelector('.promo-duration-buttons button.active');
+  const activeValue = Number(activeButton?.textContent?.replace(/[^0-9]/g, ''));
+  if (ALLOWED_DURATIONS.includes(activeValue)) return activeValue;
+  return 8;
+};
 
 const setDownloadStatus = (downloadGroup, message) => {
   const status = downloadGroup?.querySelector('.promo-preview-size');
@@ -189,12 +199,13 @@ const downloadCurrentPromoVideo = async (downloadGroup, output) => {
   const html = await getSceneHtmlDocument();
   const { width, height } = getSceneSize(scene);
   const filename = getOutputFilename(output);
+  const duration = getSelectedDuration();
 
   await downloadHtmlRender({
     output,
     filename,
     format: { id: 'current', label: `${width}x${height}`, width, height },
-    duration: 8,
+    duration,
     fps: 24,
     html,
     onStatus: (message) => setDownloadStatus(downloadGroup, message),
