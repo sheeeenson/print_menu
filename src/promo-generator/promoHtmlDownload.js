@@ -68,8 +68,9 @@ const getSelectedDuration = () => {
 const readGifSpriteData = () => {
   try {
     const data = JSON.parse(window.sessionStorage.getItem(GIF_SPRITE_STORAGE_KEY) || 'null');
-    if (!data?.spriteDataUrl || !Number(data.frames) || !Number(data.fps)) return null;
-    return data;
+    const imageUrl = data?.spriteUrl || data?.spriteDataUrl;
+    if (!imageUrl || !Number(data.frames) || !Number(data.fps)) return null;
+    return { ...data, imageUrl };
   } catch (error) {
     return null;
   }
@@ -173,7 +174,7 @@ const replaceGifOverlaysWithSprites = (scene, clone) => {
     sprite.setAttribute('aria-hidden', 'true');
     sprite.style.width = `${width}px`;
     sprite.style.height = `${height}px`;
-    sprite.style.backgroundImage = `url("${data.spriteDataUrl}")`;
+    sprite.style.backgroundImage = `url("${data.imageUrl}")`;
     sprite.style.setProperty('--promo-gif-sprite-frames', String(frames));
     sprite.style.setProperty('--promo-gif-sprite-duration', `${duration}s`);
     sprite.style.setProperty('--promo-gif-sprite-total-width', `${frames * width}px`);
