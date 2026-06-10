@@ -2,11 +2,17 @@ const LOCAL_RENDERER_BASE_URL = 'http://localhost:3020';
 const STORAGE_KEY = 'promoGifSpriteOverlayData';
 const GIF_URL_PATTERN = /\.gif(?:\?.*)?$/i;
 
-const getGifGroup = () => Array.from(document.querySelectorAll('.promo-panel-group'))
-  .find((group) => group.querySelector('h3')?.textContent?.trim() === 'GIF Overlay');
+const getGifUrlInput = (root = document) => Array.from(root.querySelectorAll('input') || [])
+  .find((input) => input.placeholder === 'Paste GIF URL' || /gif/i.test(input.placeholder || ''));
 
-const getGifUrlInput = (group) => Array.from(group?.querySelectorAll('input') || [])
-  .find((input) => input.placeholder === 'Paste GIF URL');
+const getGifGroup = () => {
+  const titledGroup = Array.from(document.querySelectorAll('.promo-panel-group'))
+    .find((group) => group.querySelector('h3')?.textContent?.trim() === 'GIF Overlay');
+  if (titledGroup) return titledGroup;
+
+  const input = getGifUrlInput();
+  return input?.closest('.promo-panel-group') || input?.parentElement || null;
+};
 
 const ensureStatus = (group) => {
   let row = group.querySelector('[data-promo-gif-sprite-row]');
@@ -109,12 +115,8 @@ const estimateGifDurationSeconds = async (gifUrl) => {
   }
 };
 
-const processSpriteOverlay = () => {
-  window.dispatchEvent(new Event('promo-gif-sprite-ready'));
-};
-
 const convertGifToSprite = async (group) => {
-  const input = getGifUrlInput(group);
+  const input = getGifUrlInput(group) || getGifUrlInput();
   const gifUrl = input?.value?.trim() || '';
 
   if (!gifUrl) {
@@ -143,22 +145,28 @@ const convertGifToSprite = async (group) => {
       const detail = payload?.detail || payload?.error || `HTTP ${response.status}`;
       throw new Error(`GIF sprite conversion failed: ${detail}`);
     }
-    if (!payload?.spriteDataUrl || !payload.frames || !payload.fps) throw new Error('Sprite converter returned incomplete data.');
+    if (!payload?.spriteDataUrl && !payload?.spriteUrl) throw new Error('Sprite converter returned no sprite image.');
+    if (!payload.frames || !payload.fps) throw new Error('Sprite converter returned incomplete timing data.');
 
     const fallbackDuration = Number(payload.frames) / Math.max(1, Number(payload.fps) || 12);
     const durationSeconds = Number(payload.durationSeconds) || detectedDuration || fallbackDuration;
-
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+    const spriteData = {
       sourceUrl: gifUrl,
-      spriteDataUrl: payload.spriteDataUrl,
+      spriteUrl: payload.spriteUrl || '',
+      spriteDataUrl: payload.spriteDataUrl || '',
       frames: payload.frames,
       fps: payload.fps,
       durationSeconds,
       truncated: Boolean(payload.truncated),
       createdAt: Date.now(),
-    }));
+    };
 
-    processSpriteOverlay();
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(spriteData));
+    } catch (storageError) {
+      throw new Error('Sprite is too large for browser storage. Renderer must be updated to return spriteUrl instead of spriteDataUrl.');
+    }
+
     const timingText = `${payload.frames} frames, ${durationSeconds.toFixed(2)}s`;
     setStatus(group, payload.truncated
       ? `Converted to sprite: ${timingText}. Long GIF was truncated.`
@@ -172,7 +180,7 @@ const ensureButton = () => {
   const group = getGifGroup();
   if (!group || group.querySelector('[data-promo-gif-sprite-button]')) return;
 
-  const input = getGifUrlInput(group);
+  const input = getGifUrlInput(group) || getGifUrlInput();
   if (!input) return;
 
   let row = group.querySelector('[data-promo-gif-sprite-row]');
@@ -199,8 +207,10 @@ const ensureButton = () => {
   if (status.parentElement !== row) row.appendChild(status);
 
   const oldConverter = group.querySelector('[data-promo-gif-converter-button]');
+  const inputLabel = input.closest('label');
   if (oldConverter) oldConverter.insertAdjacentElement('afterend', row);
-  else input.closest('label')?.insertAdjacentElement('afterend', row);
+  else if (inputLabel) inputLabel.insertAdjacentElement('afterend', row);
+  else input.insertAdjacentElement('afterend', row);
 };
 
 if (typeof window !== 'undefined') {
