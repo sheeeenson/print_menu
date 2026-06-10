@@ -83,7 +83,8 @@ const patchHtmlDuration = (html, duration) => {
   let nextHtml = String(html || '');
   nextHtml = nextHtml.replace(/--promo-duration:\s*[^;"']+/g, `--promo-duration: ${durationCss}`);
   const forceStyle = `<style id="promo-export-duration-fix">.promo-scene{--promo-duration:${durationCss}!important}.promo-scene,.promo-scene *{animation-duration:${durationCss}!important}</style>`;
-  if (nextHtml.includes('</style>')) return nextHtml.replace('</style>', `${forceStyle}</style>`);
+  if (nextHtml.includes('</head>')) return nextHtml.replace('</head>', `${forceStyle}</head>`);
+  if (nextHtml.includes('</style>')) return nextHtml.replace('</style>', `</style>${forceStyle}`);
   return `${forceStyle}${nextHtml}`;
 };
 
