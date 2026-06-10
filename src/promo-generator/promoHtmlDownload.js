@@ -4,9 +4,6 @@ import { downloadHtmlRender } from '../utils/htmlVideoExport.js';
 const LOCAL_RENDERER_DOWNLOAD_FOLDER_URL = 'https://drive.google.com/drive/folders/1mFt6XpH5MhlYH48TlJ37y9O1VtGU4e3D?usp=sharing';
 const LOCAL_RENDERER_MAC_URL = 'https://drive.google.com/uc?export=download&id=19yrHrnwx2JziRZHJTBN_PJ8MiJxbaspC';
 const LOCAL_RENDERER_WINDOWS_URL = 'https://drive.google.com/uc?export=download&id=1SkuHoZssolnEIva_7oJpiGbrQ9SQ14_Q';
-const PROJECT_STORAGE_KEY = 'restaurant-menu-studio:tv-promo-generator:v1';
-const DURATION_STORAGE_KEY = 'restaurant-menu-studio:tv-promo-generator:export-duration:v1';
-const ALLOWED_DURATIONS = [8, 16, 32];
 
 const getDocumentCss = () => Array.from(document.styleSheets)
   .map((sheet) => {
@@ -51,47 +48,6 @@ const getSceneSize = (scene) => {
     width: Math.round(rect.width / scale) || scene.offsetWidth || 1920,
     height: Math.round(rect.height / scale) || scene.offsetHeight || 1080,
   };
-};
-
-const readProject = () => {
-  try {
-    return JSON.parse(window.localStorage.getItem(PROJECT_STORAGE_KEY) || '{}');
-  } catch (error) {
-    return {};
-  }
-};
-
-const getSelectedDuration = () => {
-  const button = Array.from(document.querySelectorAll('.promo-panel-group'))
-    .find((group) => group.querySelector('h3')?.textContent?.trim() === 'Duration')
-    ?.querySelector('.promo-duration-buttons button.active');
-  const buttonValue = Number(button?.textContent?.replace(/[^0-9]/g, ''));
-  if (ALLOWED_DURATIONS.includes(buttonValue)) return buttonValue;
-
-  const storedValue = Number(window.localStorage.getItem(DURATION_STORAGE_KEY));
-  if (ALLOWED_DURATIONS.includes(storedValue)) return storedValue;
-
-  const project = readProject();
-  const projectDuration = Number(project.duration ?? project.formats?.[project.formatId]?.duration);
-  if (ALLOWED_DURATIONS.includes(projectDuration)) return projectDuration;
-
-  return 8;
-};
-
-const patchHtmlDuration = (html, duration) => {
-  const durationCss = `${duration}s`;
-  let nextHtml = String(html || '');
-  nextHtml = nextHtml.replace(/--promo-duration:\s*[^;"']+/g, `--promo-duration: ${durationCss}`);
-  const forceStyle = `<style id="promo-export-duration-fix">.promo-scene{--promo-duration:${durationCss}!important}.promo-scene,.promo-scene *{animation-duration:${durationCss}!important}</style>`;
-  if (nextHtml.includes('</head>')) return nextHtml.replace('</head>', `${forceStyle}</head>`);
-  if (nextHtml.includes('</style>')) return nextHtml.replace('</style>', `</style>${forceStyle}`);
-  return `${forceStyle}${nextHtml}`;
-};
-
-const patchFilenameDuration = (filename, duration) => {
-  const extension = String(filename || '').match(/\.[^.]+$/)?.[0] || '.mp4';
-  const base = String(filename || 'tv-promo.mp4').replace(/\.[^.]+$/, '').replace(/-(8|16|32)s$/, '');
-  return `${base}-${duration}s${extension}`;
 };
 
 const blobToDataUrl = (blob) => new Promise((resolve, reject) => {
@@ -141,7 +97,7 @@ const embedImagesInClone = async (scene, clone) => {
   }));
 };
 
-const getSceneHtmlDocument = async (duration = getSelectedDuration()) => {
+const getSceneHtmlDocument = async () => {
   const scene = document.querySelector('.promo-scene');
   if (!scene) throw new Error('Could not find the promo scene.');
 
@@ -156,7 +112,7 @@ const getSceneHtmlDocument = async (duration = getSelectedDuration()) => {
 
   const { width, height } = getSceneSize(scene);
 
-  const html = `<!doctype html>
+  return `<!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
@@ -177,8 +133,6 @@ const getSceneHtmlDocument = async (duration = getSelectedDuration()) => {
   </head>
   <body>${clone.outerHTML}</body>
 </html>`;
-
-  return patchHtmlDuration(html, duration);
 };
 
 const getOutputFilename = (extension) => `${getSafeFilename(getCurrentPromoTitle())}-${getSafeFilename(getPromoFormatLabel())}.${extension}`;
@@ -232,19 +186,17 @@ const downloadCurrentPromoVideo = async (downloadGroup, output) => {
   const scene = document.querySelector('.promo-scene');
   if (!scene) throw new Error('Could not find the promo scene.');
 
-  const duration = getSelectedDuration();
-  const html = await getSceneHtmlDocument(duration);
+  const html = await getSceneHtmlDocument();
   const { width, height } = getSceneSize(scene);
-  const filename = patchFilenameDuration(getOutputFilename(output), duration);
+  const filename = getOutputFilename(output);
 
   await downloadHtmlRender({
     output,
     filename,
     format: { id: 'current', label: `${width}x${height}`, width, height },
-    duration,
+    duration: 8,
     fps: 24,
     html,
-    settings: { duration },
     onStatus: (message) => setDownloadStatus(downloadGroup, message),
   });
 
