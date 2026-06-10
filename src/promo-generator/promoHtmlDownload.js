@@ -157,7 +157,7 @@ const replaceGifOverlaysWithSprites = (scene, clone) => {
 
   const frames = Math.max(1, Number(data.frames) || 1);
   const fps = Math.max(1, Number(data.fps) || 12);
-  const duration = frames / fps;
+  const duration = Number(data.durationSeconds) > 0 ? Number(data.durationSeconds) : frames / fps;
   const sceneScale = getSceneScale(scene);
 
   clonedGifs.forEach((clonedGif, index) => {
