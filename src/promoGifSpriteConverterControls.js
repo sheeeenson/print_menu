@@ -9,13 +9,37 @@ const getGifUrlInput = (group) => Array.from(group?.querySelectorAll('input') ||
   .find((input) => input.placeholder === 'Paste GIF URL');
 
 const ensureStatus = (group) => {
+  let row = group.querySelector('[data-promo-gif-sprite-row]');
   let status = group.querySelector('[data-promo-gif-sprite-status]');
-  if (status) return status;
-  status = document.createElement('small');
-  status.className = 'promo-preview-size';
-  status.setAttribute('data-promo-gif-sprite-status', 'true');
-  group.appendChild(status);
+
+  if (!row) {
+    row = document.createElement('div');
+    row.setAttribute('data-promo-gif-sprite-row', 'true');
+    row.style.display = 'flex';
+    row.style.alignItems = 'center';
+    row.style.gap = '10px';
+    row.style.marginTop = '8px';
+    row.style.flexWrap = 'wrap';
+  }
+
+  if (!status) {
+    status = document.createElement('small');
+    status.className = 'promo-preview-size';
+    status.setAttribute('data-promo-gif-sprite-status', 'true');
+    status.style.marginTop = '0';
+    status.style.maxWidth = '100%';
+    status.style.lineHeight = '1.3';
+  }
+
+  if (!status.parentElement) row.appendChild(status);
   return status;
+};
+
+const setStatus = (group, message, tone = 'neutral') => {
+  const status = ensureStatus(group);
+  status.textContent = message;
+  status.style.color = tone === 'error' ? '#ff8a8a' : tone === 'success' ? '#9be58f' : '';
+  status.title = message;
 };
 
 const skipGifSubBlocks = (bytes, position) => {
@@ -86,32 +110,28 @@ const estimateGifDurationSeconds = async (gifUrl) => {
 };
 
 const processSpriteOverlay = () => {
-  document.querySelectorAll('img.promo-gif-overlay[src]').forEach((image) => {
-    image.removeAttribute('data-promo-gif-sprite-processed');
-  });
   window.dispatchEvent(new Event('promo-gif-sprite-ready'));
 };
 
 const convertGifToSprite = async (group) => {
   const input = getGifUrlInput(group);
-  const status = ensureStatus(group);
   const gifUrl = input?.value?.trim() || '';
 
   if (!gifUrl) {
-    status.textContent = 'Paste a GIF URL first.';
+    setStatus(group, 'Paste a GIF URL first.', 'error');
     return;
   }
 
   if (!GIF_URL_PATTERN.test(gifUrl)) {
-    status.textContent = 'Use a direct .gif URL for sprite conversion.';
+    setStatus(group, 'Use a direct .gif URL for sprite conversion.', 'error');
     return;
   }
 
   try {
-    status.textContent = 'Reading GIF timing...';
+    setStatus(group, 'Reading GIF timing...');
     const detectedDuration = await estimateGifDurationSeconds(gifUrl);
 
-    status.textContent = 'Converting GIF to sprite sheet...';
+    setStatus(group, 'Converting GIF to sprite sheet...');
     const response = await fetch(`${LOCAL_RENDERER_BASE_URL}/convert-gif-sprite`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -119,7 +139,10 @@ const convertGifToSprite = async (group) => {
     });
 
     const payload = await response.json().catch(() => null);
-    if (!response.ok) throw new Error(payload?.detail || payload?.error || 'GIF sprite conversion failed.');
+    if (!response.ok) {
+      const detail = payload?.detail || payload?.error || `HTTP ${response.status}`;
+      throw new Error(`GIF sprite conversion failed: ${detail}`);
+    }
     if (!payload?.spriteDataUrl || !payload.frames || !payload.fps) throw new Error('Sprite converter returned incomplete data.');
 
     const fallbackDuration = Number(payload.frames) / Math.max(1, Number(payload.fps) || 12);
@@ -137,11 +160,11 @@ const convertGifToSprite = async (group) => {
 
     processSpriteOverlay();
     const timingText = `${payload.frames} frames, ${durationSeconds.toFixed(2)}s`;
-    status.textContent = payload.truncated
+    setStatus(group, payload.truncated
       ? `Converted to sprite: ${timingText}. Long GIF was truncated.`
-      : `Converted to sprite: ${timingText}.`;
+      : `Converted to sprite: ${timingText}.`, 'success');
   } catch (error) {
-    status.textContent = error instanceof Error ? error.message : 'GIF sprite conversion failed.';
+    setStatus(group, error instanceof Error ? error.message : 'GIF sprite conversion failed.', 'error');
   }
 };
 
@@ -152,17 +175,32 @@ const ensureButton = () => {
   const input = getGifUrlInput(group);
   if (!input) return;
 
+  let row = group.querySelector('[data-promo-gif-sprite-row]');
+  if (!row) {
+    row = document.createElement('div');
+    row.setAttribute('data-promo-gif-sprite-row', 'true');
+    row.style.display = 'flex';
+    row.style.alignItems = 'center';
+    row.style.gap = '10px';
+    row.style.marginTop = '8px';
+    row.style.flexWrap = 'wrap';
+  }
+
   const button = document.createElement('button');
   button.type = 'button';
   button.textContent = 'Convert GIF to Sprite';
   button.setAttribute('data-promo-gif-sprite-button', 'true');
   button.className = 'secondary-button';
-  button.style.marginTop = '8px';
+  button.style.marginTop = '0';
   button.addEventListener('click', () => convertGifToSprite(group));
 
+  const status = ensureStatus(group);
+  row.prepend(button);
+  if (status.parentElement !== row) row.appendChild(status);
+
   const oldConverter = group.querySelector('[data-promo-gif-converter-button]');
-  if (oldConverter) oldConverter.insertAdjacentElement('afterend', button);
-  else input.closest('label')?.insertAdjacentElement('afterend', button);
+  if (oldConverter) oldConverter.insertAdjacentElement('afterend', row);
+  else input.closest('label')?.insertAdjacentElement('afterend', row);
 };
 
 if (typeof window !== 'undefined') {
