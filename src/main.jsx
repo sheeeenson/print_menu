@@ -32,6 +32,8 @@ import './promoRenderProgressBridge.js';
 import './promoRenderProgressInlineOverride.js';
 import './promoVideoOverlaySupport.js';
 import './promoGifConverterControls.js';
+import './promoGifSpriteOverlaySupport.js';
+import './promoGifSpriteConverterControls.js';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>
