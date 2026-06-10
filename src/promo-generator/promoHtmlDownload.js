@@ -5,6 +5,7 @@ const LOCAL_RENDERER_DOWNLOAD_FOLDER_URL = 'https://drive.google.com/drive/folde
 const LOCAL_RENDERER_MAC_URL = 'https://drive.google.com/uc?export=download&id=19yrHrnwx2JziRZHJTBN_PJ8MiJxbaspC';
 const LOCAL_RENDERER_WINDOWS_URL = 'https://drive.google.com/uc?export=download&id=1SkuHoZssolnEIva_7oJpiGbrQ9SQ14_Q';
 const ALLOWED_DURATIONS = [8, 16, 32];
+const GIF_SPRITE_STORAGE_KEY = 'promoGifSpriteOverlayData';
 
 const getDocumentCss = () => Array.from(document.styleSheets)
   .map((sheet) => {
@@ -16,6 +17,24 @@ const getDocumentCss = () => Array.from(document.styleSheets)
   })
   .filter(Boolean)
   .join('\n');
+
+const getGifSpriteExportCss = () => `
+.promo-gif-sprite-overlay {
+  display: block;
+  overflow: hidden;
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-size: var(--promo-gif-sprite-total-width, 100%) 100%;
+  animation-name: promo-gif-sprite-play;
+  animation-duration: var(--promo-gif-sprite-duration, 1s);
+  animation-timing-function: steps(var(--promo-gif-sprite-frames, 1), end);
+  animation-iteration-count: infinite;
+}
+@keyframes promo-gif-sprite-play {
+  from { background-position-x: 0; }
+  to { background-position-x: calc(-1 * var(--promo-gif-sprite-total-width, 100%)); }
+}
+`;
 
 const getSafeFilename = (value) => String(value || 'tv-promo')
   .trim()
@@ -46,13 +65,25 @@ const getSelectedDuration = () => {
   return 8;
 };
 
+const readGifSpriteData = () => {
+  try {
+    const data = JSON.parse(window.sessionStorage.getItem(GIF_SPRITE_STORAGE_KEY) || 'null');
+    if (!data?.spriteDataUrl || !Number(data.frames) || !Number(data.fps)) return null;
+    return data;
+  } catch (error) {
+    return null;
+  }
+};
+
+const getSceneScale = (scene) => Number(scene.style.transform?.match(/scale\(([^)]+)\)/)?.[1] || 1) || 1;
+
 const setDownloadStatus = (downloadGroup, message) => {
   const status = downloadGroup?.querySelector('.promo-preview-size');
   if (status) status.textContent = message;
 };
 
 const getSceneSize = (scene) => {
-  const scale = Number(scene.style.transform?.match(/scale\(([^)]+)\)/)?.[1] || 1) || 1;
+  const scale = getSceneScale(scene);
   const rect = scene.getBoundingClientRect();
   return {
     width: Math.round(rect.width / scale) || scene.offsetWidth || 1920,
@@ -107,6 +138,50 @@ const embedImagesInClone = async (scene, clone) => {
   }));
 };
 
+const copyElementPresentation = (source, target) => {
+  target.className = source.className;
+  target.style.cssText = source.style.cssText;
+  Array.from(source.attributes || []).forEach((attribute) => {
+    if (['src', 'alt', 'class', 'style'].includes(attribute.name)) return;
+    target.setAttribute(attribute.name, attribute.value);
+  });
+};
+
+const replaceGifOverlaysWithSprites = (scene, clone) => {
+  const data = readGifSpriteData();
+  if (!data) return;
+
+  const sourceGifs = Array.from(scene.querySelectorAll('img.promo-gif-overlay[src]'));
+  const clonedGifs = Array.from(clone.querySelectorAll('img.promo-gif-overlay[src]'));
+  if (!sourceGifs.length || !clonedGifs.length) return;
+
+  const frames = Math.max(1, Number(data.frames) || 1);
+  const fps = Math.max(1, Number(data.fps) || 12);
+  const duration = frames / fps;
+  const sceneScale = getSceneScale(scene);
+
+  clonedGifs.forEach((clonedGif, index) => {
+    const sourceGif = sourceGifs[index] || sourceGifs[0];
+    const rect = sourceGif.getBoundingClientRect?.();
+    const width = Math.max(1, Math.round((rect?.width || sourceGif.width || 160) / sceneScale));
+    const height = Math.max(1, Math.round((rect?.height || sourceGif.height || width) / sceneScale));
+    const sprite = document.createElement('div');
+
+    copyElementPresentation(clonedGif, sprite);
+    sprite.classList.add('promo-gif-sprite-overlay');
+    sprite.setAttribute('data-promo-gif-sprite-overlay', 'true');
+    sprite.setAttribute('aria-hidden', 'true');
+    sprite.style.width = `${width}px`;
+    sprite.style.height = `${height}px`;
+    sprite.style.backgroundImage = `url("${data.spriteDataUrl}")`;
+    sprite.style.setProperty('--promo-gif-sprite-frames', String(frames));
+    sprite.style.setProperty('--promo-gif-sprite-duration', `${duration}s`);
+    sprite.style.setProperty('--promo-gif-sprite-total-width', `${frames * width}px`);
+
+    clonedGif.replaceWith(sprite);
+  });
+};
+
 const getSceneHtmlDocument = async () => {
   const scene = document.querySelector('.promo-scene');
   if (!scene) throw new Error('Could not find the promo scene.');
@@ -119,6 +194,7 @@ const getSceneHtmlDocument = async () => {
   clone.style.top = '0';
 
   await embedImagesInClone(scene, clone);
+  replaceGifOverlaysWithSprites(scene, clone);
 
   const { width, height } = getSceneSize(scene);
 
@@ -139,6 +215,7 @@ const getSceneHtmlDocument = async () => {
       }
       *, *::before, *::after { box-sizing: border-box; }
       ${getDocumentCss()}
+      ${getGifSpriteExportCss()}
     </style>
   </head>
   <body>${clone.outerHTML}</body>
