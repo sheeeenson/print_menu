@@ -6,6 +6,7 @@ import {
   getPromoFormat,
   loadPromoProject,
   PROMO_BACKGROUND_FITS,
+  PROMO_BACKGROUND_MEDIA_TYPES,
   PROMO_DURATIONS,
   PROMO_FONT_OPTIONS,
   PROMO_FORMATS,
@@ -30,7 +31,7 @@ const LAYOUT_CONTROL_GROUPS = [
   { title: 'GIF', x: 'gifX', y: 'gifY' },
 ];
 
-const GLOBAL_PROMO_KEYS = new Set(['selectedDishId', 'formatId', 'headline', 'offerText', 'ctaText', 'gifUrl', 'gifLibrary', 'effects', 'backgroundMediaUrl', 'backgroundFit', 'backgroundDim', 'backgroundBlur']);
+const GLOBAL_PROMO_KEYS = new Set(['selectedDishId', 'formatId', 'headline', 'offerText', 'ctaText', 'gifUrl', 'gifLibrary', 'effects', 'backgroundMediaUrl', 'backgroundMediaType', 'backgroundFit', 'backgroundDim', 'backgroundBlur']);
 const FORMAT_EXTRA_KEYS = ['gifPosition', 'gifSize', 'gifBorderRadius', 'gifShape', 'gifShadow', 'gifShadowColor'];
 const FORMAT_KEYS = [...PROMO_FORMAT_SETTING_KEYS, ...FORMAT_EXTRA_KEYS];
 const EXPORT_DURATION_KEY = 'restaurant-menu-studio:tv-promo-generator:selected-duration:v1';
@@ -184,6 +185,7 @@ function BackgroundMediaControls({ selectedDish, settings, updateSettings }) {
         <button type="button" onClick={() => updateSettings({ backgroundMediaUrl: '' })}>Clear custom</button>
       </div>
       {hasDefaultBackground && !currentUrl ? <small className="promo-preview-size">Default background from Content is active.</small> : null}
+      <label className="image-menu-control"><span>Background type</span><select value={settings.backgroundMediaType || 'auto'} onChange={(event) => updateSettings({ backgroundMediaType: event.target.value })}>{PROMO_BACKGROUND_MEDIA_TYPES.map((type) => <option key={type.id} value={type.id}>{type.label}</option>)}</select></label>
       <label className="image-menu-control"><span>Fit</span><select value={settings.backgroundFit || 'cover'} onChange={(event) => updateSettings({ backgroundFit: event.target.value })}>{PROMO_BACKGROUND_FITS.map((fit) => <option key={fit.id} value={fit.id}>{fit.label}</option>)}</select></label>
       <RangeControl label="Dark overlay" value={settings.backgroundDim ?? 28} min={0} max={85} onChange={(backgroundDim) => updateSettings({ backgroundDim })} suffix="%" />
       <RangeControl label="Blur" value={settings.backgroundBlur ?? 0} min={0} max={40} onChange={(backgroundBlur) => updateSettings({ backgroundBlur })} suffix="px" />
@@ -221,10 +223,7 @@ export function PromoSectionV2({ project }) {
   const visibleDishes = useMemo(() => contentDishes.filter((dish) => dish.visible !== false), [contentDishes]);
   const dishesWithImages = useMemo(() => visibleDishes.filter((dish) => dish.imageUrl), [visibleDishes]);
   const transparentDishes = useMemo(() => dishesWithImages.filter(isTransparentProduct), [dishesWithImages]);
-  const categoryGroups = useMemo(() => {
-    const groups = contentCategories.map((category) => ({ category, dishes: dishesWithImages.filter((dish) => dish.categoryId === category.id) }));
-    return transparentDishes.length ? [{ category: { id: 'transparent-products', nameEn: 'Without background', nameGe: 'Transparent' }, dishes: transparentDishes }, ...groups] : groups;
-  }, [contentCategories, dishesWithImages, transparentDishes]);
+  const categoryGroups = useMemo(() => contentCategories.map((category) => ({ category, dishes: dishesWithImages.filter((dish) => dish.categoryId === category.id) })), [contentCategories, dishesWithImages]);
   const [openCategoryIds, setOpenCategoryIds] = useState(() => new Set());
   const [settings, setSettings] = useState(() => loadPromoProject(dishesWithImages));
   const [exportStatus, setExportStatus] = useState('');
@@ -237,12 +236,28 @@ export function PromoSectionV2({ project }) {
     });
   }, [contentDishes, dishesWithImages, selectedDuration]);
 
+  useEffect(() => {
+    if (!transparentDishes.length) return;
+    setOpenCategoryIds((current) => {
+      const next = new Set(current);
+      transparentDishes.forEach((dish) => { if (dish.categoryId) next.add(dish.categoryId); });
+      return next;
+    });
+  }, [transparentDishes]);
+
   useEffect(() => { savePromoProject({ ...settings, duration: selectedDuration }); }, [settings, selectedDuration]);
 
   const selectedDish = dishesWithImages.find((dish) => dish.id === settings.selectedDishId) ?? dishesWithImages[0] ?? null;
   const selectedIndex = Math.max(0, dishesWithImages.findIndex((dish) => dish.id === selectedDish?.id));
   const activeFormat = getPromoFormat(settings.formatId);
   const selectedDishIsTransparent = isTransparentProduct(selectedDish);
+
+  useEffect(() => {
+    if (!selectedDishIsTransparent) return;
+    const defaultBackgroundUrl = getDishBackgroundUrl(selectedDish);
+    if (!defaultBackgroundUrl) return;
+    setSettings((current) => current.backgroundMediaUrl ? current : { ...current, backgroundMediaUrl: defaultBackgroundUrl });
+  }, [selectedDish?.id, selectedDishIsTransparent]);
 
   const updateSettings = (changes) => {
     setSettings((current) => {
@@ -256,7 +271,7 @@ export function PromoSectionV2({ project }) {
   };
 
   const selectDish = (dish) => {
-    updateSettings({ selectedDishId: dish.id, backgroundMediaUrl: isTransparentProduct(dish) ? getDishBackgroundUrl(dish) : '' });
+    updateSettings({ selectedDishId: dish.id, backgroundMediaUrl: isTransparentProduct(dish) ? getDishBackgroundUrl(dish) : '', backgroundMediaType: 'auto' });
   };
 
   const setDuration = (duration) => {
