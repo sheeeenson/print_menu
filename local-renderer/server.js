@@ -16,8 +16,8 @@ const MAX_VIDEO_FPS = Number(process.env.MAX_VIDEO_FPS || 24);
 const MAX_VIDEO_DURATION = Number(process.env.MAX_VIDEO_DURATION || 32);
 const MAX_VIDEO_WIDTH = Number(process.env.MAX_VIDEO_WIDTH || 1920);
 const MAX_GIF_DOWNLOAD_BYTES = Number(process.env.MAX_GIF_DOWNLOAD_BYTES || 25 * 1024 * 1024);
-const JPEG_FRAME_QUALITY = Number(process.env.JPEG_FRAME_QUALITY || 86);
 const IMAGE_WAIT_MS = Number(process.env.IMAGE_WAIT_MS || 10000);
+const MEDIA_SEEK_TIMEOUT_MS = Number(process.env.MEDIA_SEEK_TIMEOUT_MS || 2000);
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const BUNDLED_FFMPEG_PATH = process.platform === 'win32'
   ? path.join(ROOT_DIR, 'bin', 'ffmpeg.exe')
@@ -110,14 +110,9 @@ const createPage = async (browser, render) => {
   return page;
 };
 
-const seekAnimations = async (page, milliseconds) => {
+const seekCssAnimations = async (page, milliseconds) => {
   await page.evaluate((time) => {
     document.getAnimations({ subtree: true }).forEach((animation) => {
-      const effect = animation.effect;
-      const target = effect && 'target' in effect ? effect.target : null;
-      const isGifOverlay = target?.matches?.('.promo-gif-overlay, .promo-gif-overlay *');
-      const isMediaOverlay = target?.matches?.('video, video *');
-      if (isGifOverlay || isMediaOverlay) return;
       try {
         animation.currentTime = time;
         animation.pause();
@@ -126,6 +121,47 @@ const seekAnimations = async (page, milliseconds) => {
       }
     });
   }, milliseconds);
+};
+
+const seekVideoOverlays = async (page, seconds) => {
+  await page.evaluate(async ({ time, timeout }) => {
+    const videos = Array.from(document.querySelectorAll('video'));
+    await Promise.all(videos.map((video) => new Promise((resolve) => {
+      const done = () => {
+        video.removeEventListener('seeked', done);
+        video.removeEventListener('loadeddata', done);
+        resolve();
+      };
+      const timer = window.setTimeout(done, timeout);
+      const finish = () => {
+        window.clearTimeout(timer);
+        done();
+      };
+
+      try {
+        video.pause();
+        video.muted = true;
+        video.playsInline = true;
+        const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+        const targetTime = duration ? time % duration : time;
+        video.addEventListener('seeked', finish, { once: true });
+        video.addEventListener('loadeddata', finish, { once: true });
+        if (Math.abs((video.currentTime || 0) - targetTime) < 0.001 && video.readyState >= 2) {
+          finish();
+          return;
+        }
+        video.currentTime = targetTime;
+      } catch (error) {
+        window.clearTimeout(timer);
+        done();
+      }
+    })));
+  }, { time: seconds, timeout: MEDIA_SEEK_TIMEOUT_MS });
+};
+
+const seekFrame = async (page, seconds) => {
+  await seekCssAnimations(page, seconds * 1000);
+  await seekVideoOverlays(page, seconds);
 };
 
 const runFfmpeg = (args, { stdin } = {}) => new Promise((resolve, reject) => {
@@ -138,9 +174,9 @@ const runFfmpeg = (args, { stdin } = {}) => new Promise((resolve, reject) => {
 });
 
 const ffmpegArgs = ({ output, outputPath, fps }) => {
-  const input = ['-y', '-f', 'image2pipe', '-framerate', String(fps), '-vcodec', 'mjpeg', '-i', 'pipe:0', '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2'];
-  if (output === 'webm') return [...input, '-c:v', 'libvpx-vp9', '-deadline', 'realtime', '-cpu-used', '5', '-b:v', '0', '-crf', '34', '-pix_fmt', 'yuv420p', outputPath];
-  return [...input, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', outputPath];
+  const input = ['-y', '-f', 'image2pipe', '-framerate', String(fps), '-vcodec', 'png', '-i', 'pipe:0', '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2'];
+  if (output === 'webm') return [...input, '-c:v', 'libvpx-vp9', '-deadline', 'good', '-cpu-used', '4', '-b:v', '0', '-crf', '28', '-pix_fmt', 'yuv420p', outputPath];
+  return [...input, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', outputPath];
 };
 
 const writeFrame = (ffmpeg, buffer) => new Promise((resolve, reject) => {
@@ -161,7 +197,6 @@ const createProgress = (stage, currentFrame = 0, totalFrames = 0) => {
 
 const renderVideo = async ({ page, render, outputPath, onProgress }) => {
   const frameCount = Math.max(1, Math.round(render.duration * render.fps));
-  const frameDelayMs = 1000 / render.fps;
   log(`Rendering ${frameCount} frames for ${render.filename} (${render.width}x${render.height}, ${render.fps}fps, ${render.duration}s) using ${FFMPEG_PATH}`);
   onProgress?.(createProgress('capturing_frames', 0, frameCount));
 
@@ -176,9 +211,8 @@ const renderVideo = async ({ page, render, outputPath, onProgress }) => {
   try {
     for (let i = 0; i < frameCount; i += 1) {
       if (i === 0 || i === frameCount - 1 || i % Math.max(1, Math.round(render.fps)) === 0) log(`Frame ${i + 1}/${frameCount}`);
-      await seekAnimations(page, (i / render.fps) * 1000);
-      if (i > 0) await wait(frameDelayMs);
-      const frame = await page.screenshot({ type: 'jpeg', quality: clampNumber(JPEG_FRAME_QUALITY, 86, 50, 92), omitBackground: false, clip: { x: 0, y: 0, width: render.width, height: render.height } });
+      await seekFrame(page, i / render.fps);
+      const frame = await page.screenshot({ type: 'png', omitBackground: false, clip: { x: 0, y: 0, width: render.width, height: render.height } });
       await writeFrame(ffmpeg, frame);
       onProgress?.(createProgress('capturing_frames', i + 1, frameCount));
     }
@@ -297,7 +331,7 @@ const convertGifToWebm = async (gifUrl) => {
       '-deadline', 'good',
       '-cpu-used', '4',
       '-b:v', '0',
-      '-crf', '32',
+      '-crf', '30',
       '-pix_fmt', 'yuv420p',
       outputPath,
     ], { stdin: gifBuffer });
@@ -309,7 +343,7 @@ const convertGifToWebm = async (gifUrl) => {
   }
 };
 
-app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, stableCssTimeline: true, gifConversion: true, gifConversionPipe: true, gifPreviewSpeedCapture: true }));
+app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, stableCssTimeline: true, gifConversion: true, gifConversionPipe: true, seekableVideoOverlayCapture: true, pngFramePipe: true }));
 
 app.post('/convert-gif', async (request, response) => {
   let result;
