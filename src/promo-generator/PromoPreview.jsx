@@ -136,7 +136,8 @@ function PromoBackgroundMedia({ url, settings }) {
   const style = backgroundMediaStyle(settings);
   const mediaType = getBackgroundMediaType(url, settings);
   if (mediaType === 'video') {
-    return <video className="promo-background-media" src={normalizeVideoBackgroundUrl(url)} muted loop autoPlay playsInline preload="auto" aria-hidden="true" style={style} />;
+    const videoUrl = normalizeVideoBackgroundUrl(url);
+    return <video key={videoUrl} className="promo-background-media" src={videoUrl} crossOrigin="anonymous" muted loop autoPlay playsInline preload="auto" aria-hidden="true" style={style} />;
   }
   return <img className="promo-background-media" src={normalizeImageBackgroundUrl(url)} alt="" aria-hidden="true" style={style} />;
 }
