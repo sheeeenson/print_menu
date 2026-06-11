@@ -113,6 +113,11 @@ const createPage = async (browser, render) => {
 const seekAnimations = async (page, milliseconds) => {
   await page.evaluate((time) => {
     document.getAnimations({ subtree: true }).forEach((animation) => {
+      const effect = animation.effect;
+      const target = effect && 'target' in effect ? effect.target : null;
+      const isGifOverlay = target?.matches?.('.promo-gif-overlay, .promo-gif-overlay *');
+      const isMediaOverlay = target?.matches?.('video, video *');
+      if (isGifOverlay || isMediaOverlay) return;
       try {
         animation.currentTime = time;
         animation.pause();
@@ -156,6 +161,7 @@ const createProgress = (stage, currentFrame = 0, totalFrames = 0) => {
 
 const renderVideo = async ({ page, render, outputPath, onProgress }) => {
   const frameCount = Math.max(1, Math.round(render.duration * render.fps));
+  const frameDelayMs = 1000 / render.fps;
   log(`Rendering ${frameCount} frames for ${render.filename} (${render.width}x${render.height}, ${render.fps}fps, ${render.duration}s) using ${FFMPEG_PATH}`);
   onProgress?.(createProgress('capturing_frames', 0, frameCount));
 
@@ -171,6 +177,7 @@ const renderVideo = async ({ page, render, outputPath, onProgress }) => {
     for (let i = 0; i < frameCount; i += 1) {
       if (i === 0 || i === frameCount - 1 || i % Math.max(1, Math.round(render.fps)) === 0) log(`Frame ${i + 1}/${frameCount}`);
       await seekAnimations(page, (i / render.fps) * 1000);
+      if (i > 0) await wait(frameDelayMs);
       const frame = await page.screenshot({ type: 'jpeg', quality: clampNumber(JPEG_FRAME_QUALITY, 86, 50, 92), omitBackground: false, clip: { x: 0, y: 0, width: render.width, height: render.height } });
       await writeFrame(ffmpeg, frame);
       onProgress?.(createProgress('capturing_frames', i + 1, frameCount));
@@ -302,7 +309,7 @@ const convertGifToWebm = async (gifUrl) => {
   }
 };
 
-app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, stableCssTimeline: true, gifConversion: true, gifConversionPipe: true }));
+app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, stableCssTimeline: true, gifConversion: true, gifConversionPipe: true, gifPreviewSpeedCapture: true }));
 
 app.post('/convert-gif', async (request, response) => {
   let result;
