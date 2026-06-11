@@ -158,20 +158,16 @@ const imageElementToDataUrl = async (sourceImage) => {
   const currentSrc = sourceImage.currentSrc || sourceImage.src || sourceImage.getAttribute('src') || '';
   if (!currentSrc || currentSrc.startsWith('data:')) return currentSrc;
 
-  if (currentSrc.startsWith('blob:')) {
-    const dataUrl = await mediaSrcToDataUrl(currentSrc);
-    if (dataUrl?.startsWith('data:image/gif')) return dataUrl;
+  const fetchedDataUrl = await mediaSrcToDataUrl(currentSrc).catch(() => '');
+  if (fetchedDataUrl?.startsWith('data:image')) return fetchedDataUrl;
 
-    const canvas = document.createElement('canvas');
-    canvas.width = sourceImage.naturalWidth || sourceImage.width;
-    canvas.height = sourceImage.naturalHeight || sourceImage.height;
-    if (!canvas.width || !canvas.height) return '';
-    const context = canvas.getContext('2d');
-    context.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL('image/png');
-  }
-
-  return mediaSrcToDataUrl(currentSrc);
+  const canvas = document.createElement('canvas');
+  canvas.width = sourceImage.naturalWidth || sourceImage.width || sourceImage.clientWidth;
+  canvas.height = sourceImage.naturalHeight || sourceImage.height || sourceImage.clientHeight;
+  if (!canvas.width || !canvas.height) return '';
+  const context = canvas.getContext('2d');
+  context.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/png');
 };
 
 const embedImagesInClone = async (scene, clone) => {
@@ -187,7 +183,7 @@ const embedImagesInClone = async (scene, clone) => {
     clonedImage.removeAttribute('decoding');
 
     const currentSrc = sourceImage.currentSrc || sourceImage.src || sourceImage.getAttribute('src') || '';
-    if (currentSrc) clonedImage.setAttribute('src', currentSrc);
+    if (currentSrc && !currentSrc.startsWith('blob:')) clonedImage.setAttribute('src', currentSrc);
 
     try {
       const dataUrl = await imageElementToDataUrl(sourceImage);
@@ -217,13 +213,17 @@ const embedVideosInClone = async (scene, clone) => {
     clonedVideo.setAttribute('playsinline', 'true');
     clonedVideo.setAttribute('preload', 'auto');
 
-    try {
-      const currentSrc = sourceVideo.currentSrc || sourceVideo.src || sourceVideo.getAttribute('src') || '';
-      if (currentSrc) clonedVideo.setAttribute('src', currentSrc);
-      const dataUrl = await mediaSrcToDataUrl(currentSrc);
-      if (dataUrl?.startsWith('data:')) clonedVideo.setAttribute('src', dataUrl);
-    } catch (error) {
-      console.warn('Could not embed promo video in HTML export:', error instanceof Error ? error.message : String(error));
+    const currentSrc = sourceVideo.currentSrc || sourceVideo.src || sourceVideo.getAttribute('src') || '';
+    if (!currentSrc) return;
+
+    clonedVideo.setAttribute('src', currentSrc);
+    if (currentSrc.startsWith('blob:')) {
+      try {
+        const dataUrl = await mediaSrcToDataUrl(currentSrc);
+        if (dataUrl?.startsWith('data:')) clonedVideo.setAttribute('src', dataUrl);
+      } catch (error) {
+        console.warn('Could not embed blob promo video in HTML export:', error instanceof Error ? error.message : String(error));
+      }
     }
   }));
 };
@@ -323,197 +323,76 @@ const downloadCurrentPromoVideo = async (downloadGroup, output) => {
   const scene = document.querySelector('.promo-scene');
   if (!scene) throw new Error('Could not find the promo scene.');
 
+  const duration = getSelectedDuration();
   const html = await getSceneHtmlDocument();
   const { width, height } = getSceneSize(scene);
-  const filename = getOutputFilename(output);
-  const duration = getSelectedDuration();
+  const extension = output === 'webm' ? 'webm' : 'mp4';
+  const filename = `${getSafeFilename(getCurrentPromoTitle())}-${getSafeFilename(getPromoFormatLabel())}-${duration}s.${extension}`;
 
   await downloadHtmlRender({
-    output,
+    output: extension,
     filename,
-    format: { id: 'current', label: `${width}x${height}`, width, height },
+    format: { width, height, label: getPromoFormatLabel() },
     duration,
     fps: 24,
     html,
     onStatus: (message) => setDownloadStatus(downloadGroup, message),
   });
-
-  setDownloadStatus(downloadGroup, `${output.toUpperCase()} downloaded.`);
+  setDownloadStatus(downloadGroup, `${extension.toUpperCase()} downloaded.`);
 };
 
-const addDownloadButton = ({ buttonRow, downloadGroup, label, dataAttribute, onClick, prepend = false }) => {
-  if (buttonRow.querySelector(`[${dataAttribute}]`)) return;
+const findDownloadGroup = () => Array.from(document.querySelectorAll('.promo-panel-group'))
+  .find((group) => group.querySelector('h3')?.textContent?.trim() === 'Download');
 
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.textContent = label;
-  button.setAttribute(dataAttribute, 'true');
-  button.addEventListener('click', async () => {
+const installDownloadButtons = () => {
+  const downloadGroup = findDownloadGroup();
+  if (!downloadGroup || downloadGroup.dataset.promoDownloadEnhanced === 'true') return;
+  const buttons = Array.from(downloadGroup.querySelectorAll('button'));
+  const pngButton = buttons.find((button) => button.textContent?.trim().toUpperCase() === 'PNG');
+  const mp4Button = buttons.find((button) => button.textContent?.trim().toUpperCase() === 'MP4');
+  const webmButton = buttons.find((button) => button.textContent?.trim().toUpperCase() === 'WEBM');
+
+  if (pngButton) pngButton.addEventListener('click', async (event) => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
     try {
-      await onClick(downloadGroup);
+      await downloadCurrentPromoPng(downloadGroup);
     } catch (error) {
       console.error(error);
-      setDownloadStatus(downloadGroup, error instanceof Error ? error.message : `${label} export failed.`);
+      setDownloadStatus(downloadGroup, error instanceof Error ? error.message : 'PNG export failed.');
     }
-  });
+  }, true);
 
-  if (prepend) buttonRow.prepend(button);
-  else buttonRow.appendChild(button);
+  if (mp4Button) mp4Button.addEventListener('click', async (event) => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    try {
+      setDownloadStatus(downloadGroup, 'Preparing MP4 render...');
+      await downloadCurrentPromoVideo(downloadGroup, 'mp4');
+    } catch (error) {
+      console.error(error);
+      setDownloadStatus(downloadGroup, error instanceof Error ? error.message : 'MP4 export failed.');
+    }
+  }, true);
+
+  if (webmButton) webmButton.addEventListener('click', async (event) => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    try {
+      setDownloadStatus(downloadGroup, 'Preparing WEBM render...');
+      await downloadCurrentPromoVideo(downloadGroup, 'webm');
+    } catch (error) {
+      console.error(error);
+      setDownloadStatus(downloadGroup, error instanceof Error ? error.message : 'WEBM export failed.');
+    }
+  }, true);
+
+  downloadGroup.dataset.promoDownloadEnhanced = 'true';
 };
 
-const hideBuiltInButton = (buttonRow, label, dataAttribute) => {
-  const builtInButton = Array.from(buttonRow.querySelectorAll('button'))
-    .find((button) => button.textContent?.trim() === label && button.getAttribute(dataAttribute) !== 'true');
-  if (builtInButton) builtInButton.style.display = 'none';
-};
-
-const getRendererPlatform = () => {
-  const platform = navigator.platform?.toLowerCase() || '';
-  const userAgent = navigator.userAgent?.toLowerCase() || '';
-  if (platform.includes('win') || userAgent.includes('windows')) return 'windows';
-  if (platform.includes('mac') || userAgent.includes('mac os')) return 'mac';
-  return 'unknown';
-};
-
-const createRendererLink = ({ label, href }) => {
-  const link = document.createElement('a');
-  link.href = href;
-  link.target = '_blank';
-  link.rel = 'noreferrer';
-  link.textContent = label;
-  link.className = 'promo-local-renderer-link';
-  return link;
-};
-
-const ensureLocalRendererInstallPanel = (downloadGroup) => {
-  if (downloadGroup.querySelector('[data-promo-local-renderer-panel]')) return;
-
-  const panel = document.createElement('div');
-  panel.setAttribute('data-promo-local-renderer-panel', 'true');
-  panel.style.marginTop = '12px';
-  panel.style.padding = '12px';
-  panel.style.border = '1px solid rgba(255,255,255,0.14)';
-  panel.style.borderRadius = '14px';
-  panel.style.background = 'rgba(255,255,255,0.06)';
-  panel.style.display = 'grid';
-  panel.style.gap = '8px';
-
-  const title = document.createElement('div');
-  title.textContent = 'Local Renderer for MP4/WebM';
-  title.style.fontWeight = '800';
-  title.style.fontSize = '13px';
-
-  const description = document.createElement('div');
-  description.textContent = 'For reliable CSS video export, run the local renderer on Mac or Windows. PNG and HTML work without it.';
-  description.style.fontSize = '12px';
-  description.style.opacity = '0.72';
-  description.style.lineHeight = '1.35';
-
-  const instructions = document.createElement('ol');
-  instructions.style.margin = '0';
-  instructions.style.paddingLeft = '18px';
-  instructions.style.fontSize = '12px';
-  instructions.style.opacity = '0.82';
-  instructions.style.lineHeight = '1.45';
-
-  [
-    'Download renderer for your system.',
-    'Unzip the file.',
-    'Run the renderer app.',
-    'Return here and click MP4 or WebM.',
-  ].forEach((step) => {
-    const item = document.createElement('li');
-    item.textContent = step;
-    instructions.appendChild(item);
-  });
-
-  const linkRow = document.createElement('div');
-  linkRow.style.display = 'flex';
-  linkRow.style.flexWrap = 'wrap';
-  linkRow.style.gap = '8px';
-
-  const platform = getRendererPlatform();
-  if (platform === 'mac') {
-    linkRow.appendChild(createRendererLink({ label: 'Download for Mac', href: LOCAL_RENDERER_MAC_URL }));
-    linkRow.appendChild(createRendererLink({ label: 'Windows', href: LOCAL_RENDERER_WINDOWS_URL }));
-  } else if (platform === 'windows') {
-    linkRow.appendChild(createRendererLink({ label: 'Download for Windows', href: LOCAL_RENDERER_WINDOWS_URL }));
-    linkRow.appendChild(createRendererLink({ label: 'Mac', href: LOCAL_RENDERER_MAC_URL }));
-  } else {
-    linkRow.appendChild(createRendererLink({ label: 'Download for Mac', href: LOCAL_RENDERER_MAC_URL }));
-    linkRow.appendChild(createRendererLink({ label: 'Download for Windows', href: LOCAL_RENDERER_WINDOWS_URL }));
-  }
-  linkRow.appendChild(createRendererLink({ label: 'Download folder', href: LOCAL_RENDERER_DOWNLOAD_FOLDER_URL }));
-
-  panel.appendChild(title);
-  panel.appendChild(description);
-  panel.appendChild(instructions);
-  panel.appendChild(linkRow);
-  downloadGroup.appendChild(panel);
-};
-
-const ensureDownloadButtons = () => {
-  const downloadGroup = Array.from(document.querySelectorAll('.promo-panel-group'))
-    .find((group) => group.querySelector('h3')?.textContent?.trim() === 'Download');
-  const buttonRow = downloadGroup?.querySelector('.promo-duration-buttons');
-  if (!buttonRow) return;
-
-  hideBuiltInButton(buttonRow, 'PNG', 'data-promo-browser-png-download');
-  hideBuiltInButton(buttonRow, 'MP4', 'data-promo-job-mp4-download');
-
-  addDownloadButton({
-    buttonRow,
-    downloadGroup,
-    label: 'PNG',
-    dataAttribute: 'data-promo-browser-png-download',
-    prepend: true,
-    onClick: async (group) => {
-      await downloadCurrentPromoPng(group);
-    },
-  });
-
-  addDownloadButton({
-    buttonRow,
-    downloadGroup,
-    label: 'MP4',
-    dataAttribute: 'data-promo-job-mp4-download',
-    onClick: async (group) => {
-      setDownloadStatus(group, 'Preparing MP4 export...');
-      await downloadCurrentPromoVideo(group, 'mp4');
-    },
-  });
-
-  addDownloadButton({
-    buttonRow,
-    downloadGroup,
-    label: 'WebM',
-    dataAttribute: 'data-promo-webm-download',
-    onClick: async (group) => {
-      setDownloadStatus(group, 'Preparing WebM export...');
-      await downloadCurrentPromoVideo(group, 'webm');
-    },
-  });
-
-  addDownloadButton({
-    buttonRow,
-    downloadGroup,
-    label: 'HTML',
-    dataAttribute: 'data-promo-html-download',
-    onClick: async (group) => {
-      setDownloadStatus(group, 'Preparing HTML with embedded images...');
-      await downloadCurrentPromoHtml();
-      setDownloadStatus(group, 'HTML downloaded.');
-    },
-  });
-
-  ensureLocalRendererInstallPanel(downloadGroup);
-};
-
-export const installPromoHtmlDownloadButton = () => {
-  if (typeof window === 'undefined') return;
-
-  const observer = new MutationObserver(ensureDownloadButtons);
-  observer.observe(document.body, { childList: true, subtree: true });
-  window.addEventListener('load', ensureDownloadButtons);
-  ensureDownloadButtons();
-};
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', installDownloadButtons);
+  const observer = new MutationObserver(() => window.requestAnimationFrame(installDownloadButtons));
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+  window.requestAnimationFrame(installDownloadButtons);
+}
