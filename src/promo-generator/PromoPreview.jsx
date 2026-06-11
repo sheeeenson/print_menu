@@ -130,7 +130,7 @@ function PromoBackgroundMedia({ url, settings }) {
   if (isVideoBackground(url)) {
     return <video className="promo-background-media" src={url} muted loop autoPlay playsInline preload="auto" aria-hidden="true" style={style} />;
   }
-  return <img className="promo-background-media" src={url} alt="" crossOrigin="anonymous" aria-hidden="true" style={style} />;
+  return <img className="promo-background-media" src={url} alt="" aria-hidden="true" style={style} />;
 }
 
 export function PromoPreview({ dish, settings, index = 0 }) {
@@ -242,7 +242,6 @@ export function PromoPreview({ dish, settings, index = 0 }) {
                 className="promo-dish-image"
                 src={dish.imageUrl}
                 alt={dish.nameEn || dish.nameGe || 'Dish'}
-                crossOrigin="anonymous"
                 style={{ width: `${dishImageSize}px`, maxWidth: 'none', maxHeight: 'none' }}
               />
             ) : <div className="promo-dish-placeholder">Select dish with image</div>}
