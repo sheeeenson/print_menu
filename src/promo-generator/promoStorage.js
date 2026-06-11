@@ -29,6 +29,12 @@ export const PROMO_GIF_SHAPES = Object.freeze([
   { id: 'blob', label: 'Blob' },
 ]);
 
+export const PROMO_BACKGROUND_FITS = Object.freeze([
+  { id: 'cover', label: 'Cover' },
+  { id: 'contain', label: 'Contain' },
+  { id: 'fill', label: 'Fill' },
+]);
+
 export const DEFAULT_PROMO_EFFECTS = Object.freeze({
   slowZoom: true,
   fastEntrance: false,
@@ -118,6 +124,10 @@ export const DEFAULT_PROMO_GLOBAL_SETTINGS = Object.freeze({
   gifShadow: false,
   gifShadowColor: '#000000',
   gifLibrary: [],
+  backgroundMediaUrl: '',
+  backgroundFit: 'cover',
+  backgroundDim: 28,
+  backgroundBlur: 0,
 });
 
 export const DEFAULT_PROMO_SETTINGS = Object.freeze({
@@ -134,6 +144,7 @@ const normalizeDuration = (value) => PROMO_DURATIONS.includes(Number(value)) ? N
 const normalizeFormatId = (value) => PROMO_FORMATS.some((format) => format.id === value) ? value : DEFAULT_PROMO_SETTINGS.formatId;
 const normalizeGifPosition = (value) => ['textLeft', 'topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(value) ? value : DEFAULT_PROMO_GLOBAL_SETTINGS.gifPosition;
 const normalizeGifShape = (value) => PROMO_GIF_SHAPES.some((shape) => shape.id === value) ? value : DEFAULT_PROMO_GLOBAL_SETTINGS.gifShape;
+const normalizeBackgroundFit = (value) => PROMO_BACKGROUND_FITS.some((fit) => fit.id === value) ? value : DEFAULT_PROMO_GLOBAL_SETTINGS.backgroundFit;
 const normalizeFont = (value, fallback) => PROMO_FONT_OPTIONS.includes(value) ? value : fallback;
 const normalizeColor = (value, fallback) => /^#[0-9a-f]{6}$/i.test(String(value || '')) ? value : fallback;
 const normalizeUrl = (value) => String(value || '').trim();
@@ -255,16 +266,19 @@ export const normalizePromoProject = (project = {}, dishes = []) => {
     gifLibrary: legacyGifUrl && !gifLibrary.some((item) => item.url === legacyGifUrl)
       ? [{ id: `gif_${Date.now()}`, name: 'Current GIF', url: legacyGifUrl }, ...gifLibrary]
       : gifLibrary,
+    backgroundMediaUrl: normalizeUrl(project.backgroundMediaUrl || project.formats?.[formatId]?.backgroundMediaUrl),
+    backgroundFit: normalizeBackgroundFit(project.backgroundFit || project.formats?.[formatId]?.backgroundFit),
+    backgroundDim: normalizeNumber(project.backgroundDim ?? project.formats?.[formatId]?.backgroundDim, DEFAULT_PROMO_GLOBAL_SETTINGS.backgroundDim, 0, 85),
+    backgroundBlur: normalizeNumber(project.backgroundBlur ?? project.formats?.[formatId]?.backgroundBlur, DEFAULT_PROMO_GLOBAL_SETTINGS.backgroundBlur, 0, 40),
     formats,
   };
 };
 
 export const loadPromoProject = (dishes = []) => {
   try {
-    const rawValue = window.localStorage.getItem(STORAGE_KEY);
-    return normalizePromoProject(rawValue ? JSON.parse(rawValue) : {}, dishes);
+    const parsed = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || '{}');
+    return normalizePromoProject(parsed, dishes);
   } catch (error) {
-    console.warn('Unable to restore TV Promo settings. Loading defaults.', error);
     return normalizePromoProject({}, dishes);
   }
 };
