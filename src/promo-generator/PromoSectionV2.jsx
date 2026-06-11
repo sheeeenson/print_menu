@@ -15,7 +15,7 @@ import {
   savePromoProject,
 } from './promoStorage.js';
 import { getSceneHtmlDocument } from './promoHtmlDownload.js';
-import { normalizeGoogleDriveMediaUrl } from '../utils/imageUrls.js';
+import { normalizeGoogleDriveMediaUrl, normalizeGoogleDriveVideoUrl } from '../utils/imageUrls.js';
 import './promoGenerator.css';
 
 const EFFECT_GROUPS = [
@@ -44,6 +44,7 @@ const withFallback = (value, fallback) => value === undefined || value === null 
 const normalizeDuration = (value) => PROMO_DURATIONS.includes(Number(value)) ? Number(value) : 8;
 const isTransparentProduct = (dish) => dish?.imageMode === 'transparent' || dish?.transparentImage === true;
 const getDishBackgroundUrl = (dish) => normalizeGoogleDriveMediaUrl(dish?.promoBackgroundUrl || '');
+const normalizeBackgroundInputUrl = (value, mediaType = 'auto') => mediaType === 'video' ? normalizeGoogleDriveVideoUrl(value) : normalizeGoogleDriveMediaUrl(value);
 
 const pickKeys = (source = {}, keys = []) => Object.fromEntries(keys.filter((key) => source[key] !== undefined).map((key) => [key, source[key]]));
 const pickFormatState = (settings = {}) => pickKeys(settings, FORMAT_KEYS);
@@ -150,15 +151,24 @@ function BackgroundMediaControls({ selectedDish, settings, updateSettings }) {
   const defaultBackgroundUrl = getDishBackgroundUrl(selectedDish);
   const hasDefaultBackground = Boolean(defaultBackgroundUrl);
   const currentUrl = settings.backgroundMediaUrl || '';
+  const currentType = settings.backgroundMediaType || 'auto';
+  const applyBackgroundUrl = (value, mediaType = currentType) => updateSettings({ backgroundMediaUrl: normalizeBackgroundInputUrl(value, mediaType) });
+  const applyBackgroundType = (backgroundMediaType) => {
+    const sourceUrl = currentUrl || defaultBackgroundUrl;
+    updateSettings({
+      backgroundMediaType,
+      backgroundMediaUrl: sourceUrl ? normalizeBackgroundInputUrl(sourceUrl, backgroundMediaType) : '',
+    });
+  };
   return (
     <div className="promo-background-controls">
-      <label className="image-menu-control"><span>Background URL</span><input value={currentUrl} placeholder={hasDefaultBackground ? 'Using default background from Content' : 'Paste image/video URL or Google Drive link'} onChange={(event) => updateSettings({ backgroundMediaUrl: normalizeGoogleDriveMediaUrl(event.target.value) })} /></label>
+      <label className="image-menu-control"><span>Background URL</span><input value={currentUrl} placeholder={hasDefaultBackground ? 'Using default background from Content' : 'Paste image/video URL or Google Drive link'} onChange={(event) => applyBackgroundUrl(event.target.value)} /></label>
       <div className="promo-gif-library-actions">
-        {hasDefaultBackground ? <button type="button" onClick={() => updateSettings({ backgroundMediaUrl: defaultBackgroundUrl })}>Use default</button> : null}
+        {hasDefaultBackground ? <button type="button" onClick={() => applyBackgroundUrl(defaultBackgroundUrl)}>Use default</button> : null}
         <button type="button" onClick={() => updateSettings({ backgroundMediaUrl: '' })}>Clear custom</button>
       </div>
       {hasDefaultBackground && !currentUrl ? <small className="promo-preview-size">Default background from Content is active.</small> : null}
-      <label className="image-menu-control"><span>Background type</span><select value={settings.backgroundMediaType || 'auto'} onChange={(event) => updateSettings({ backgroundMediaType: event.target.value })}>{PROMO_BACKGROUND_MEDIA_TYPES.map((type) => <option key={type.id} value={type.id}>{type.label}</option>)}</select></label>
+      <label className="image-menu-control"><span>Background type</span><select value={currentType} onChange={(event) => applyBackgroundType(event.target.value)}>{PROMO_BACKGROUND_MEDIA_TYPES.map((type) => <option key={type.id} value={type.id}>{type.label}</option>)}</select></label>
       <label className="image-menu-control"><span>Fit</span><select value={settings.backgroundFit || 'cover'} onChange={(event) => updateSettings({ backgroundFit: event.target.value })}>{PROMO_BACKGROUND_FITS.map((fit) => <option key={fit.id} value={fit.id}>{fit.label}</option>)}</select></label>
       <RangeControl label="Dark overlay" value={settings.backgroundDim ?? 28} min={0} max={85} onChange={(backgroundDim) => updateSettings({ backgroundDim })} suffix="%" />
       <RangeControl label="Blur" value={settings.backgroundBlur ?? 0} min={0} max={40} onChange={(backgroundBlur) => updateSettings({ backgroundBlur })} suffix="px" />
