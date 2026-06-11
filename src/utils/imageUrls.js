@@ -1,28 +1,25 @@
-const getGoogleDriveFileId = (url) => {
-  const text = String(url || '').trim();
-  if (!text) return '';
+const GOOGLE_DRIVE_ID_PATTERNS = Object.freeze([
+  /\/file\/d\/([a-zA-Z0-9_-]+)/,
+  /[?&]id=([a-zA-Z0-9_-]+)/,
+]);
 
-  const filePathMarker = 'drive.google.com/file/d/';
-  if (text.includes(filePathMarker)) {
-    const afterMarker = text.split(filePathMarker)[1] || '';
-    return afterMarker.split('/')[0] || '';
-  }
+export function extractGoogleDriveFileId(value = '') {
+  const input = String(value || '').trim();
+  if (!input) return '';
 
-  try {
-    const parsed = new URL(text);
-    if (parsed.hostname.includes('drive.google.com')) return parsed.searchParams.get('id') || '';
-  } catch (error) {
-    return '';
+  for (const pattern of GOOGLE_DRIVE_ID_PATTERNS) {
+    const match = input.match(pattern);
+    if (match?.[1]) return match[1];
   }
 
   return '';
-};
+}
 
 export function normalizeGoogleDriveImageUrl(value) {
   const url = String(value || '').trim();
   if (!url) return '';
 
-  const fileId = getGoogleDriveFileId(url);
+  const fileId = extractGoogleDriveFileId(url);
   if (fileId && url.includes('drive.google.com')) return `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}`;
 
   return url;
@@ -32,8 +29,16 @@ export function normalizeGoogleDriveMediaUrl(value) {
   const url = String(value || '').trim();
   if (!url) return '';
 
-  const fileId = getGoogleDriveFileId(url);
-  if (fileId && url.includes('drive.google.com')) return `https://drive.google.com/uc?export=download&id=${encodeURIComponent(fileId)}`;
+  const fileId = extractGoogleDriveFileId(url);
+  if (fileId && url.includes('drive.google.com')) return `https://drive.google.com/uc?export=view&id=${encodeURIComponent(fileId)}`;
 
   return url;
+}
+
+export function guessMediaTypeFromUrl(value = '') {
+  const url = String(value || '').trim().toLowerCase();
+  if (!url) return 'auto';
+  if (/\.(mp4|webm|mov)(?:\?|#|$)/i.test(url)) return 'video';
+  if (/\.(png|jpg|jpeg|webp|gif|avif)(?:\?|#|$)/i.test(url)) return 'image';
+  return 'auto';
 }
