@@ -6,7 +6,8 @@ const LOCAL_RENDERER_DOWNLOAD_FOLDER_URL = 'https://drive.google.com/drive/folde
 const LOCAL_RENDERER_MAC_URL = 'https://drive.google.com/uc?export=download&id=19yrHrnwx2JziRZHJTBN_PJ8MiJxbaspC';
 const LOCAL_RENDERER_WINDOWS_URL = 'https://drive.google.com/uc?export=download&id=1SkuHoZssolnEIva_7oJpiGbrQ9SQ14_Q';
 const ALLOWED_DURATIONS = [8, 16, 32];
-const GIF_URL_PATTERN = /\.gif(?:\?.*)?$/i;
+const GIF_URL_PATTERN = /\.gif(?:[?#].*)?$/i;
+const GIF_EXPORT_IMAGE_SELECTOR = 'img.promo-gif-overlay[src], img.promo-background-media[src]';
 
 const getDocumentCss = () => Array.from(document.styleSheets)
   .map((sheet) => {
@@ -116,6 +117,9 @@ const convertGifOverlayToVideoDataUrl = async (sourceImage) => {
   } else if (currentSrc.startsWith('blob:')) {
     const dataUrl = await mediaSrcToDataUrl(currentSrc);
     if (dataUrl?.startsWith('data:image/gif')) payload = { dataUrl };
+  } else {
+    const dataUrl = await mediaSrcToDataUrl(currentSrc);
+    if (dataUrl?.startsWith('data:image/gif')) payload = { dataUrl };
   }
 
   if (!payload) return '';
@@ -133,8 +137,8 @@ const convertGifOverlayToVideoDataUrl = async (sourceImage) => {
 };
 
 const replaceGifImagesWithVideosInClone = async (scene, clone) => {
-  const sourceGifs = Array.from(scene.querySelectorAll('img.promo-gif-overlay[src]'));
-  const clonedGifs = Array.from(clone.querySelectorAll('img.promo-gif-overlay[src]'));
+  const sourceGifs = Array.from(scene.querySelectorAll(GIF_EXPORT_IMAGE_SELECTOR));
+  const clonedGifs = Array.from(clone.querySelectorAll(GIF_EXPORT_IMAGE_SELECTOR));
   if (!sourceGifs.length || !clonedGifs.length) return;
 
   await Promise.all(sourceGifs.map(async (sourceImage, index) => {
@@ -145,7 +149,7 @@ const replaceGifImagesWithVideosInClone = async (scene, clone) => {
       if (!videoDataUrl?.startsWith('data:video')) return;
       clonedImage.replaceWith(makeVideoOverlayFromImage(clonedImage, videoDataUrl));
     } catch (error) {
-      console.warn('Could not convert GIF overlay for HTML export:', error instanceof Error ? error.message : String(error));
+      console.warn('Could not convert GIF image for HTML export:', error instanceof Error ? error.message : String(error));
     }
   }));
 };
@@ -182,6 +186,9 @@ const embedImagesInClone = async (scene, clone) => {
     clonedImage.removeAttribute('loading');
     clonedImage.removeAttribute('decoding');
 
+    const currentSrc = sourceImage.currentSrc || sourceImage.src || sourceImage.getAttribute('src') || '';
+    if (currentSrc) clonedImage.setAttribute('src', currentSrc);
+
     try {
       const dataUrl = await imageElementToDataUrl(sourceImage);
       if (dataUrl?.startsWith('data:')) clonedImage.setAttribute('src', dataUrl);
@@ -212,6 +219,7 @@ const embedVideosInClone = async (scene, clone) => {
 
     try {
       const currentSrc = sourceVideo.currentSrc || sourceVideo.src || sourceVideo.getAttribute('src') || '';
+      if (currentSrc) clonedVideo.setAttribute('src', currentSrc);
       const dataUrl = await mediaSrcToDataUrl(currentSrc);
       if (dataUrl?.startsWith('data:')) clonedVideo.setAttribute('src', dataUrl);
     } catch (error) {
@@ -226,7 +234,7 @@ const embedMediaInClone = async (scene, clone) => {
   await embedVideosInClone(scene, clone);
 };
 
-const getSceneHtmlDocument = async () => {
+export const getSceneHtmlDocument = async () => {
   const scene = document.querySelector('.promo-scene');
   if (!scene) throw new Error('Could not find the promo scene.');
 
