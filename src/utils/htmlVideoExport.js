@@ -34,6 +34,7 @@ const downloadUrl = (url, filename) => {
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
+  link.rel = 'noopener';
   document.body.appendChild(link);
   link.click();
   link.remove();
@@ -63,7 +64,7 @@ const downloadBlobResponse = async (response, filename, extension) => {
 
   const fileUrl = URL.createObjectURL(fileBlob);
   downloadUrl(fileUrl, filename);
-  setTimeout(() => URL.revokeObjectURL(fileUrl), 1000);
+  setTimeout(() => URL.revokeObjectURL(fileUrl), 30000);
 };
 
 const isLocalRendererAvailable = async (baseUrl) => {
@@ -128,9 +129,9 @@ const downloadViaJob = async ({ baseUrl, payload, filename, extension, fallbackM
 
     if (status.status === 'failed') throw new Error(status.error || fallbackMessage);
     if (status.status === 'done') {
-      const fileResponse = await fetch(`${baseUrl}/jobs/${jobId}/file`);
-      if (!fileResponse.ok) throw new Error(await getRenderErrorMessage(fileResponse, fallbackMessage));
-      await downloadBlobResponse(fileResponse, filename, extension);
+      const fileUrl = `${baseUrl}/jobs/${jobId}/file`;
+      onStatus?.(`Downloading ${extension.toUpperCase()}... 100%`);
+      downloadUrl(fileUrl, filename);
       return;
     }
   }
