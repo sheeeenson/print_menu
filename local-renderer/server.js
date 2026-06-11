@@ -195,6 +195,14 @@ const createProgress = (stage, currentFrame = 0, totalFrames = 0) => {
   return { stage, currentFrame: safeCurrent, totalFrames: safeTotal, percent };
 };
 
+const dataUrlToBuffer = (value = '') => {
+  const match = String(value).match(/^data:([^;,]+)?(;base64)?,(.*)$/);
+  if (!match) throw new Error('Invalid data URL.');
+  const isBase64 = Boolean(match[2]);
+  const data = match[3] || '';
+  return isBase64 ? Buffer.from(data, 'base64') : Buffer.from(decodeURIComponent(data));
+};
+
 const renderVideo = async ({ page, render, outputPath, onProgress }) => {
   const frameCount = Math.max(1, Math.round(render.duration * render.fps));
   log(`Rendering ${frameCount} frames for ${render.filename} (${render.width}x${render.height}, ${render.fps}fps, ${render.duration}s) using ${FFMPEG_PATH}`);
@@ -224,56 +232,6 @@ const renderVideo = async ({ page, render, outputPath, onProgress }) => {
     ffmpeg.stdin.destroy();
     ffmpeg.kill('SIGKILL');
     throw error;
-  }
-};
-
-const renderToFile = async (payload, onProgress) => {
-  const render = normalizePayload(payload);
-  if (!render.html) throw new Error('Missing HTML.');
-  let browser;
-  const workdir = await mkdtemp(path.join(tmpdir(), 'print-menu-local-render-'));
-  const outputPath = path.join(workdir, render.filename);
-  try {
-    onProgress?.(createProgress('opening_browser', 0, 0));
-    browser = await chromium.launch({ args: ['--no-sandbox', '--disable-dev-shm-usage', '--hide-scrollbars', '--autoplay-policy=no-user-gesture-required'] });
-    const page = await createPage(browser, render);
-    await renderVideo({ page, render, outputPath, onProgress });
-    return { ...render, filePath: outputPath, workdir, contentType: contentType(render.output) };
-  } finally {
-    if (browser) await browser.close().catch(() => {});
-  }
-};
-
-const serializeJob = (job) => ({
-  id: job.id,
-  status: job.status,
-  output: job.output,
-  filename: job.filename,
-  error: job.error,
-  progress: job.progress || createProgress(job.status || 'queued', 0, 0),
-  downloadUrl: job.status === 'done' ? `/jobs/${job.id}/file` : null,
-});
-const cleanupJob = async (id) => {
-  const job = jobs.get(id);
-  if (job?.workdir) await rm(job.workdir, { recursive: true, force: true }).catch(() => {});
-  jobs.delete(id);
-};
-const runJob = async (id, payload) => {
-  const job = jobs.get(id);
-  if (!job) return;
-  job.status = 'rendering';
-  job.progress = createProgress('starting', 0, 0);
-  log(`Job ${id} started`);
-  try {
-    Object.assign(job, await renderToFile(payload, (progress) => {
-      job.progress = progress;
-    }), { status: 'done', progress: createProgress('done', 1, 1) });
-    log(`Job ${id} done: ${job.filename}`);
-  } catch (error) {
-    job.status = 'failed';
-    job.error = error instanceof Error ? error.message : String(error);
-    job.progress = createProgress('failed', 0, 1);
-    log(`Job ${id} failed: ${job.error}`);
   }
 };
 
@@ -314,14 +272,10 @@ const downloadGifBuffer = async (gifUrl) => {
   return buffer;
 };
 
-const convertGifToWebm = async (gifUrl) => {
-  const url = normalizeGifInputUrl(gifUrl);
+const convertGifBufferToWebm = async (gifBuffer, label = 'gif-overlay') => {
   const workdir = await mkdtemp(path.join(tmpdir(), 'print-menu-gif-convert-'));
-  const outputPath = path.join(workdir, 'gif-overlay.webm');
+  const outputPath = path.join(workdir, `${label}.webm`);
   try {
-    log(`Downloading GIF overlay: ${url}`);
-    const gifBuffer = await downloadGifBuffer(url);
-    log(`Converting GIF overlay to WebM: ${url}`);
     await runFfmpeg([
       '-y',
       '-i', 'pipe:0',
@@ -343,12 +297,121 @@ const convertGifToWebm = async (gifUrl) => {
   }
 };
 
-app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, stableCssTimeline: true, gifConversion: true, gifConversionPipe: true, seekableVideoOverlayCapture: true, pngFramePipe: true }));
+const convertGifToWebm = async (gifUrl) => {
+  const url = normalizeGifInputUrl(gifUrl);
+  log(`Downloading GIF overlay: ${url}`);
+  const gifBuffer = await downloadGifBuffer(url);
+  log(`Converting GIF overlay to WebM: ${url}`);
+  return convertGifBufferToWebm(gifBuffer, 'gif-overlay');
+};
+
+const replaceGifImagesWithVideos = async (page) => {
+  const gifImages = await page.evaluate(() => Array.from(document.querySelectorAll('img.promo-gif-overlay[src], img.promo-background-media[src]')).map((image, index) => ({
+    index,
+    src: image.currentSrc || image.src || image.getAttribute('src') || '',
+  })));
+
+  for (const image of gifImages) {
+    let result;
+    try {
+      const gifBuffer = image.src.startsWith('data:image/gif') ? dataUrlToBuffer(image.src) : await downloadGifBuffer(image.src);
+      result = await convertGifBufferToWebm(gifBuffer, `gif-render-${image.index}`);
+      const dataUrl = `data:video/webm;base64,${result.buffer.toString('base64')}`;
+      await page.evaluate(({ index, src }) => {
+        const images = Array.from(document.querySelectorAll('img.promo-gif-overlay[src], img.promo-background-media[src]'));
+        const image = images[index];
+        if (!image) return;
+        const video = document.createElement('video');
+        Array.from(image.attributes || []).forEach((attribute) => {
+          if (['src', 'srcset', 'alt', 'loading', 'decoding', 'crossorigin'].includes(attribute.name)) return;
+          video.setAttribute(attribute.name, attribute.value);
+        });
+        video.className = image.className;
+        video.style.cssText = image.style.cssText;
+        video.src = src;
+        video.muted = true;
+        video.loop = true;
+        video.autoplay = false;
+        video.playsInline = true;
+        video.setAttribute('muted', 'true');
+        video.setAttribute('loop', 'true');
+        video.setAttribute('playsinline', 'true');
+        video.setAttribute('preload', 'auto');
+        video.setAttribute('aria-hidden', 'true');
+        video.setAttribute('data-promo-gif-converted-video', 'true');
+        image.replaceWith(video);
+      }, { index: image.index, src: dataUrl });
+      log(`Converted GIF image ${image.index + 1} to seekable video for render.`);
+    } catch (error) {
+      log(`Skipped GIF image ${image.index + 1}: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      if (result?.workdir) await rm(result.workdir, { recursive: true, force: true }).catch(() => {});
+    }
+  }
+};
+
+const renderToFile = async (payload, onProgress) => {
+  const render = normalizePayload(payload);
+  if (!render.html) throw new Error('Missing HTML.');
+  let browser;
+  const workdir = await mkdtemp(path.join(tmpdir(), 'print-menu-local-render-'));
+  const outputPath = path.join(workdir, render.filename);
+  try {
+    onProgress?.(createProgress('opening_browser', 0, 0));
+    browser = await chromium.launch({ args: ['--no-sandbox', '--disable-dev-shm-usage', '--hide-scrollbars', '--autoplay-policy=no-user-gesture-required'] });
+    const page = await createPage(browser, render);
+    await replaceGifImagesWithVideos(page);
+    await waitForImages(page);
+    await renderVideo({ page, render, outputPath, onProgress });
+    return { ...render, filePath: outputPath, workdir, contentType: contentType(render.output) };
+  } finally {
+    if (browser) await browser.close().catch(() => {});
+  }
+};
+
+const serializeJob = (job) => ({
+  id: job.id,
+  status: job.status,
+  output: job.output,
+  filename: job.filename,
+  error: job.error,
+  progress: job.progress || createProgress(job.status || 'queued', 0, 0),
+  downloadUrl: job.status === 'done' ? `/jobs/${job.id}/file` : null,
+});
+const cleanupJob = async (id) => {
+  const job = jobs.get(id);
+  if (job?.workdir) await rm(job.workdir, { recursive: true, force: true }).catch(() => {});
+  jobs.delete(id);
+};
+const runJob = async (id, payload) => {
+  const job = jobs.get(id);
+  if (!job) return;
+  job.status = 'rendering';
+  job.progress = createProgress('starting', 0, 0);
+  log(`Job ${id} started`);
+  try {
+    Object.assign(job, await renderToFile(payload, (progress) => {
+      job.progress = progress;
+    }), { status: 'done', progress: createProgress('done', 1, 1) });
+    log(`Job ${id} done: ${job.filename}`);
+  } catch (error) {
+    job.status = 'failed';
+    job.error = error instanceof Error ? error.message : String(error);
+    job.progress = createProgress('failed', 0, 1);
+    log(`Job ${id} failed: ${job.error}`);
+  }
+};
+
+app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, stableCssTimeline: true, gifConversion: true, gifConversionPipe: true, seekableVideoOverlayCapture: true, pngFramePipe: true, gifBackgroundConversion: true }));
 
 app.post('/convert-gif', async (request, response) => {
   let result;
   try {
-    result = await convertGifToWebm(request.body?.url);
+    if (request.body?.dataUrl) {
+      result = await convertGifBufferToWebm(dataUrlToBuffer(request.body.dataUrl), 'gif-overlay');
+    } else {
+      result = await convertGifToWebm(request.body?.url);
+    }
     response.setHeader('Content-Type', 'video/webm');
     response.setHeader('Content-Disposition', 'attachment; filename="gif-overlay.webm"');
     response.end(result.buffer);
