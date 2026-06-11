@@ -436,7 +436,28 @@ app.get('/drive-media/:fileId', async (request, response) => {
   }
 });
 
-app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, stableCssTimeline: true, gifConversion: true, gifConversionPipe: true, seekableVideoOverlayCapture: true, pngFramePipe: true, gifBackgroundConversion: true, driveMediaProxy: true }));
+app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, stableCssTimeline: true, gifConversion: true, gifConversionPipe: true, seekableVideoOverlayCapture: true, pngFramePipe: true, gifBackgroundConversion: true, driveMediaProxy: true, apiPromoRenderBlob: true }));
+
+app.post('/api/promo-render', async (request, response) => {
+  let result;
+  try {
+    result = await renderToFile(request.body || {}, (progress) => {
+      if (progress?.currentFrame === 1 || progress?.percent === 100 || progress?.currentFrame % 24 === 1) {
+        // Progress is already logged from renderVideo; this hook keeps API mode compatible.
+      }
+    });
+    const buffer = await readFile(result.filePath);
+    if (!buffer.length) return response.status(500).json({ error: 'Render failed.', detail: 'Renderer produced an empty file.' });
+    response.setHeader('Content-Type', result.contentType);
+    response.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    response.setHeader('Content-Length', String(buffer.length));
+    return response.end(buffer);
+  } catch (error) {
+    return response.status(500).json({ error: 'Render failed.', detail: error instanceof Error ? error.message : String(error) });
+  } finally {
+    if (result?.workdir) await rm(result.workdir, { recursive: true, force: true }).catch(() => {});
+  }
+});
 
 app.post('/convert-gif', async (request, response) => {
   let result;
