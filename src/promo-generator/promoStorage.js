@@ -29,6 +29,12 @@ export const PROMO_GIF_SHAPES = Object.freeze([
   { id: 'blob', label: 'Blob' },
 ]);
 
+export const PROMO_BACKGROUND_MEDIA_TYPES = Object.freeze([
+  { id: 'auto', label: 'Auto' },
+  { id: 'image', label: 'Image' },
+  { id: 'video', label: 'Video' },
+]);
+
 export const PROMO_BACKGROUND_FITS = Object.freeze([
   { id: 'cover', label: 'Cover' },
   { id: 'contain', label: 'Contain' },
@@ -125,6 +131,7 @@ export const DEFAULT_PROMO_GLOBAL_SETTINGS = Object.freeze({
   gifShadowColor: '#000000',
   gifLibrary: [],
   backgroundMediaUrl: '',
+  backgroundMediaType: 'auto',
   backgroundFit: 'cover',
   backgroundDim: 28,
   backgroundBlur: 0,
@@ -145,6 +152,7 @@ const normalizeFormatId = (value) => PROMO_FORMATS.some((format) => format.id ==
 const normalizeGifPosition = (value) => ['textLeft', 'topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(value) ? value : DEFAULT_PROMO_GLOBAL_SETTINGS.gifPosition;
 const normalizeGifShape = (value) => PROMO_GIF_SHAPES.some((shape) => shape.id === value) ? value : DEFAULT_PROMO_GLOBAL_SETTINGS.gifShape;
 const normalizeBackgroundFit = (value) => PROMO_BACKGROUND_FITS.some((fit) => fit.id === value) ? value : DEFAULT_PROMO_GLOBAL_SETTINGS.backgroundFit;
+const normalizeBackgroundMediaType = (value) => PROMO_BACKGROUND_MEDIA_TYPES.some((type) => type.id === value) ? value : DEFAULT_PROMO_GLOBAL_SETTINGS.backgroundMediaType;
 const normalizeFont = (value, fallback) => PROMO_FONT_OPTIONS.includes(value) ? value : fallback;
 const normalizeColor = (value, fallback) => /^#[0-9a-f]{6}$/i.test(String(value || '')) ? value : fallback;
 const normalizeUrl = (value) => String(value || '').trim();
@@ -267,6 +275,7 @@ export const normalizePromoProject = (project = {}, dishes = []) => {
       ? [{ id: `gif_${Date.now()}`, name: 'Current GIF', url: legacyGifUrl }, ...gifLibrary]
       : gifLibrary,
     backgroundMediaUrl: normalizeUrl(project.backgroundMediaUrl || project.formats?.[formatId]?.backgroundMediaUrl),
+    backgroundMediaType: normalizeBackgroundMediaType(project.backgroundMediaType || project.formats?.[formatId]?.backgroundMediaType),
     backgroundFit: normalizeBackgroundFit(project.backgroundFit || project.formats?.[formatId]?.backgroundFit),
     backgroundDim: normalizeNumber(project.backgroundDim ?? project.formats?.[formatId]?.backgroundDim, DEFAULT_PROMO_GLOBAL_SETTINGS.backgroundDim, 0, 85),
     backgroundBlur: normalizeNumber(project.backgroundBlur ?? project.formats?.[formatId]?.backgroundBlur, DEFAULT_PROMO_GLOBAL_SETTINGS.backgroundBlur, 0, 40),
