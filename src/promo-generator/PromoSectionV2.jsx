@@ -5,6 +5,7 @@ import {
   DEFAULT_PROMO_LAYOUT_OFFSETS,
   getPromoFormat,
   loadPromoProject,
+  PROMO_BACKGROUND_FITS,
   PROMO_DURATIONS,
   PROMO_FONT_OPTIONS,
   PROMO_FORMATS,
@@ -12,6 +13,7 @@ import {
   PROMO_GIF_SHAPES,
   savePromoProject,
 } from './promoStorage.js';
+import { normalizeGoogleDriveMediaUrl } from '../utils/imageUrls.js';
 import './promoGenerator.css';
 
 const EFFECT_GROUPS = [
@@ -28,7 +30,7 @@ const LAYOUT_CONTROL_GROUPS = [
   { title: 'GIF', x: 'gifX', y: 'gifY' },
 ];
 
-const GLOBAL_PROMO_KEYS = new Set(['selectedDishId', 'formatId', 'headline', 'offerText', 'ctaText', 'gifUrl', 'gifLibrary', 'effects']);
+const GLOBAL_PROMO_KEYS = new Set(['selectedDishId', 'formatId', 'headline', 'offerText', 'ctaText', 'gifUrl', 'gifLibrary', 'effects', 'backgroundMediaUrl', 'backgroundFit', 'backgroundDim', 'backgroundBlur']);
 const FORMAT_EXTRA_KEYS = ['gifPosition', 'gifSize', 'gifBorderRadius', 'gifShape', 'gifShadow', 'gifShadowColor'];
 const FORMAT_KEYS = [...PROMO_FORMAT_SETTING_KEYS, ...FORMAT_EXTRA_KEYS];
 const EXPORT_DURATION_KEY = 'restaurant-menu-studio:tv-promo-generator:selected-duration:v1';
@@ -38,6 +40,8 @@ const getSafeFilename = (value) => String(value || 'promo').trim().toLowerCase()
 const normalizeGifUrl = (value) => String(value || '').trim();
 const withFallback = (value, fallback) => value === undefined || value === null ? fallback : value;
 const normalizeDuration = (value) => PROMO_DURATIONS.includes(Number(value)) ? Number(value) : 8;
+const isTransparentProduct = (dish) => dish?.imageMode === 'transparent' || dish?.transparentImage === true;
+const getDishBackgroundUrl = (dish) => normalizeGoogleDriveMediaUrl(dish?.promoBackgroundUrl || '');
 
 const pickKeys = (source = {}, keys = []) => Object.fromEntries(keys.filter((key) => source[key] !== undefined).map((key) => [key, source[key]]));
 const pickFormatState = (settings = {}) => pickKeys(settings, FORMAT_KEYS);
@@ -168,6 +172,25 @@ function TextShadowControls({ settings, updateSettings }) {
   );
 }
 
+function BackgroundMediaControls({ selectedDish, settings, updateSettings }) {
+  const defaultBackgroundUrl = getDishBackgroundUrl(selectedDish);
+  const hasDefaultBackground = Boolean(defaultBackgroundUrl);
+  const currentUrl = settings.backgroundMediaUrl || '';
+  return (
+    <div className="promo-background-controls">
+      <label className="image-menu-control"><span>Background URL</span><input value={currentUrl} placeholder={hasDefaultBackground ? 'Using default background from Content' : 'Paste image/video URL or Google Drive link'} onChange={(event) => updateSettings({ backgroundMediaUrl: normalizeGoogleDriveMediaUrl(event.target.value) })} /></label>
+      <div className="promo-gif-library-actions">
+        {hasDefaultBackground ? <button type="button" onClick={() => updateSettings({ backgroundMediaUrl: defaultBackgroundUrl })}>Use default</button> : null}
+        <button type="button" onClick={() => updateSettings({ backgroundMediaUrl: '' })}>Clear custom</button>
+      </div>
+      {hasDefaultBackground && !currentUrl ? <small className="promo-preview-size">Default background from Content is active.</small> : null}
+      <label className="image-menu-control"><span>Fit</span><select value={settings.backgroundFit || 'cover'} onChange={(event) => updateSettings({ backgroundFit: event.target.value })}>{PROMO_BACKGROUND_FITS.map((fit) => <option key={fit.id} value={fit.id}>{fit.label}</option>)}</select></label>
+      <RangeControl label="Dark overlay" value={settings.backgroundDim ?? 28} min={0} max={85} onChange={(backgroundDim) => updateSettings({ backgroundDim })} suffix="%" />
+      <RangeControl label="Blur" value={settings.backgroundBlur ?? 0} min={0} max={40} onChange={(backgroundBlur) => updateSettings({ backgroundBlur })} suffix="px" />
+    </div>
+  );
+}
+
 function GifLibraryControls({ settings, updateSettings }) {
   const gifUrl = normalizeGifUrl(settings.gifUrl);
   const gifLibrary = Array.isArray(settings.gifLibrary) ? settings.gifLibrary : [];
@@ -197,7 +220,11 @@ export function PromoSectionV2({ project }) {
   const contentDishes = useMemo(() => project.dishes ?? [], [project.dishes]);
   const visibleDishes = useMemo(() => contentDishes.filter((dish) => dish.visible !== false), [contentDishes]);
   const dishesWithImages = useMemo(() => visibleDishes.filter((dish) => dish.imageUrl), [visibleDishes]);
-  const categoryGroups = useMemo(() => contentCategories.map((category) => ({ category, dishes: dishesWithImages.filter((dish) => dish.categoryId === category.id) })), [contentCategories, dishesWithImages]);
+  const transparentDishes = useMemo(() => dishesWithImages.filter(isTransparentProduct), [dishesWithImages]);
+  const categoryGroups = useMemo(() => {
+    const groups = contentCategories.map((category) => ({ category, dishes: dishesWithImages.filter((dish) => dish.categoryId === category.id) }));
+    return transparentDishes.length ? [{ category: { id: 'transparent-products', nameEn: 'Without background', nameGe: 'Transparent' }, dishes: transparentDishes }, ...groups] : groups;
+  }, [contentCategories, dishesWithImages, transparentDishes]);
   const [openCategoryIds, setOpenCategoryIds] = useState(() => new Set());
   const [settings, setSettings] = useState(() => loadPromoProject(dishesWithImages));
   const [exportStatus, setExportStatus] = useState('');
@@ -215,6 +242,7 @@ export function PromoSectionV2({ project }) {
   const selectedDish = dishesWithImages.find((dish) => dish.id === settings.selectedDishId) ?? dishesWithImages[0] ?? null;
   const selectedIndex = Math.max(0, dishesWithImages.findIndex((dish) => dish.id === selectedDish?.id));
   const activeFormat = getPromoFormat(settings.formatId);
+  const selectedDishIsTransparent = isTransparentProduct(selectedDish);
 
   const updateSettings = (changes) => {
     setSettings((current) => {
@@ -225,6 +253,10 @@ export function PromoSectionV2({ project }) {
         : { ...(current.formats || {}) };
       return { ...current, ...changes, formats: nextFormats };
     });
+  };
+
+  const selectDish = (dish) => {
+    updateSettings({ selectedDishId: dish.id, backgroundMediaUrl: isTransparentProduct(dish) ? getDishBackgroundUrl(dish) : '' });
   };
 
   const setDuration = (duration) => {
@@ -285,12 +317,14 @@ export function PromoSectionV2({ project }) {
             {categoryGroups.map(({ category, dishes: categoryDishes }) => {
               const isOpen = openCategoryIds.has(category.id);
               const selectedCount = categoryDishes.some((dish) => dish.id === selectedDish?.id) ? 1 : 0;
-              return <section key={category.id} className="image-menu-category-group"><button className="image-menu-category-toggle" type="button" onClick={() => toggleCategoryOpen(category.id)} aria-expanded={isOpen}><span>{isOpen ? '▾' : '▸'}</span><strong>{category.nameEn || category.nameGe || 'Untitled category'}</strong><small>{selectedCount}/{categoryDishes.length}</small></button>{isOpen ? <div className="image-menu-category-body"><div className="image-menu-dish-picker promo-dish-picker">{categoryDishes.length === 0 ? <p className="muted-text">No dishes with images in this category.</p> : null}{categoryDishes.map((dish) => { const selected = dish.id === selectedDish?.id; return <div key={dish.id} className={selected ? 'selected' : ''}><label><input type="radio" name="tv-promo-dish" checked={selected} onChange={() => updateSettings({ selectedDishId: dish.id })} />{dish.imageUrl ? <img src={dish.imageUrl} alt="" /> : <span className="image-menu-mini-placeholder" />}<span><strong>{dish.nameEn}</strong><small>{dish.nameGe}</small></span></label></div>; })}</div></div> : null}</section>;
+              return <section key={category.id} className="image-menu-category-group"><button className="image-menu-category-toggle" type="button" onClick={() => toggleCategoryOpen(category.id)} aria-expanded={isOpen}><span>{isOpen ? '▾' : '▸'}</span><strong>{category.nameEn || category.nameGe || 'Untitled category'}</strong><small>{selectedCount}/{categoryDishes.length}</small></button>{isOpen ? <div className="image-menu-category-body"><div className="image-menu-dish-picker promo-dish-picker">{categoryDishes.length === 0 ? <p className="muted-text">No dishes with images in this category.</p> : null}{categoryDishes.map((dish) => { const selected = dish.id === selectedDish?.id; return <div key={dish.id} className={selected ? 'selected' : ''}><label><input type="radio" name="tv-promo-dish" checked={selected} onChange={() => selectDish(dish)} />{dish.imageUrl ? <img src={dish.imageUrl} alt="" /> : <span className="image-menu-mini-placeholder" />}<span><strong>{dish.nameEn}</strong><small>{isTransparentProduct(dish) ? 'Without background' : dish.nameGe}</small></span></label></div>; })}</div></div> : null}</section>;
             })}
           </div>
         </div>
 
         <PromoControlGroup title="Duration"><div className="promo-duration-buttons">{PROMO_DURATIONS.map((duration) => <button key={duration} className={selectedDuration === duration ? 'active' : ''} type="button" onClick={() => setDuration(duration)}>{duration}s</button>)}</div></PromoControlGroup>
+
+        {selectedDishIsTransparent ? <PromoControlGroup title="Background Media"><BackgroundMediaControls selectedDish={selectedDish} settings={settings} updateSettings={updateSettings} /></PromoControlGroup> : null}
 
         <PromoControlGroup title="Offer"><ToggleField label="Show offer text" checked={Boolean(settings.showOffer)} onChange={(showOffer) => updateSettings({ showOffer })} /><label className="image-menu-control"><span>Headline</span><input value={settings.headline} placeholder={selectedDish ? getDishTitle(selectedDish) : 'Promo headline'} onChange={(event) => updateSettings({ headline: event.target.value })} /></label><label className="image-menu-control"><span>Offer text</span><input value={settings.offerText} placeholder="New, Today only, -20%" onChange={(event) => updateSettings({ offerText: event.target.value })} /></label><ToggleField label="Show CTA" checked={Boolean(settings.showCta)} onChange={(showCta) => updateSettings({ showCta })} /><label className="image-menu-control"><span>CTA</span><input value={settings.ctaText} placeholder="ORDER NOW" onChange={(event) => updateSettings({ ctaText: event.target.value })} /></label></PromoControlGroup>
 
