@@ -14,6 +14,7 @@ import {
   PROMO_GIF_SHAPES,
   savePromoProject,
 } from './promoStorage.js';
+import { getSceneHtmlDocument } from './promoHtmlDownload.js';
 import { normalizeGoogleDriveMediaUrl } from '../utils/imageUrls.js';
 import './promoGenerator.css';
 
@@ -47,14 +48,6 @@ const getDishBackgroundUrl = (dish) => normalizeGoogleDriveMediaUrl(dish?.promoB
 const pickKeys = (source = {}, keys = []) => Object.fromEntries(keys.filter((key) => source[key] !== undefined).map((key) => [key, source[key]]));
 const pickFormatState = (settings = {}) => pickKeys(settings, FORMAT_KEYS);
 
-const getDocumentCss = () => Array.from(document.styleSheets)
-  .map((sheet) => {
-    try { return Array.from(sheet.cssRules ?? []).map((rule) => rule.cssText).join('\n'); }
-    catch (error) { return ''; }
-  })
-  .filter(Boolean)
-  .join('\n');
-
 const downloadUrl = (url, filename) => {
   const link = document.createElement('a');
   link.href = url;
@@ -64,36 +57,16 @@ const downloadUrl = (url, filename) => {
   link.remove();
 };
 
-const forceDurationInHtml = (html, duration) => {
-  const seconds = `${normalizeDuration(duration)}s`;
-  const durationStyle = `<style id="promo-export-duration-override">.promo-scene{--promo-duration:${seconds}!important}.promo-scene,.promo-scene *{animation-duration:${seconds}!important}</style>`;
-  const text = String(html || '').replace(/--promo-duration:\s*[^;"']+/g, `--promo-duration:${seconds}`);
-  return text.includes('</style>') ? text.replace('</style>', `${durationStyle}</style>`) : `${durationStyle}${text}`;
-};
-
-const getPromoSceneHtml = (duration = 8) => {
-  const scene = document.querySelector('.promo-scene');
-  if (!scene) return '';
-  const clone = scene.cloneNode(true);
-  clone.style.transform = 'none';
-  clone.style.transformOrigin = 'top left';
-  clone.style.position = 'relative';
-  clone.style.left = '0';
-  clone.style.top = '0';
-  clone.style.setProperty('--promo-duration', `${normalizeDuration(duration)}s`, 'important');
-  return forceDurationInHtml(`<style>${getDocumentCss()}</style>${clone.outerHTML}`, duration);
-};
-
 async function downloadPromoExport(format, selectedDish, settings, output, durationOverride) {
   const exportDuration = normalizeDuration(durationOverride ?? settings?.duration ?? 8);
-  const html = getPromoSceneHtml(exportDuration);
+  const html = await getSceneHtmlDocument();
   if (!html) throw new Error('Could not find the promo scene.');
   const extension = output === 'png' ? 'png' : 'mp4';
   const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-${format.label.replace(':', 'x')}-${exportDuration}s.${extension}`;
   const response = await fetch('/api/promo-render', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ output, filename, format, duration: exportDuration, fps: 30, settings: { ...settings, duration: exportDuration }, dish: selectedDish, html }),
+    body: JSON.stringify({ output, filename, format, duration: exportDuration, fps: 24, settings: { ...settings, duration: exportDuration }, dish: selectedDish, html }),
   });
   if (!response.ok) {
     const responseText = await response.text();
@@ -299,13 +272,13 @@ export function PromoSectionV2({ project }) {
 
   const handleDownloadPng = async () => {
     if (!selectedDish) return setExportStatus('Select a dish with an image before exporting PNG.');
-    try { setExportStatus('Rendering PNG on server...'); await downloadPromoExport(activeFormat, selectedDish, { ...settings, duration: selectedDuration }, 'png', selectedDuration); setExportStatus('PNG downloaded.'); }
+    try { setExportStatus('Rendering PNG on server with embedded media...'); await downloadPromoExport(activeFormat, selectedDish, { ...settings, duration: selectedDuration }, 'png', selectedDuration); setExportStatus('PNG downloaded.'); }
     catch (error) { console.error(error); setExportStatus(error instanceof Error ? error.message : 'PNG export failed.'); }
   };
 
   const handleDownloadMp4 = async () => {
     if (!selectedDish) return setExportStatus('Select a dish with an image before exporting MP4.');
-    try { setExportStatus(`Rendering ${selectedDuration}s MP4 on server...`); await downloadPromoExport(activeFormat, selectedDish, { ...settings, duration: selectedDuration }, 'mp4', selectedDuration); setExportStatus(`${selectedDuration}s MP4 video downloaded.`); }
+    try { setExportStatus(`Rendering ${selectedDuration}s MP4 with embedded media...`); await downloadPromoExport(activeFormat, selectedDish, { ...settings, duration: selectedDuration }, 'mp4', selectedDuration); setExportStatus(`${selectedDuration}s MP4 video downloaded.`); }
     catch (error) { console.error(error); setExportStatus(error instanceof Error ? error.message : 'MP4 export failed.'); }
   };
 
