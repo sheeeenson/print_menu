@@ -31,8 +31,8 @@ const log = (message) => console.log(`[${new Date().toISOString()}] ${message}`)
 app.use((request, response, next) => {
   response.setHeader('Access-Control-Allow-Origin', '*');
   response.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  response.setHeader('Access-Control-Expose-Headers', 'Content-Disposition,Content-Type');
+  response.setHeader('Access-Control-Allow-Headers', 'Content-Type,Range');
+  response.setHeader('Access-Control-Expose-Headers', 'Content-Disposition,Content-Type,Content-Length,Content-Range,Accept-Ranges');
   if (request.method === 'OPTIONS') return response.status(204).end();
   return next();
 });
@@ -402,7 +402,41 @@ const runJob = async (id, payload) => {
   }
 };
 
-app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, stableCssTimeline: true, gifConversion: true, gifConversionPipe: true, seekableVideoOverlayCapture: true, pngFramePipe: true, gifBackgroundConversion: true }));
+const getGoogleDriveDownloadUrl = (fileId) => `https://drive.google.com/uc?export=download&id=${encodeURIComponent(fileId)}`;
+
+app.get('/drive-media/:fileId', async (request, response) => {
+  try {
+    const fileId = String(request.params.fileId || '').trim();
+    if (!/^[a-zA-Z0-9_-]+$/.test(fileId)) return response.status(400).json({ error: 'Invalid Google Drive file id.' });
+
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 Print Menu Local Renderer',
+      Accept: 'video/mp4,video/webm,video/*,*/*;q=0.8',
+    };
+    if (request.headers.range) headers.Range = request.headers.range;
+
+    const upstream = await fetch(getGoogleDriveDownloadUrl(fileId), { redirect: 'follow', headers });
+    if (!upstream.ok && upstream.status !== 206) {
+      return response.status(upstream.status).json({ error: 'Google Drive media proxy failed.', detail: `HTTP ${upstream.status}` });
+    }
+
+    response.status(upstream.status === 206 ? 206 : 200);
+    response.setHeader('Content-Type', upstream.headers.get('content-type') || 'video/mp4');
+    response.setHeader('Accept-Ranges', upstream.headers.get('accept-ranges') || 'bytes');
+    const contentLength = upstream.headers.get('content-length');
+    const contentRange = upstream.headers.get('content-range');
+    if (contentLength) response.setHeader('Content-Length', contentLength);
+    if (contentRange) response.setHeader('Content-Range', contentRange);
+    response.setHeader('Cache-Control', 'public, max-age=3600');
+
+    const buffer = Buffer.from(await upstream.arrayBuffer());
+    return response.end(buffer);
+  } catch (error) {
+    return response.status(500).json({ error: 'Google Drive media proxy failed.', detail: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, stableCssTimeline: true, gifConversion: true, gifConversionPipe: true, seekableVideoOverlayCapture: true, pngFramePipe: true, gifBackgroundConversion: true, driveMediaProxy: true }));
 
 app.post('/convert-gif', async (request, response) => {
   let result;
