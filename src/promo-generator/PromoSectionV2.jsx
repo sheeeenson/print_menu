@@ -15,6 +15,7 @@ import {
   savePromoProject,
 } from './promoStorage.js';
 import { getSceneHtmlDocument } from './promoHtmlDownload.js';
+import { downloadHtmlRender } from '../utils/htmlVideoExport.js';
 import { normalizeGoogleDriveMediaUrl, normalizeGoogleDriveVideoUrl } from '../utils/imageUrls.js';
 import './promoGenerator.css';
 
@@ -58,30 +59,36 @@ const downloadUrl = (url, filename) => {
   link.remove();
 };
 
-async function downloadPromoExport(format, selectedDish, settings, output, durationOverride) {
+const getRenderErrorMessage = async (response, fallbackMessage) => {
+  const responseText = await response.text();
+  if (!responseText) return fallbackMessage;
+  try {
+    const payload = JSON.parse(responseText);
+    return payload.detail || payload.error || responseText;
+  } catch (error) {
+    return responseText;
+  }
+};
+
+async function downloadPromoExport(format, selectedDish, settings, output, durationOverride, onStatus) {
   const exportDuration = normalizeDuration(durationOverride ?? settings?.duration ?? 8);
   const html = await getSceneHtmlDocument();
   if (!html) throw new Error('Could not find the promo scene.');
   const extension = output === 'png' ? 'png' : 'mp4';
   const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-${format.label.replace(':', 'x')}-${exportDuration}s.${extension}`;
+  const payload = { output, filename, format, duration: exportDuration, fps: 24, settings: { ...settings, duration: exportDuration }, dish: selectedDish, html };
+
+  if (output === 'mp4') {
+    await downloadHtmlRender({ ...payload, onStatus });
+    return;
+  }
+
   const response = await fetch('/api/promo-render', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ output, filename, format, duration: exportDuration, fps: 24, settings: { ...settings, duration: exportDuration }, dish: selectedDish, html }),
+    body: JSON.stringify(payload),
   });
-  if (!response.ok) {
-    const responseText = await response.text();
-    let message = responseText || `${extension.toUpperCase()} export failed.`;
-    if (responseText) {
-      try {
-        const payload = JSON.parse(responseText);
-        message = payload.detail || payload.error || responseText;
-      } catch (error) {
-        message = responseText;
-      }
-    }
-    throw new Error(message);
-  }
+  if (!response.ok) throw new Error(await getRenderErrorMessage(response, `${extension.toUpperCase()} export failed.`));
   const fileBlob = await response.blob();
   if (!fileBlob.size) throw new Error(`Renderer returned an empty ${extension.toUpperCase()} file.`);
   const fileUrl = URL.createObjectURL(fileBlob);
@@ -282,13 +289,13 @@ export function PromoSectionV2({ project }) {
 
   const handleDownloadPng = async () => {
     if (!selectedDish) return setExportStatus('Select a dish with an image before exporting PNG.');
-    try { setExportStatus('Rendering PNG on server with embedded media...'); await downloadPromoExport(activeFormat, selectedDish, { ...settings, duration: selectedDuration }, 'png', selectedDuration); setExportStatus('PNG downloaded.'); }
+    try { setExportStatus('Rendering PNG on server with embedded media...'); await downloadPromoExport(activeFormat, selectedDish, { ...settings, duration: selectedDuration }, 'png', selectedDuration, setExportStatus); setExportStatus('PNG downloaded.'); }
     catch (error) { console.error(error); setExportStatus(error instanceof Error ? error.message : 'PNG export failed.'); }
   };
 
   const handleDownloadMp4 = async () => {
     if (!selectedDish) return setExportStatus('Select a dish with an image before exporting MP4.');
-    try { setExportStatus(`Rendering ${selectedDuration}s MP4 with embedded media...`); await downloadPromoExport(activeFormat, selectedDish, { ...settings, duration: selectedDuration }, 'mp4', selectedDuration); setExportStatus(`${selectedDuration}s MP4 video downloaded.`); }
+    try { setExportStatus(`Rendering ${selectedDuration}s MP4 with embedded media...`); await downloadPromoExport(activeFormat, selectedDish, { ...settings, duration: selectedDuration }, 'mp4', selectedDuration, setExportStatus); setExportStatus(`${selectedDuration}s MP4 video downloaded.`); }
     catch (error) { console.error(error); setExportStatus(error instanceof Error ? error.message : 'MP4 export failed.'); }
   };
 
