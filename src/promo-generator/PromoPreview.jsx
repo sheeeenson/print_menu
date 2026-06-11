@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getPromoFormat } from './promoStorage.js';
 import { getFallbackImageBackground, sampleImageColor } from '../utils/imageColor.js';
-import { normalizeGoogleDriveMediaUrl } from '../utils/imageUrls.js';
+import { guessMediaTypeFromUrl, normalizeGoogleDriveMediaUrl } from '../utils/imageUrls.js';
 
 export const TV_PROMO_WIDTH = 1920;
 export const TV_PROMO_HEIGHT = 1080;
@@ -44,11 +44,15 @@ const GIF_SHAPE_CLIPS = Object.freeze({
   blob: 'polygon(49% 2%, 78% 10%, 97% 35%, 92% 68%, 67% 94%, 32% 92%, 7% 68%, 5% 34%, 20% 11%)',
 });
 
-const VIDEO_BACKGROUND_PATTERN = /\.(mp4|webm|mov)(?:\?.*)?$/i;
 const isTransparentProduct = (dish) => dish?.imageMode === 'transparent' || dish?.transparentImage === true;
 const normalizeBackgroundUrl = (dish, settings) => normalizeGoogleDriveMediaUrl(settings.backgroundMediaUrl || (isTransparentProduct(dish) ? dish?.promoBackgroundUrl : '') || '');
 const getBackgroundFit = (settings) => settings.backgroundFit === 'contain' || settings.backgroundFit === 'fill' ? settings.backgroundFit : 'cover';
-const isVideoBackground = (url) => VIDEO_BACKGROUND_PATTERN.test(String(url || ''));
+const getBackgroundMediaType = (url, settings) => {
+  const explicitType = settings.backgroundMediaType || 'auto';
+  if (explicitType === 'image' || explicitType === 'video') return explicitType;
+  const guessedType = guessMediaTypeFromUrl(url);
+  return guessedType === 'video' ? 'video' : 'image';
+};
 
 const getPrice = (value) => {
   const number = Number(value);
@@ -127,7 +131,7 @@ const getGifShapeStyle = (settings) => {
 function PromoBackgroundMedia({ url, settings }) {
   if (!url) return null;
   const style = backgroundMediaStyle(settings);
-  if (isVideoBackground(url)) {
+  if (getBackgroundMediaType(url, settings) === 'video') {
     return <video className="promo-background-media" src={url} muted loop autoPlay playsInline preload="auto" aria-hidden="true" style={style} />;
   }
   return <img className="promo-background-media" src={url} alt="" aria-hidden="true" style={style} />;
