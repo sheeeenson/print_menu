@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getPromoFormat } from './promoStorage.js';
 import { getFallbackImageBackground, sampleImageColor } from '../utils/imageColor.js';
-import { guessMediaTypeFromUrl, normalizeGoogleDriveImageUrl, normalizeGoogleDriveMediaUrl, normalizeGoogleDriveVideoUrl } from '../utils/imageUrls.js';
+import { guessMediaTypeFromUrl, isVideoLikeUrl, normalizeGoogleDriveImageUrl, normalizeGoogleDriveMediaUrl, normalizeGoogleDriveVideoUrl } from '../utils/imageUrls.js';
 
 export const TV_PROMO_WIDTH = 1920;
 export const TV_PROMO_HEIGHT = 1080;
@@ -135,9 +135,12 @@ function PromoBackgroundMedia({ url, settings }) {
   if (!url) return null;
   const style = backgroundMediaStyle(settings);
   const mediaType = getBackgroundMediaType(url, settings);
+  const videoUrl = normalizeVideoBackgroundUrl(url);
   if (mediaType === 'video') {
-    const videoUrl = normalizeVideoBackgroundUrl(url);
     return <video key={videoUrl} className="promo-background-media" src={videoUrl} crossOrigin="anonymous" muted loop autoPlay playsInline preload="auto" aria-hidden="true" style={style} />;
+  }
+  if (isVideoLikeUrl(videoUrl)) {
+    return <video key={`${videoUrl}-still`} className="promo-background-media" src={videoUrl} crossOrigin="anonymous" muted playsInline preload="auto" aria-hidden="true" style={style} onLoadedData={(event) => { event.currentTarget.pause(); }} />;
   }
   return <img className="promo-background-media" src={normalizeImageBackgroundUrl(url)} alt="" aria-hidden="true" style={style} />;
 }
