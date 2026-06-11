@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getPromoFormat } from './promoStorage.js';
 import { getFallbackImageBackground, sampleImageColor } from '../utils/imageColor.js';
-import { guessMediaTypeFromUrl, normalizeGoogleDriveImageUrl, normalizeGoogleDriveMediaUrl } from '../utils/imageUrls.js';
+import { guessMediaTypeFromUrl, normalizeGoogleDriveImageUrl, normalizeGoogleDriveMediaUrl, normalizeGoogleDriveVideoUrl } from '../utils/imageUrls.js';
 
 export const TV_PROMO_WIDTH = 1920;
 export const TV_PROMO_HEIGHT = 1080;
@@ -48,6 +48,7 @@ const isTransparentProduct = (dish) => dish?.imageMode === 'transparent' || dish
 const getRawBackgroundUrl = (dish, settings) => settings.backgroundMediaUrl || (isTransparentProduct(dish) ? dish?.promoBackgroundUrl : '') || '';
 const normalizeBackgroundUrl = (dish, settings) => normalizeGoogleDriveMediaUrl(getRawBackgroundUrl(dish, settings));
 const normalizeImageBackgroundUrl = (url) => normalizeGoogleDriveImageUrl(url);
+const normalizeVideoBackgroundUrl = (url) => normalizeGoogleDriveVideoUrl(url);
 const getBackgroundFit = (settings) => settings.backgroundFit === 'contain' || settings.backgroundFit === 'fill' ? settings.backgroundFit : 'cover';
 const getBackgroundMediaType = (url, settings) => {
   const explicitType = settings.backgroundMediaType || 'auto';
@@ -135,7 +136,7 @@ function PromoBackgroundMedia({ url, settings }) {
   const style = backgroundMediaStyle(settings);
   const mediaType = getBackgroundMediaType(url, settings);
   if (mediaType === 'video') {
-    return <video className="promo-background-media" src={url} muted loop autoPlay playsInline preload="auto" aria-hidden="true" style={style} />;
+    return <video className="promo-background-media" src={normalizeVideoBackgroundUrl(url)} muted loop autoPlay playsInline preload="auto" aria-hidden="true" style={style} />;
   }
   return <img className="promo-background-media" src={normalizeImageBackgroundUrl(url)} alt="" aria-hidden="true" style={style} />;
 }
