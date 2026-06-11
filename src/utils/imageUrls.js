@@ -3,6 +3,8 @@ const GOOGLE_DRIVE_ID_PATTERNS = Object.freeze([
   /[?&]id=([a-zA-Z0-9_-]+)/,
 ]);
 
+const LOCAL_RENDERER_BASE_URL = 'http://localhost:3020';
+
 export function extractGoogleDriveFileId(value = '') {
   const input = String(value || '').trim();
   if (!input) return '';
@@ -40,8 +42,8 @@ export function normalizeGoogleDriveVideoUrl(value) {
   if (!url) return '';
 
   const fileId = extractGoogleDriveFileId(url);
-  if (fileId && url.includes('drive.google.com')) {
-    return `https://drive.usercontent.google.com/download?id=${encodeURIComponent(fileId)}&export=download&authuser=0&confirm=t`;
+  if (fileId && (url.includes('drive.google.com') || url.includes('drive.usercontent.google.com'))) {
+    return `${LOCAL_RENDERER_BASE_URL}/drive-media/${encodeURIComponent(fileId)}`;
   }
 
   return url;
