@@ -1,7 +1,7 @@
 import express from 'express';
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -12,13 +12,10 @@ const app = express();
 const PORT = Number(process.env.PORT || 3020);
 const MAX_BODY_SIZE = process.env.MAX_BODY_SIZE || '80mb';
 const JOB_TTL_MS = Number(process.env.JOB_TTL_MS || 30 * 60 * 1000);
-const SPRITE_TTL_MS = Number(process.env.SPRITE_TTL_MS || 30 * 60 * 1000);
 const MAX_VIDEO_FPS = Number(process.env.MAX_VIDEO_FPS || 24);
 const MAX_VIDEO_DURATION = Number(process.env.MAX_VIDEO_DURATION || 32);
 const MAX_VIDEO_WIDTH = Number(process.env.MAX_VIDEO_WIDTH || 1920);
 const MAX_GIF_DOWNLOAD_BYTES = Number(process.env.MAX_GIF_DOWNLOAD_BYTES || 25 * 1024 * 1024);
-const GIF_SPRITE_FPS = Number(process.env.GIF_SPRITE_FPS || 12);
-const GIF_SPRITE_MAX_FRAMES = Number(process.env.GIF_SPRITE_MAX_FRAMES || 120);
 const JPEG_FRAME_QUALITY = Number(process.env.JPEG_FRAME_QUALITY || 86);
 const IMAGE_WAIT_MS = Number(process.env.IMAGE_WAIT_MS || 10000);
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -28,7 +25,6 @@ const BUNDLED_FFMPEG_PATH = process.platform === 'win32'
 const FFMPEG_PATH = process.env.FFMPEG_PATH || (existsSync(BUNDLED_FFMPEG_PATH) ? BUNDLED_FFMPEG_PATH : 'ffmpeg');
 
 const jobs = new Map();
-const sprites = new Map();
 
 const log = (message) => console.log(`[${new Date().toISOString()}] ${message}`);
 
@@ -306,67 +302,7 @@ const convertGifToWebm = async (gifUrl) => {
   }
 };
 
-const cleanupSprite = async (id) => {
-  const sprite = sprites.get(id);
-  if (sprite?.workdir) await rm(sprite.workdir, { recursive: true, force: true }).catch(() => {});
-  sprites.delete(id);
-};
-
-const convertGifToSprite = async (gifUrl) => {
-  const url = normalizeGifInputUrl(gifUrl);
-  const id = crypto.randomUUID();
-  const workdir = await mkdtemp(path.join(tmpdir(), 'print-menu-gif-sprite-'));
-  const framesDir = path.join(workdir, 'frames');
-  const framePattern = path.join(framesDir, 'frame_%04d.png');
-  const spritePath = path.join(workdir, 'sprite.png');
-
-  try {
-    log(`Downloading GIF overlay for sprite: ${url}`);
-    const gifBuffer = await downloadGifBuffer(url);
-    await mkdir(framesDir, { recursive: true });
-
-    log(`Extracting GIF frames for sprite: ${url}`);
-    await runFfmpeg([
-      '-y',
-      '-i', 'pipe:0',
-      '-vf', `fps=${GIF_SPRITE_FPS},scale=trunc(iw/2)*2:trunc(ih/2)*2`,
-      '-vframes', String(GIF_SPRITE_MAX_FRAMES),
-      framePattern,
-    ], { stdin: gifBuffer });
-
-    const frameFiles = (await readdir(framesDir)).filter((file) => /^frame_\d+\.png$/i.test(file)).sort();
-    const frameCount = frameFiles.length;
-    if (!frameCount) throw new Error('GIF did not produce any frames.');
-
-    log(`Building GIF sprite sheet: ${frameCount} frames`);
-    await runFfmpeg([
-      '-y',
-      '-framerate', String(GIF_SPRITE_FPS),
-      '-i', framePattern,
-      '-frames:v', '1',
-      '-filter_complex', `tile=${frameCount}x1:padding=0:margin=0`,
-      spritePath,
-    ]);
-
-    sprites.set(id, { workdir, spritePath });
-    setTimeout(() => cleanupSprite(id), SPRITE_TTL_MS).unref?.();
-
-    return {
-      id,
-      spriteUrl: `http://localhost:${PORT}/gif-sprites/${id}.png`,
-      frames: frameCount,
-      fps: GIF_SPRITE_FPS,
-      maxFrames: GIF_SPRITE_MAX_FRAMES,
-      truncated: frameCount >= GIF_SPRITE_MAX_FRAMES,
-      workdir,
-    };
-  } catch (error) {
-    await rm(workdir, { recursive: true, force: true }).catch(() => {});
-    throw error;
-  }
-};
-
-app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, stableCssTimeline: true, gifConversion: true, gifConversionPipe: true, gifSpriteConversion: true, gifSpriteUrl: true }));
+app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, stableCssTimeline: true, gifConversion: true, gifConversionPipe: true }));
 
 app.post('/convert-gif', async (request, response) => {
   let result;
@@ -380,29 +316,6 @@ app.post('/convert-gif', async (request, response) => {
   } finally {
     if (result?.workdir) await rm(result.workdir, { recursive: true, force: true }).catch(() => {});
   }
-});
-
-app.post('/convert-gif-sprite', async (request, response) => {
-  try {
-    const result = await convertGifToSprite(request.body?.url);
-    response.json({
-      spriteUrl: result.spriteUrl,
-      frames: result.frames,
-      fps: result.fps,
-      maxFrames: result.maxFrames,
-      truncated: result.truncated,
-    });
-  } catch (error) {
-    response.status(400).json({ error: 'GIF sprite conversion failed.', detail: error instanceof Error ? error.message : String(error) });
-  }
-});
-
-app.get('/gif-sprites/:id.png', async (request, response) => {
-  const sprite = sprites.get(request.params.id);
-  if (!sprite || !existsSync(sprite.spritePath)) return response.status(404).json({ error: 'GIF sprite not found or expired.' });
-  response.setHeader('Content-Type', 'image/png');
-  response.setHeader('Cache-Control', 'no-store');
-  return response.sendFile(sprite.spritePath);
 });
 
 app.post('/jobs', (request, response) => {
