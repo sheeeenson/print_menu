@@ -1,10 +1,12 @@
 import html2canvas from 'html2canvas';
 import { downloadHtmlRender } from '../utils/htmlVideoExport.js';
 
+const LOCAL_RENDERER_BASE_URL = 'http://localhost:3020';
 const LOCAL_RENDERER_DOWNLOAD_FOLDER_URL = 'https://drive.google.com/drive/folders/1mFt6XpH5MhlYH48TlJ37y9O1VtGU4e3D?usp=sharing';
 const LOCAL_RENDERER_MAC_URL = 'https://drive.google.com/uc?export=download&id=19yrHrnwx2JziRZHJTBN_PJ8MiJxbaspC';
 const LOCAL_RENDERER_WINDOWS_URL = 'https://drive.google.com/uc?export=download&id=1SkuHoZssolnEIva_7oJpiGbrQ9SQ14_Q';
 const ALLOWED_DURATIONS = [8, 16, 32];
+const GIF_URL_PATTERN = /\.gif(?:\?.*)?$/i;
 
 const getDocumentCss = () => Array.from(document.styleSheets)
   .map((sheet) => {
@@ -76,11 +78,86 @@ const mediaSrcToDataUrl = async (currentSrc) => {
   return blobToDataUrl(await response.blob());
 };
 
+const copyElementPresentation = (source, target) => {
+  target.className = source.className;
+  target.style.cssText = source.style.cssText;
+  Array.from(source.attributes || []).forEach((attribute) => {
+    if (['src', 'srcset', 'alt', 'loading', 'decoding', 'crossorigin'].includes(attribute.name)) return;
+    target.setAttribute(attribute.name, attribute.value);
+  });
+};
+
+const makeVideoOverlayFromImage = (sourceImage, videoDataUrl) => {
+  const video = document.createElement('video');
+  copyElementPresentation(sourceImage, video);
+  video.src = videoDataUrl;
+  video.muted = true;
+  video.loop = true;
+  video.autoplay = false;
+  video.playsInline = true;
+  video.setAttribute('muted', 'true');
+  video.setAttribute('loop', 'true');
+  video.setAttribute('playsinline', 'true');
+  video.setAttribute('preload', 'auto');
+  video.setAttribute('aria-hidden', 'true');
+  video.setAttribute('data-promo-video-overlay', 'true');
+  return video;
+};
+
+const convertGifOverlayToVideoDataUrl = async (sourceImage) => {
+  const currentSrc = sourceImage.currentSrc || sourceImage.src || sourceImage.getAttribute('src') || '';
+  if (!currentSrc) return '';
+
+  let payload = null;
+  if (/^https?:\/\//i.test(currentSrc) && GIF_URL_PATTERN.test(currentSrc)) {
+    payload = { url: currentSrc };
+  } else if (currentSrc.startsWith('data:image/gif')) {
+    payload = { dataUrl: currentSrc };
+  } else if (currentSrc.startsWith('blob:')) {
+    const dataUrl = await mediaSrcToDataUrl(currentSrc);
+    if (dataUrl?.startsWith('data:image/gif')) payload = { dataUrl };
+  }
+
+  if (!payload) return '';
+
+  const response = await fetch(`${LOCAL_RENDERER_BASE_URL}/convert-gif`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) return '';
+
+  const webmBlob = await response.blob();
+  if (!webmBlob.size) return '';
+  return blobToDataUrl(webmBlob);
+};
+
+const replaceGifImagesWithVideosInClone = async (scene, clone) => {
+  const sourceGifs = Array.from(scene.querySelectorAll('img.promo-gif-overlay[src]'));
+  const clonedGifs = Array.from(clone.querySelectorAll('img.promo-gif-overlay[src]'));
+  if (!sourceGifs.length || !clonedGifs.length) return;
+
+  await Promise.all(sourceGifs.map(async (sourceImage, index) => {
+    const clonedImage = clonedGifs[index];
+    if (!clonedImage) return;
+    try {
+      const videoDataUrl = await convertGifOverlayToVideoDataUrl(sourceImage);
+      if (!videoDataUrl?.startsWith('data:video')) return;
+      clonedImage.replaceWith(makeVideoOverlayFromImage(clonedImage, videoDataUrl));
+    } catch (error) {
+      console.warn('Could not convert GIF overlay for HTML export:', error instanceof Error ? error.message : String(error));
+    }
+  }));
+};
+
 const imageElementToDataUrl = async (sourceImage) => {
   const currentSrc = sourceImage.currentSrc || sourceImage.src || sourceImage.getAttribute('src') || '';
   if (!currentSrc || currentSrc.startsWith('data:')) return currentSrc;
 
   if (currentSrc.startsWith('blob:')) {
+    const dataUrl = await mediaSrcToDataUrl(currentSrc);
+    if (dataUrl?.startsWith('data:image/gif')) return dataUrl;
+
     const canvas = document.createElement('canvas');
     canvas.width = sourceImage.naturalWidth || sourceImage.width;
     canvas.height = sourceImage.naturalHeight || sourceImage.height;
@@ -144,6 +221,7 @@ const embedVideosInClone = async (scene, clone) => {
 };
 
 const embedMediaInClone = async (scene, clone) => {
+  await replaceGifImagesWithVideosInClone(scene, clone);
   await embedImagesInClone(scene, clone);
   await embedVideosInClone(scene, clone);
 };
