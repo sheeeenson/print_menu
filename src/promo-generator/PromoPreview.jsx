@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getPromoFormat } from './promoStorage.js';
 import { getFallbackImageBackground, sampleImageColor } from '../utils/imageColor.js';
+import { normalizeGoogleDriveMediaUrl } from '../utils/imageUrls.js';
 
 export const TV_PROMO_WIDTH = 1920;
 export const TV_PROMO_HEIGHT = 1080;
@@ -43,6 +44,12 @@ const GIF_SHAPE_CLIPS = Object.freeze({
   blob: 'polygon(49% 2%, 78% 10%, 97% 35%, 92% 68%, 67% 94%, 32% 92%, 7% 68%, 5% 34%, 20% 11%)',
 });
 
+const VIDEO_BACKGROUND_PATTERN = /\.(mp4|webm|mov)(?:\?.*)?$/i;
+const isTransparentProduct = (dish) => dish?.imageMode === 'transparent' || dish?.transparentImage === true;
+const normalizeBackgroundUrl = (dish, settings) => normalizeGoogleDriveMediaUrl(settings.backgroundMediaUrl || (isTransparentProduct(dish) ? dish?.promoBackgroundUrl : '') || '');
+const getBackgroundFit = (settings) => settings.backgroundFit === 'contain' || settings.backgroundFit === 'fill' ? settings.backgroundFit : 'cover';
+const isVideoBackground = (url) => VIDEO_BACKGROUND_PATTERN.test(String(url || ''));
+
 const getPrice = (value) => {
   const number = Number(value);
   if (!Number.isFinite(number) || number <= 0) return '';
@@ -84,6 +91,15 @@ const gifShadowCss = (settings) => {
   return `drop-shadow(0 24px 34px ${color})`;
 };
 
+const backgroundMediaStyle = (settings) => {
+  const fit = getBackgroundFit(settings);
+  return {
+    objectFit: fit === 'fill' ? 'fill' : fit,
+    filter: settings.backgroundBlur ? `blur(${clamp(settings.backgroundBlur, 0, 40)}px)` : 'none',
+    transform: settings.backgroundBlur ? 'scale(1.04)' : 'none',
+  };
+};
+
 const getGifLayout = (layout, position, showCta) => {
   if (position === 'bottomLeft') return showCta ? layout.gif.bottomLeft : layout.gif.ctaLeft;
   return ({ textLeft: layout.gif.headlineLeft, topLeft: layout.gif.headlineLeft, topRight: layout.gif.priceRight, bottomRight: layout.gif.bottomRight }[position] ?? layout.gif.headlineLeft);
@@ -108,11 +124,22 @@ const getGifShapeStyle = (settings) => {
   return clipPath ? { clipPath, WebkitClipPath: clipPath, borderRadius: 0, aspectRatio: '1 / 1', objectFit: 'cover' } : { borderRadius: `${settings.gifBorderRadius || 0}px` };
 };
 
+function PromoBackgroundMedia({ url, settings }) {
+  if (!url) return null;
+  const style = backgroundMediaStyle(settings);
+  if (isVideoBackground(url)) {
+    return <video className="promo-background-media" src={url} muted loop autoPlay playsInline preload="auto" aria-hidden="true" style={style} />;
+  }
+  return <img className="promo-background-media" src={url} alt="" crossOrigin="anonymous" aria-hidden="true" style={style} />;
+}
+
 export function PromoPreview({ dish, settings, index = 0 }) {
   const [sampledColor, setSampledColor] = useState('');
   const fallbackColor = getFallbackImageBackground(index);
   const edgeColor = sampledColor || fallbackColor;
   const tunedBackground = useMemo(() => colorWithTone(edgeColor, settings.backgroundTone), [edgeColor, settings.backgroundTone]);
+  const backgroundUrl = normalizeBackgroundUrl(dish, settings);
+  const backgroundDim = clamp(settings.backgroundDim ?? 28, 0, 85) / 100;
   const format = getPromoFormat(settings.formatId);
   const layout = FORMAT_LAYOUTS[format.id] ?? FORMAT_LAYOUTS.landscape;
   const offsets = settings.layoutOffsets ?? {};
@@ -147,6 +174,8 @@ export function PromoPreview({ dish, settings, index = 0 }) {
 
   const sceneClass = [
     'promo-scene',
+    backgroundUrl ? 'promo-scene-has-background-media' : '',
+    isTransparentProduct(dish) ? 'promo-scene-transparent-product' : '',
     effects.slowZoom ? 'promo-effect-slow-zoom' : '',
     effects.fastEntrance ? 'promo-effect-fast-entrance' : '',
     effects.stopMotion ? 'promo-effect-stop-motion' : '',
@@ -184,10 +213,13 @@ export function PromoPreview({ dish, settings, index = 0 }) {
             '--promo-duration': `${settings.duration || 8}s`,
             '--promo-gif-motion-duration': '1s',
             '--promo-edge-color': tunedBackground,
+            '--promo-background-dim': backgroundDim,
             '--promo-text-shadow': textShadow,
           }}
         >
           <div className="promo-background" />
+          <PromoBackgroundMedia url={backgroundUrl} settings={settings} />
+          {backgroundUrl ? <div className="promo-background-dimmer" aria-hidden="true" /> : null}
           {effects.spotlightPulse ? <div className="promo-spotlight" aria-hidden="true" /> : null}
           {effects.lightSweep ? <div className="promo-light-sweep" aria-hidden="true" /> : null}
           {effects.confetti ? <div className="promo-confetti" aria-hidden="true" /> : null}
