@@ -65,9 +65,16 @@ const getSceneSize = (scene) => {
 const blobToDataUrl = (blob) => new Promise((resolve, reject) => {
   const reader = new FileReader();
   reader.onload = () => resolve(reader.result);
-  reader.onerror = () => reject(reader.error || new Error('Could not read image blob.'));
+  reader.onerror = () => reject(reader.error || new Error('Could not read blob.'));
   reader.readAsDataURL(blob);
 });
+
+const mediaSrcToDataUrl = async (currentSrc) => {
+  if (!currentSrc || currentSrc.startsWith('data:')) return currentSrc;
+  const response = await fetch(currentSrc, { mode: currentSrc.startsWith('blob:') ? 'same-origin' : 'cors', cache: 'force-cache' });
+  if (!response.ok) return '';
+  return blobToDataUrl(await response.blob());
+};
 
 const imageElementToDataUrl = async (sourceImage) => {
   const currentSrc = sourceImage.currentSrc || sourceImage.src || sourceImage.getAttribute('src') || '';
@@ -83,9 +90,7 @@ const imageElementToDataUrl = async (sourceImage) => {
     return canvas.toDataURL('image/png');
   }
 
-  const response = await fetch(currentSrc, { mode: 'cors', cache: 'force-cache' });
-  if (!response.ok) return '';
-  return blobToDataUrl(await response.blob());
+  return mediaSrcToDataUrl(currentSrc);
 };
 
 const embedImagesInClone = async (scene, clone) => {
@@ -109,6 +114,40 @@ const embedImagesInClone = async (scene, clone) => {
   }));
 };
 
+const embedVideosInClone = async (scene, clone) => {
+  const sourceVideos = Array.from(scene.querySelectorAll('video'));
+  const clonedVideos = Array.from(clone.querySelectorAll('video'));
+
+  await Promise.all(sourceVideos.map(async (sourceVideo, index) => {
+    const clonedVideo = clonedVideos[index];
+    if (!clonedVideo) return;
+
+    clonedVideo.removeAttribute('srcset');
+    clonedVideo.removeAttribute('crossorigin');
+    clonedVideo.removeAttribute('preload');
+    clonedVideo.muted = true;
+    clonedVideo.loop = true;
+    clonedVideo.playsInline = true;
+    clonedVideo.setAttribute('muted', 'true');
+    clonedVideo.setAttribute('loop', 'true');
+    clonedVideo.setAttribute('playsinline', 'true');
+    clonedVideo.setAttribute('preload', 'auto');
+
+    try {
+      const currentSrc = sourceVideo.currentSrc || sourceVideo.src || sourceVideo.getAttribute('src') || '';
+      const dataUrl = await mediaSrcToDataUrl(currentSrc);
+      if (dataUrl?.startsWith('data:')) clonedVideo.setAttribute('src', dataUrl);
+    } catch (error) {
+      console.warn('Could not embed promo video in HTML export:', error instanceof Error ? error.message : String(error));
+    }
+  }));
+};
+
+const embedMediaInClone = async (scene, clone) => {
+  await embedImagesInClone(scene, clone);
+  await embedVideosInClone(scene, clone);
+};
+
 const getSceneHtmlDocument = async () => {
   const scene = document.querySelector('.promo-scene');
   if (!scene) throw new Error('Could not find the promo scene.');
@@ -120,7 +159,7 @@ const getSceneHtmlDocument = async () => {
   clone.style.left = '0';
   clone.style.top = '0';
 
-  await embedImagesInClone(scene, clone);
+  await embedMediaInClone(scene, clone);
 
   const { width, height } = getSceneSize(scene);
 
