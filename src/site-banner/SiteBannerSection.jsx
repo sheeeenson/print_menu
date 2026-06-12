@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { SiteBannerPreview } from './SiteBannerPreview.jsx';
 import { DEFAULT_SITE_BANNER_LAYOUT, SITE_BANNER_FONT_OPTIONS, SITE_BANNER_FORMAT, loadSiteBannerProject, saveSiteBannerProject } from './siteBannerStorage.js';
-import '../promo-generator/promoGenerator.css';
 import './siteBanner.css';
 
 const getDishTitle = (dish) => dish?.nameEn || dish?.nameGe || 'Untitled dish';
@@ -84,24 +83,24 @@ async function downloadSiteBannerImage(mimeType, extension, selectedDish) {
 }
 
 function ControlGroup({ title, children }) {
-  return <section className="promo-panel-group"><h3>{title}</h3>{children}</section>;
+  return <section className="app-control-group"><h3>{title}</h3>{children}</section>;
 }
 
 function ToggleField({ checked, label, onChange }) {
-  return <label className="promo-toggle-field"><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} /><span>{label}</span></label>;
+  return <label className="app-toggle"><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} /><span>{label}</span></label>;
 }
 
 function RangeControl({ label, value, min, max, step = 1, suffix = '', onChange }) {
-  return <label className="image-menu-control"><span>{label} <strong>{value}{suffix}</strong></span><input type="range" min={min} max={max} step={step} value={value} onChange={(event) => onChange(Number(event.target.value))} /></label>;
+  return <label className="app-field image-menu-control"><span>{label} <strong>{value}{suffix}</strong></span><input type="range" min={min} max={max} step={step} value={value} onChange={(event) => onChange(Number(event.target.value))} /></label>;
 }
 
 function ColorControl({ label, value, onChange }) {
-  return <label className="field-label image-menu-field">{label}<input type="color" value={value} onChange={(event) => onChange(event.target.value)} /></label>;
+  return <label className="app-field">{label}<input type="color" value={value} onChange={(event) => onChange(event.target.value)} /></label>;
 }
 
 function FontControl({ label, value, onChange }) {
   return (
-    <label className="field-label image-menu-field">
+    <label className="app-field">
       {label}
       <select value={value} onChange={(event) => onChange(event.target.value)}>
         {SITE_BANNER_FONT_OPTIONS.map((font) => <option key={font} value={font}>{font.split(',')[0]}</option>)}
@@ -112,7 +111,7 @@ function FontControl({ label, value, onChange }) {
 
 function TextStyleControls({ title, prefix, settings, updateSettings, sizeMin = 12, sizeMax = 160 }) {
   return (
-    <div className="promo-style-block">
+    <div className="app-card site-banner-style-block">
       <h4>{title}</h4>
       <ColorControl label="Color" value={settings[`${prefix}Color`]} onChange={(value) => updateSettings({ [`${prefix}Color`]: value })} />
       <FontControl label="Font" value={settings[`${prefix}Font`]} onChange={(value) => updateSettings({ [`${prefix}Font`]: value })} />
@@ -124,7 +123,7 @@ function TextStyleControls({ title, prefix, settings, updateSettings, sizeMin = 
 function LayoutOffsetControls({ settings, updateLayoutOffset, resetLayoutOffsets }) {
   const offsets = settings.layoutOffsets ?? DEFAULT_SITE_BANNER_LAYOUT;
   return (
-    <div className="promo-style-block">
+    <div className="site-banner-style-stack">
       <button className="secondary-button" type="button" onClick={resetLayoutOffsets}>Reset Layout</button>
       {[
         { title: 'Text block', x: 'textX', y: 'textY' },
@@ -132,7 +131,7 @@ function LayoutOffsetControls({ settings, updateLayoutOffset, resetLayoutOffsets
         { title: 'CTA', x: 'ctaX', y: 'ctaY' },
         { title: 'Price', x: 'priceX', y: 'priceY' },
       ].map((group) => (
-        <div key={group.title} className="promo-style-block">
+        <div key={group.title} className="app-card site-banner-style-block">
           <h4>{group.title}</h4>
           <RangeControl label="X" value={offsets[group.x] ?? 0} min={-900} max={900} onChange={(value) => updateLayoutOffset(group.x, value)} suffix="px" />
           <RangeControl label="Y" value={offsets[group.y] ?? 0} min={-500} max={500} onChange={(value) => updateLayoutOffset(group.y, value)} suffix="px" />
@@ -196,26 +195,26 @@ export function SiteBannerSection({ project }) {
   };
 
   return (
-    <section className="promo-generator-section">
-      <aside className="promo-generator-panel">
-        <header className="promo-panel-header">
+    <section className="app-page site-banner-page">
+      <aside className="app-side-panel site-banner-side-panel">
+        <header className="app-panel-header">
           <p>Website Banner</p>
           <h2>Sushiwoki Banner</h2>
           <span>{SITE_BANNER_FORMAT.width} x {SITE_BANNER_FORMAT.height}px canvas with safer center-focused zones.</span>
         </header>
 
         <ControlGroup title="Export">
-          <div className="promo-duration-buttons site-banner-export-row">
+          <div className="app-segmented site-banner-export-row">
             <button type="button" onClick={() => handleDownload('image/png', 'png')}>PNG</button>
             <button type="button" onClick={() => handleDownload('image/jpeg', 'jpg')}>JPG</button>
             <button type="button" onClick={() => handleDownload('image/webp', 'webp')}>WebP</button>
           </div>
-          {exportStatus ? <small className="promo-preview-size">{exportStatus}</small> : null}
+          {exportStatus ? <small className="app-preview-size">{exportStatus}</small> : null}
         </ControlGroup>
 
-        <div className="panel-section promo-select-section">
+        <div className="app-control-group site-banner-select-section">
           <div className="image-menu-section-heading"><div><h2>Select product</h2><small>{contentCategories.length} content categories</small></div><small>{selectedDish ? '1/1 selected' : '0/1 selected'}</small></div>
-          <div className="image-menu-category-picker promo-category-picker">
+          <div className="image-menu-category-picker site-banner-category-picker">
             {categoryGroups.length === 0 ? <p className="muted-text">No categories in Content yet.</p> : null}
             {categoryGroups.map(({ category, dishes: categoryDishes }) => {
               const isOpen = openCategoryIds.has(category.id);
@@ -225,7 +224,7 @@ export function SiteBannerSection({ project }) {
                   <button className="image-menu-category-toggle" type="button" onClick={() => toggleCategoryOpen(category.id)} aria-expanded={isOpen}><span>{isOpen ? '▾' : '▸'}</span><strong>{category.nameEn || category.nameGe || 'Untitled category'}</strong><small>{selectedCount}/{categoryDishes.length}</small></button>
                   {isOpen ? (
                     <div className="image-menu-category-body">
-                      <div className="image-menu-dish-picker promo-dish-picker">
+                      <div className="image-menu-dish-picker site-banner-dish-picker">
                         {categoryDishes.length === 0 ? <p className="muted-text">No products with images in this category.</p> : null}
                         {categoryDishes.map((dish) => {
                           const selected = dish.id === selectedDish?.id;
@@ -241,17 +240,17 @@ export function SiteBannerSection({ project }) {
         </div>
 
         <ControlGroup title="Copy">
-          <label className="image-menu-control"><span>Headline</span><input value={settings.headline} placeholder={selectedDish ? getDishTitle(selectedDish) : 'Banner headline'} onChange={(event) => updateSettings({ headline: event.target.value })} /></label>
+          <label className="app-field"><span>Headline</span><input value={settings.headline} placeholder={selectedDish ? getDishTitle(selectedDish) : 'Banner headline'} onChange={(event) => updateSettings({ headline: event.target.value })} /></label>
           <ToggleField label="Show subheadline" checked={Boolean(settings.showSubheadline)} onChange={(showSubheadline) => updateSettings({ showSubheadline })} />
-          <label className="image-menu-control"><span>Subheadline</span><input value={settings.subheadline} placeholder="Fresh sushi, rolls and wok delivery" onChange={(event) => updateSettings({ subheadline: event.target.value })} /></label>
+          <label className="app-field"><span>Subheadline</span><input value={settings.subheadline} placeholder="Fresh sushi, rolls and wok delivery" onChange={(event) => updateSettings({ subheadline: event.target.value })} /></label>
           <ToggleField label="Show CTA" checked={Boolean(settings.showCta)} onChange={(showCta) => updateSettings({ showCta })} />
-          <label className="image-menu-control"><span>CTA</span><input value={settings.ctaText} placeholder="ORDER NOW" onChange={(event) => updateSettings({ ctaText: event.target.value })} /></label>
+          <label className="app-field"><span>CTA</span><input value={settings.ctaText} placeholder="ORDER NOW" onChange={(event) => updateSettings({ ctaText: event.target.value })} /></label>
           <ToggleField label="Show price" checked={Boolean(settings.showPrice)} onChange={(showPrice) => updateSettings({ showPrice })} />
         </ControlGroup>
 
         <ControlGroup title="Background">
-          <label className="image-menu-control"><span>Mode</span><select value={settings.backgroundMode} onChange={(event) => updateSettings({ backgroundMode: event.target.value })}><option value="auto">Auto fill from product image</option><option value="custom">Custom background URL</option></select></label>
-          <label className="image-menu-control"><span>Custom background URL</span><input value={settings.customBackgroundUrl} placeholder="Paste background image URL" onChange={(event) => updateSettings({ customBackgroundUrl: event.target.value })} /></label>
+          <label className="app-field"><span>Mode</span><select value={settings.backgroundMode} onChange={(event) => updateSettings({ backgroundMode: event.target.value })}><option value="auto">Auto fill from product image</option><option value="custom">Custom background URL</option></select></label>
+          <label className="app-field"><span>Custom background URL</span><input value={settings.customBackgroundUrl} placeholder="Paste background image URL" onChange={(event) => updateSettings({ customBackgroundUrl: event.target.value })} /></label>
           <RangeControl label="Background tone" value={settings.backgroundTone} min={-50} max={50} onChange={(backgroundTone) => updateSettings({ backgroundTone })} />
           <ColorControl label="Accent color" value={settings.accentColor} onChange={(accentColor) => updateSettings({ accentColor })} />
         </ControlGroup>
@@ -272,8 +271,8 @@ export function SiteBannerSection({ project }) {
         </ControlGroup>
       </aside>
 
-      <main className="promo-generator-preview-stage">
-        <div className="promo-generator-toolbar"><div><p>Preview</p><h2>{selectedDish ? getDishTitle(selectedDish) : 'Select product'}</h2></div><div className="promo-output-pill">{SITE_BANNER_FORMAT.label}</div></div>
+      <main className="app-preview-stage site-banner-preview-stage">
+        <div className="app-toolbar"><div><p>Preview</p><h2>{selectedDish ? getDishTitle(selectedDish) : 'Select product'}</h2></div><div className="app-pill">{SITE_BANNER_FORMAT.label}</div></div>
         <SiteBannerPreview dish={selectedDish} settings={settings} index={selectedIndex} />
       </main>
     </section>
