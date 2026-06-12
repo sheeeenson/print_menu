@@ -277,11 +277,6 @@ export const downloadPromoHtml = async ({ filename }) => {
 };
 
 export const downloadPromoRender = async ({ output, filename, duration = 8, fps = 24, onStatus }) => {
-  if (output === 'png') {
-    await downloadBrowserPng({ filename, onStatus });
-    return;
-  }
-
   const html = await getPromoHtmlDocument();
   const { width, height } = getPromoSceneSize();
 
@@ -297,6 +292,11 @@ export const downloadPromoRender = async ({ output, filename, duration = 8, fps 
     });
   } catch (error) {
     console.error(error);
+    if (output === 'png') {
+      onStatus?.('Local renderer unavailable. Trying browser PNG fallback...');
+      await downloadBrowserPng({ filename, onStatus });
+      return;
+    }
     if (output === 'webm') {
       onStatus?.('Renderer unavailable. Trying browser WebM fallback...');
       await downloadBrowserWebm({ filename, onStatus });
