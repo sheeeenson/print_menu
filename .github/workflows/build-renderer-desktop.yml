@@ -1,0 +1,51 @@
+name: Build Renderer Desktop
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - local-renderer/**
+      - local-renderer-desktop/**
+      - .github/workflows/build-renderer-desktop.yml
+
+jobs:
+  build-windows:
+    name: Build Windows installer
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install renderer dependencies
+        working-directory: local-renderer
+        run: npm install
+
+      - name: Install Playwright Chromium
+        working-directory: local-renderer
+        run: npx playwright install chromium
+
+      - name: Install desktop dependencies
+        working-directory: local-renderer-desktop
+        run: npm install
+
+      - name: Build Windows installer and portable app
+        working-directory: local-renderer-desktop
+        run: npm run package:win
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: print-menu-renderer-windows
+          path: |
+            local-renderer-desktop/dist/*.exe
+            local-renderer-desktop/dist/*.blockmap
+          if-no-files-found: error
+          retention-days: 14
