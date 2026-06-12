@@ -23,11 +23,9 @@ export function recalculatePricing(dish, changedField) {
   }
 
   if (changedField === 'discountPercent') {
-    if (hasPositiveNumber(next.oldPrice) && hasDiscount(next.discountPercent)) {
-      next.newPrice = roundCurrency(next.oldPrice * (1 - next.discountPercent / 100));
-    } else if (hasPositiveNumber(next.newPrice) && hasDiscount(next.discountPercent)) {
-      next.oldPrice = roundCurrency(next.newPrice / (1 - next.discountPercent / 100));
-    }
+    // Manual discount edits are treated as a display/badge override.
+    // They should not change oldPrice or newPrice. Old/new price edits still recalculate this value automatically.
+    return next;
   }
 
   return next;
