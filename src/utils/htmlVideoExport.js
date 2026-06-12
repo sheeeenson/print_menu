@@ -1,7 +1,7 @@
 const DEFAULT_RENDERER_ENDPOINT = 'https://print-menu.onrender.com/render';
 const DEFAULT_LOCAL_RENDERER_BASE_URL = 'http://localhost:3020';
 const JOB_POLL_INTERVAL_MS = 1200;
-const JOB_TIMEOUT_MS = 300000;
+const JOB_TIMEOUT_MS = 900000;
 const LOCAL_HEALTH_TIMEOUT_MS = 900;
 
 export const getSafeRenderFilename = (value, fallback = 'html-video') => String(value || fallback)
@@ -138,7 +138,7 @@ const downloadViaJob = async ({ baseUrl, payload, filename, extension, fallbackM
     }
   }
 
-  throw new Error(`${extension.toUpperCase()} export timed out.`);
+  throw new Error(`${extension.toUpperCase()} export timed out after 15 minutes.`);
 };
 
 export async function downloadHtmlRender({
@@ -168,21 +168,15 @@ export async function downloadHtmlRender({
 
   const cloudBaseUrl = endpoint ? endpoint.replace(/\/$/, '').replace(/\/render$/, '') : getRendererBaseUrl();
   const localBaseUrl = getLocalRendererBaseUrl();
-  const shouldTryLocal = output === 'mp4' || output === 'webm';
+  const shouldUseLocalOnly = output === 'mp4' || output === 'webm';
 
-  if (shouldTryLocal) {
+  if (shouldUseLocalOnly) {
     onStatus?.('Checking local renderer...');
-    if (await isLocalRendererAvailable(localBaseUrl)) {
-      try {
-        await downloadViaJob({ baseUrl: localBaseUrl, payload, filename, extension, fallbackMessage, onStatus, rendererLabel: 'local renderer' });
-        return;
-      } catch (localError) {
-        console.error(localError);
-        onStatus?.('Local renderer failed, trying cloud renderer...');
-      }
-    } else {
-      onStatus?.('Local renderer not found, trying cloud renderer...');
+    if (!(await isLocalRendererAvailable(localBaseUrl))) {
+      throw new Error('Local renderer is not running. Start it at http://localhost:3020 and try again.');
     }
+    await downloadViaJob({ baseUrl: localBaseUrl, payload, filename, extension, fallbackMessage, onStatus, rendererLabel: 'local renderer' });
+    return;
   }
 
   try {
