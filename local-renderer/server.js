@@ -46,7 +46,7 @@ const clampNumber = (value, fallback, min, max) => {
   if (!Number.isFinite(number)) return fallback;
   return Math.min(max, Math.max(min, number));
 };
-const RENDER_SCALE = clampNumber(process.env.RENDER_SCALE, 2, 1, 3);
+const RENDER_SCALE = clampNumber(process.env.RENDER_SCALE, 3, 1, 4);
 const outputType = (value) => (value === 'webm' ? 'webm' : 'mp4');
 const contentType = (output) => (output === 'webm' ? 'video/webm' : 'video/mp4');
 const videoSize = ({ width, height }) => width <= MAX_VIDEO_WIDTH ? { width, height } : { width: MAX_VIDEO_WIDTH, height: Math.round(height * (MAX_VIDEO_WIDTH / width)) };
@@ -71,7 +71,7 @@ const normalizePayload = (payload = {}) => {
 
 const buildDocument = ({ html, width, height, duration }) => {
   if (/<!doctype\s+html|<html[\s>]/i.test(html)) return html;
-  return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=${width}, initial-scale=1"/><style>html,body{width:${width}px;height:${height}px;margin:0;padding:0;overflow:hidden;background:#231f20}*,*::before,*::after{box-sizing:border-box}.promo-scene{transform:none!important;transform-origin:top left!important;--promo-duration:${duration}s!important}.promo-scene,.promo-scene *{animation-duration:${duration}s!important}</style></head><body>${html}</body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=${width}, initial-scale=1"/><style>html,body{width:${width}px;height:${height}px;margin:0;padding:0;overflow:hidden;background:#231f20;text-rendering:geometricPrecision;-webkit-font-smoothing:antialiased}*,*::before,*::after{box-sizing:border-box}.promo-scene{transform:none!important;transform-origin:top left!important;--promo-duration:${duration}s!important}.promo-scene,.promo-scene *{animation-duration:${duration}s!important}</style></head><body>${html}</body></html>`;
 };
 
 const runFfmpeg = (args, { stdin } = {}) => new Promise((resolve, reject) => {
@@ -107,19 +107,7 @@ const transcodeVideoBufferToWebm = async (videoBuffer, label = 'drive-video') =>
   const workdir = await mkdtemp(path.join(tmpdir(), 'print-menu-video-transcode-'));
   const outputPath = path.join(workdir, `${label}.webm`);
   try {
-    await runFfmpeg([
-      '-y',
-      '-i', 'pipe:0',
-      '-an',
-      '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
-      '-c:v', 'libvpx-vp9',
-      '-deadline', 'good',
-      '-cpu-used', '4',
-      '-b:v', '0',
-      '-crf', '28',
-      '-pix_fmt', 'yuv420p',
-      outputPath,
-    ], { stdin: videoBuffer });
+    await runFfmpeg(['-y', '-i', 'pipe:0', '-an', '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2', '-c:v', 'libvpx-vp9', '-deadline', 'good', '-cpu-used', '4', '-b:v', '0', '-crf', '28', '-pix_fmt', 'yuv420p', outputPath], { stdin: videoBuffer });
     return { buffer: await readFile(outputPath), workdir };
   } catch (error) {
     await rm(workdir, { recursive: true, force: true }).catch(() => {});
@@ -229,11 +217,26 @@ const waitForVideos = async (page) => {
   if (diagnostics.length) log(`Video diagnostics: ${JSON.stringify(diagnostics)}`);
 };
 
+const applyTextRenderingHints = async (page) => {
+  await page.addStyleTag({ content: `
+    html, body, .promo-scene, .promo-scene * {
+      text-rendering: geometricPrecision !important;
+      -webkit-font-smoothing: antialiased !important;
+      font-synthesis: none !important;
+    }
+    .promo-copy-block, .promo-price-card, .promo-cta {
+      transform: translateZ(0);
+      backface-visibility: hidden;
+    }
+  ` }).catch(() => undefined);
+};
+
 const createPage = async (browser, render) => {
   const page = await browser.newPage({ viewport: { width: render.width, height: render.height }, deviceScaleFactor: RENDER_SCALE });
   page.setDefaultTimeout(0); page.setDefaultNavigationTimeout(0);
   const html = await embedDriveMediaUrls(buildDocument(render));
   await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 0 });
+  await applyTextRenderingHints(page);
   await waitForRenderReady(page);
   await replaceGifMediaWithVideos(page);
   await waitForImages(page);
@@ -265,15 +268,15 @@ const ffmpegArgs = ({ output, outputPath, fps, width, height }) => {
   const scaleFilter = `scale=${width}:${height}:flags=lanczos,format=yuv420p`;
   const input = ['-y', '-f', 'image2pipe', '-framerate', String(fps), '-vcodec', 'png', '-i', 'pipe:0', '-vf', scaleFilter];
   return output === 'webm'
-    ? [...input, '-c:v', 'libvpx-vp9', '-deadline', 'good', '-cpu-used', '4', '-b:v', '0', '-crf', '24', outputPath]
-    : [...input, '-c:v', 'libx264', '-preset', 'slow', '-crf', '16', '-movflags', '+faststart', outputPath];
+    ? [...input, '-c:v', 'libvpx-vp9', '-deadline', 'good', '-cpu-used', '5', '-b:v', '0', '-crf', '22', outputPath]
+    : [...input, '-c:v', 'libx264', '-preset', 'medium', '-crf', '14', '-movflags', '+faststart', outputPath];
 };
 const writeFrame = (ffmpeg, buffer) => new Promise((resolve, reject) => { const fail = (error) => reject(error); ffmpeg.stdin.once('error', fail); ffmpeg.stdin.write(buffer, () => { ffmpeg.stdin.off('error', fail); resolve(); }); });
 const createProgress = (stage, currentFrame = 0, totalFrames = 0) => ({ stage, currentFrame, totalFrames, percent: totalFrames ? Math.round((currentFrame / totalFrames) * 100) : 0 });
 
 const renderVideo = async ({ page, render, outputPath, onProgress }) => {
   const frameCount = Math.max(1, Math.round(render.duration * render.fps));
-  log(`Rendering ${frameCount} frames for ${render.filename} (${render.width}x${render.height}, ${render.fps}fps, ${render.duration}s, ${RENDER_SCALE}x supersampling) using ${FFMPEG_PATH}`);
+  log(`Rendering ${frameCount} frames for ${render.filename} (${render.width}x${render.height}, ${render.fps}fps, ${render.duration}s, ${RENDER_SCALE}x supersampling, high-quality text) using ${FFMPEG_PATH}`);
   onProgress?.(createProgress('capturing_frames', 0, frameCount));
   const ffmpeg = spawn(FFMPEG_PATH, ffmpegArgs({ output: render.output, outputPath, fps: render.fps, width: render.width, height: render.height }), { stdio: ['pipe', 'ignore', 'pipe'] });
   let stderr = '';
@@ -310,7 +313,7 @@ const cleanupJob = async (id) => { const job = jobs.get(id); if (job?.workdir) a
 const runJob = async (id, payload) => { const job = jobs.get(id); if (!job) return; job.status = 'rendering'; job.progress = createProgress('starting', 0, 0); log(`Job ${id} started`); try { Object.assign(job, await renderToFile(payload, (progress) => { job.progress = progress; }), { status: 'done', progress: createProgress('done', 1, 1) }); log(`Job ${id} done: ${job.filename}`); } catch (error) { job.status = 'failed'; job.error = error instanceof Error ? error.message : String(error); job.progress = createProgress('failed', 0, 1); log(`Job ${id} failed: ${job.error}`); } };
 
 app.get('/drive-media/:fileId', async (request, response) => { try { const fileId = String(request.params.fileId || '').trim(); if (!/^[a-zA-Z0-9_-]+$/.test(fileId)) return response.status(400).json({ error: 'Invalid Google Drive file id.' }); const media = await fetchDriveMedia(fileId, request.headers.range || ''); response.status(media.status === 206 ? 206 : 200); response.setHeader('Content-Type', media.contentType); response.setHeader('Accept-Ranges', media.headers.get('accept-ranges') || 'bytes'); const contentRange = media.headers.get('content-range'); if (contentRange) response.setHeader('Content-Range', contentRange); response.setHeader('Content-Length', String(media.buffer.length)); response.setHeader('Cache-Control', 'public, max-age=3600'); return response.end(media.buffer); } catch (error) { return response.status(500).json({ error: 'Google Drive media proxy failed.', detail: error instanceof Error ? error.message : String(error) }); } });
-app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, renderScale: RENDER_SCALE, stableCssTimeline: true, gifConversion: true, gifConversionPipe: true, seekableVideoOverlayCapture: true, pngFramePipe: true, gifBackgroundConversion: true, driveMediaProxy: true, apiPromoRenderBlob: true, videoWait: true, renderReadyWait: true, embeddedDriveMedia: true, gifVideoFix: true, driveVideoTranscode: true, supersampledRender: true }));
+app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, renderScale: RENDER_SCALE, stableCssTimeline: true, gifConversion: true, gifConversionPipe: true, seekableVideoOverlayCapture: true, pngFramePipe: true, gifBackgroundConversion: true, driveMediaProxy: true, apiPromoRenderBlob: true, videoWait: true, renderReadyWait: true, embeddedDriveMedia: true, gifVideoFix: true, driveVideoTranscode: true, supersampledRender: true, highQualityText: true }));
 app.post('/api/promo-render', async (request, response) => { let result; try { result = await renderToFile(request.body || {}, () => {}); const buffer = await readFile(result.filePath); response.setHeader('Content-Type', result.contentType); response.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`); response.setHeader('Content-Length', String(buffer.length)); return response.end(buffer); } catch (error) { return response.status(500).json({ error: 'Render failed.', detail: error instanceof Error ? error.message : String(error) }); } finally { if (result?.workdir) await rm(result.workdir, { recursive: true, force: true }).catch(() => {}); } });
 app.post('/convert-gif', async (request, response) => { let result; try { result = await convertGifBufferToWebm(await downloadGifBuffer(request.body?.dataUrl || request.body?.url), 'gif-overlay'); response.setHeader('Content-Type', 'video/webm'); response.setHeader('Content-Disposition', 'attachment; filename="gif-overlay.webm"'); response.end(result.buffer); } catch (error) { response.status(400).json({ error: 'GIF conversion failed.', detail: error instanceof Error ? error.message : String(error) }); } finally { if (result?.workdir) await rm(result.workdir, { recursive: true, force: true }).catch(() => {}); } });
 app.post('/jobs', (request, response) => { const render = normalizePayload(request.body || {}); if (!render.html) return response.status(400).json({ error: 'Invalid render payload.', detail: 'Missing HTML.' }); const id = crypto.randomUUID(); log(`Job ${id} queued: ${render.output}, ${render.width}x${render.height}, ${render.fps}fps, ${render.duration}s, html ${render.html.length} chars`); jobs.set(id, { id, status: 'queued', output: render.output, filename: render.filename, progress: createProgress('queued', 0, 0) }); setTimeout(() => cleanupJob(id), JOB_TTL_MS).unref?.(); setImmediate(() => runJob(id, request.body || {})); return response.status(202).json(serializeJob(jobs.get(id))); });
