@@ -1,4 +1,81 @@
 /* Site banner-specific canvas styles. Generic page UI reuses promo-generator classes. */
+
+/* Defensive theme alignment for both the current promo-based markup and older site-banner wrappers. */
+.site-banner-generator-section,
+.promo-generator-section {
+  background: var(--un-bg, #222633) !important;
+  color: var(--un-text, #f7f4ee) !important;
+}
+
+.site-banner-generator-panel,
+.promo-generator-panel {
+  background: linear-gradient(180deg, var(--un-bg-deep, #171922), var(--un-bg-dark, #101116)) !important;
+  color: var(--un-text, #f7f4ee) !important;
+  border-color: var(--un-border, rgba(255,255,255,0.11)) !important;
+  padding: 22px !important;
+}
+
+.site-banner-generator-preview-stage,
+.promo-generator-preview-stage {
+  background: var(--un-bg, #222633) !important;
+  color: var(--un-text, #f7f4ee) !important;
+  padding: 28px !important;
+}
+
+.site-banner-panel-header,
+.promo-panel-header,
+.site-banner-generator-toolbar,
+.promo-generator-toolbar {
+  color: var(--un-text, #f7f4ee) !important;
+}
+
+.site-banner-panel-header h2,
+.promo-panel-header h2,
+.site-banner-generator-toolbar h2,
+.promo-generator-toolbar h2 {
+  color: var(--un-text, #f7f4ee) !important;
+}
+
+.site-banner-panel-header p,
+.promo-panel-header p,
+.site-banner-generator-toolbar p,
+.promo-generator-toolbar p,
+.site-banner-preview-size,
+.promo-preview-size {
+  color: var(--un-muted, #b7b0a8) !important;
+}
+
+.site-banner-panel-group,
+.promo-panel-group,
+.site-banner-select-section,
+.promo-select-section,
+.image-menu-category-group,
+.site-banner-dish-picker > div,
+.promo-dish-picker > div {
+  background: var(--un-surface, #1c1f29) !important;
+  color: var(--un-text, #f7f4ee) !important;
+  border: 1px solid var(--un-border, rgba(255,255,255,0.11)) !important;
+  border-radius: var(--un-radius-lg, 20px) !important;
+  box-shadow: none !important;
+}
+
+.site-banner-panel-group,
+.promo-panel-group,
+.site-banner-select-section,
+.promo-select-section {
+  padding: 16px !important;
+  margin-bottom: 14px !important;
+}
+
+.site-banner-preview-shell,
+.promo-preview-shell {
+  background: radial-gradient(circle at top, rgba(42,46,59,0.9), rgba(23,25,34,0.96)) !important;
+  border: 1px solid var(--un-border-soft, rgba(255,255,255,0.075)) !important;
+  border-radius: var(--un-radius-xl, 24px) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.035) !important;
+  padding: 22px 26px 44px !important;
+}
+
 .site-banner-export-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .site-banner-canvas-wrap { aspect-ratio: 2048 / 900; }
 .site-banner-scene { position: absolute; left: 0; top: 0; transform-origin: top left; overflow: hidden; background: var(--site-banner-bg); color: #fffaf2; isolation: isolate; font-family: inherit; }
