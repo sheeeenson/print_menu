@@ -1,3 +1,4 @@
+/* Website banner generator styles. */
 .site-banner-generator-section { display: grid; grid-template-columns: 390px minmax(0, 1fr); min-height: calc(100vh - 76px); background: #f1ebe2; }
 .site-banner-generator-panel { border-right: 1px solid #dfd6c9; background: #fffaf2; padding: 22px; overflow-y: auto; max-height: calc(100vh - 76px); }
 .site-banner-panel-header { display: grid; gap: 5px; margin-bottom: 18px; }
