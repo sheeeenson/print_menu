@@ -1,0 +1,53 @@
+{
+  "name": "print-menu-renderer-desktop",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Desktop shell for Print Menu local renderer.",
+  "type": "module",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "package:win": "electron-builder --win nsis portable",
+    "package:mac": "electron-builder --mac dmg zip"
+  },
+  "dependencies": {
+    "electron": "^33.3.1"
+  },
+  "devDependencies": {
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.printmenu.renderer",
+    "productName": "Print Menu Renderer",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../local-renderer",
+        "to": "local-renderer",
+        "filter": [
+          "**/*",
+          "!node_modules/.cache/**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.utilities"
+    }
+  }
+}
