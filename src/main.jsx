@@ -14,6 +14,7 @@ import './pizzaSizeLayoutFix.js';
 import './pizzaBaselineFix.css';
 import './blurImageFix.css';
 import './finalPizzaPriceAlign.css';
+import './orderAndNumbers.css';
 import './ui/appTheme.css';
 import './mobileFixes.css';
 import './advancedResponsiveFix.css';
