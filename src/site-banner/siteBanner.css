@@ -1,25 +1,6 @@
-/* Website banner generator styles. */
-.site-banner-generator-section { display: grid; grid-template-columns: 390px minmax(0, 1fr); min-height: calc(100vh - 76px); background: #f1ebe2; }
-.site-banner-generator-panel { border-right: 1px solid #dfd6c9; background: #fffaf2; padding: 22px; overflow-y: auto; max-height: calc(100vh - 76px); }
-.site-banner-panel-header { display: grid; gap: 5px; margin-bottom: 18px; }
-.site-banner-panel-header p, .site-banner-generator-toolbar p { margin: 0; color: #9b1c31; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.72rem; font-weight: 950; }
-.site-banner-panel-header h2, .site-banner-generator-toolbar h2 { margin: 0; color: #231f20; letter-spacing: -0.045em; line-height: 1; }
-.site-banner-panel-header span { color: #7c7065; font-size: 0.88rem; line-height: 1.35; }
-.site-banner-panel-group { border-top: 1px solid #eadfce; padding-top: 16px; margin-top: 16px; display: grid; gap: 11px; }
-.site-banner-panel-group h3 { margin: 0; color: #231f20; font-size: 0.86rem; text-transform: uppercase; letter-spacing: 0.08em; }
-.site-banner-panel-group select, .site-banner-panel-group input[type='text'], .site-banner-panel-group input:not([type]) { width: 100%; border: 1px solid #ded1c1; border-radius: 14px; background: #fff; color: #231f20; padding: 11px 12px; font: inherit; font-weight: 750; box-sizing: border-box; }
-.site-banner-export-buttons { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.site-banner-export-buttons button { border: 1px solid #ded1c1; border-radius: 14px; background: #231f20; color: #fffaf2; padding: 10px 8px; font-weight: 900; }
-.site-banner-toggle-field { border: 1px solid #e2d7c8; border-radius: 14px; background: #fff; padding: 10px 12px; display: flex; align-items: center; gap: 10px; color: #574d45; font-weight: 850; cursor: pointer; }
-.site-banner-toggle-field input { width: 18px; height: 18px; accent-color: #9b1c31; }
-.site-banner-style-block { display: grid; gap: 10px; }
-.site-banner-style-block.compact { border: 1px solid #eadfce; border-radius: 16px; padding: 12px; background: rgba(255,255,255,0.58); }
-.site-banner-style-block h4 { margin: 0; color: #574d45; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; }
-.site-banner-generator-preview-stage { min-width: 0; padding: 28px; overflow: hidden; display: grid; grid-template-rows: auto minmax(0, 1fr); }
-.site-banner-generator-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
-.site-banner-output-pill { border: 1px solid #ded1c1; border-radius: 999px; background: #fffaf2; color: #231f20; padding: 9px 14px; font-weight: 950; box-shadow: 0 10px 25px rgba(35,31,32,0.06); }
-.site-banner-preview-shell { overflow: auto; padding: 22px 26px 44px; display: grid; justify-items: center; align-items: start; min-height: 0; border-radius: 28px; background: radial-gradient(circle at top, rgba(255,250,242,0.95), rgba(223,214,201,0.42)); }
-.site-banner-canvas-wrap { width: 1180px; max-width: 100%; aspect-ratio: 2048 / 900; position: relative; box-shadow: 0 30px 70px rgba(35,31,32,0.18); border-radius: 28px; overflow: hidden; background: #231f20; }
+/* Site banner-specific canvas styles. Generic page UI reuses promo-generator classes. */
+.site-banner-export-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.site-banner-canvas-wrap { aspect-ratio: 2048 / 900; }
 .site-banner-scene { position: absolute; left: 0; top: 0; transform-origin: top left; overflow: hidden; background: var(--site-banner-bg); color: #fffaf2; isolation: isolate; font-family: inherit; }
 .site-banner-background { position: absolute; inset: 0; background: radial-gradient(circle at 74% 45%, rgba(255,255,255,0.24), transparent 34%), linear-gradient(120deg, rgba(35,31,32,0.82), rgba(155,28,49,0.52)), var(--site-banner-bg); z-index: 0; }
 .site-banner-custom-background { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; filter: saturate(1.04) contrast(1.02); }
@@ -43,7 +24,3 @@
 .site-banner-price span { justify-self: start; position: relative; border-radius: 18px; background: rgba(35,31,32,0.42); color: rgba(255,250,242,0.82); padding: 12px 18px; font-size: 0.56em; font-weight: 900; }
 .site-banner-price span::after { content: ''; position: absolute; left: 12px; right: 12px; top: 50%; height: 4px; background: currentColor; transform: rotate(-8deg); }
 .site-banner-price strong { font-size: 1em; letter-spacing: -0.08em; }
-.site-banner-preview-size { margin-top: 12px; color: #7c7065; font-weight: 850; }
-@media (max-width: 1180px) { .site-banner-generator-section { grid-template-columns: 350px minmax(0, 1fr); } .site-banner-canvas-wrap { width: 960px; } }
-@media (max-width: 900px) { .site-banner-generator-section { grid-template-columns: 1fr; } .site-banner-generator-panel { max-height: none; border-right: 0; border-bottom: 1px solid #dfd6c9; } .site-banner-canvas-wrap { width: 720px; } }
-@media print { .site-banner-generator-section { display: none; } }
