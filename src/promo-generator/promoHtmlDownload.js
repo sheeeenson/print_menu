@@ -89,6 +89,32 @@ const mediaSrcToDataUrl = async (currentSrc) => {
   return blobToDataUrl(await response.blob());
 };
 
+const waitForSceneMedia = async (scene) => {
+  const images = Array.from(scene.querySelectorAll('img'));
+  const videos = Array.from(scene.querySelectorAll('video'));
+  await Promise.allSettled([
+    ...images.map((image) => {
+      if (image.complete && image.naturalWidth > 0) return Promise.resolve();
+      if (typeof image.decode === 'function') return image.decode().catch(() => undefined);
+      return new Promise((resolve) => {
+        image.addEventListener('load', resolve, { once: true });
+        image.addEventListener('error', resolve, { once: true });
+        setTimeout(resolve, 2500);
+      });
+    }),
+    ...videos.map((video) => {
+      if (video.readyState >= 2) return Promise.resolve();
+      video.load?.();
+      return new Promise((resolve) => {
+        video.addEventListener('loadeddata', resolve, { once: true });
+        video.addEventListener('canplay', resolve, { once: true });
+        video.addEventListener('error', resolve, { once: true });
+        setTimeout(resolve, 3500);
+      });
+    }),
+  ]);
+};
+
 const getElementMediaSrc = (element) => element?.currentSrc || element?.src || element?.getAttribute?.('src') || '';
 
 const extractGoogleDriveFileId = (value = '') => {
@@ -206,8 +232,8 @@ const replaceGifImagesWithVideosInClone = async (scene, clone) => {
   }));
 };
 
-const imageElementToDataUrl = async (sourceImage) => {
-  const currentSrc = getElementMediaSrc(sourceImage);
+const imageElementToDataUrl = async (sourceImage, preferredSrc = '') => {
+  const currentSrc = preferredSrc || getElementMediaSrc(sourceImage);
   if (!currentSrc || currentSrc.startsWith('data:')) return currentSrc;
 
   const fetchedDataUrl = await mediaSrcToDataUrl(currentSrc).catch(() => '');
@@ -242,11 +268,9 @@ const embedImagesInClone = async (scene, clone) => {
     const rendererSrc = getLocalRendererMediaUrl(currentSrc);
     if (rendererSrc && !rendererSrc.startsWith('blob:')) clonedImage.setAttribute('src', rendererSrc);
 
-    if (rendererSrc !== currentSrc) return;
-
     try {
-      const dataUrl = await imageElementToDataUrl(sourceImage);
-      if (dataUrl?.startsWith('data:')) clonedImage.setAttribute('src', dataUrl);
+      const dataUrl = await imageElementToDataUrl(sourceImage, rendererSrc);
+      if (dataUrl?.startsWith('data:image')) clonedImage.setAttribute('src', dataUrl);
     } catch (error) {
       console.warn('Could not embed promo image in HTML export:', error instanceof Error ? error.message : String(error));
     }
@@ -303,10 +327,45 @@ const embedMediaInClone = async (scene, clone) => {
   await embedVideosInClone(scene, clone);
 };
 
+const getRenderReadyScript = () => `<script>
+window.__PROMO_RENDER_READY__ = false;
+(async function () {
+  const images = Array.from(document.images || []);
+  const videos = Array.from(document.querySelectorAll('video'));
+  await Promise.allSettled(images.map(function (image) {
+    if (image.complete && image.naturalWidth > 0) return Promise.resolve();
+    if (typeof image.decode === 'function') return image.decode().catch(function () {});
+    return new Promise(function (resolve) {
+      image.addEventListener('load', resolve, { once: true });
+      image.addEventListener('error', resolve, { once: true });
+      setTimeout(resolve, 2500);
+    });
+  }));
+  await Promise.allSettled(videos.map(function (video) {
+    video.muted = true;
+    video.loop = true;
+    video.autoplay = true;
+    video.playsInline = true;
+    try { video.load(); } catch (error) {}
+    var playPromise = video.play && video.play();
+    if (playPromise && typeof playPromise.catch === 'function') playPromise.catch(function () {});
+    if (video.readyState >= 2) return Promise.resolve();
+    return new Promise(function (resolve) {
+      video.addEventListener('loadeddata', resolve, { once: true });
+      video.addEventListener('canplay', resolve, { once: true });
+      video.addEventListener('error', resolve, { once: true });
+      setTimeout(resolve, 3500);
+    });
+  }));
+  window.__PROMO_RENDER_READY__ = true;
+})();
+<\/script>`;
+
 export const getSceneHtmlDocument = async () => {
   const scene = document.querySelector('.promo-scene');
   if (!scene) throw new Error('Could not find the promo scene.');
 
+  await waitForSceneMedia(scene);
   markPromoMediaForExport(scene);
   const clone = scene.cloneNode(true);
   clone.style.transform = 'none';
@@ -339,7 +398,7 @@ export const getSceneHtmlDocument = async () => {
       ${getDocumentCss()}
     </style>
   </head>
-  <body>${clone.outerHTML}</body>
+  <body>${clone.outerHTML}${getRenderReadyScript()}</body>
 </html>`;
 };
 
@@ -464,6 +523,12 @@ const installDownloadButtons = () => {
 export const installPromoHtmlDownloadButton = installDownloadButtons;
 
 if (typeof window !== 'undefined') {
+  window.promoHtmlDownload = {
+    getSceneHtmlDocument,
+    downloadCurrentPromoHtml,
+    downloadCurrentPromoVideo,
+    downloadCurrentPromoPng,
+  };
   window.addEventListener('load', installDownloadButtons);
   const observer = new MutationObserver(() => window.requestAnimationFrame(installDownloadButtons));
   observer.observe(document.documentElement, { childList: true, subtree: true });
