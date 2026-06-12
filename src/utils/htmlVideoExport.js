@@ -131,7 +131,9 @@ const downloadViaJob = async ({ baseUrl, payload, filename, extension, fallbackM
     if (status.status === 'done') {
       const fileUrl = `${baseUrl}/jobs/${jobId}/file`;
       onStatus?.(`Downloading ${extension.toUpperCase()}... 100%`);
-      downloadUrl(fileUrl, filename);
+      const fileResponse = await fetch(fileUrl);
+      if (!fileResponse.ok) throw new Error(await getRenderErrorMessage(fileResponse, fallbackMessage));
+      await downloadBlobResponse(fileResponse, filename, extension);
       return;
     }
   }
