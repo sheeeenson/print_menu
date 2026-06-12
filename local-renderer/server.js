@@ -1,7 +1,7 @@
 import express from 'express';
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -47,8 +47,8 @@ const clampNumber = (value, fallback, min, max) => {
   return Math.min(max, Math.max(min, number));
 };
 const RENDER_SCALE = clampNumber(process.env.RENDER_SCALE, 3, 1, 4);
-const outputType = (value) => (value === 'webm' ? 'webm' : 'mp4');
-const contentType = (output) => (output === 'webm' ? 'video/webm' : 'video/mp4');
+const outputType = (value) => (value === 'webm' ? 'webm' : value === 'png' ? 'png' : 'mp4');
+const contentType = (output) => (output === 'webm' ? 'video/webm' : output === 'png' ? 'image/png' : 'video/mp4');
 const videoSize = ({ width, height }) => width <= MAX_VIDEO_WIDTH ? { width, height } : { width: MAX_VIDEO_WIDTH, height: Math.round(height * (MAX_VIDEO_WIDTH / width)) };
 const getRequestedDuration = (payload = {}) => Number.isFinite(Number(payload.duration)) ? Number(payload.duration) : Number.isFinite(Number(payload.settings?.duration)) ? Number(payload.settings.duration) : 8;
 
@@ -96,11 +96,11 @@ const fetchDriveMedia = async (fileId, range = '') => {
   if (range) headers.Range = range;
   const upstream = await fetch(getGoogleDriveDownloadUrl(fileId), { redirect: 'follow', headers });
   if (!upstream.ok && upstream.status !== 206) throw new Error(`HTTP ${upstream.status}`);
-  const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
+  const contentTypeHeader = upstream.headers.get('content-type') || 'application/octet-stream';
   const buffer = Buffer.from(await upstream.arrayBuffer());
   if (!buffer.length) throw new Error('Google Drive returned an empty file.');
-  if (/text\/html/i.test(contentType) || buffer.subarray(0, 80).toString('utf8').includes('<html')) throw new Error('Google Drive returned HTML instead of media. Check file sharing or use a direct media file.');
-  return { buffer, contentType, status: upstream.status, headers: upstream.headers };
+  if (/text\/html/i.test(contentTypeHeader) || buffer.subarray(0, 80).toString('utf8').includes('<html')) throw new Error('Google Drive returned HTML instead of media. Check file sharing or use a direct media file.');
+  return { buffer, contentType: contentTypeHeader, status: upstream.status, headers: upstream.headers };
 };
 
 const transcodeVideoBufferToWebm = async (videoBuffer, label = 'drive-video') => {
@@ -274,6 +274,15 @@ const ffmpegArgs = ({ output, outputPath, fps, width, height }) => {
 const writeFrame = (ffmpeg, buffer) => new Promise((resolve, reject) => { const fail = (error) => reject(error); ffmpeg.stdin.once('error', fail); ffmpeg.stdin.write(buffer, () => { ffmpeg.stdin.off('error', fail); resolve(); }); });
 const createProgress = (stage, currentFrame = 0, totalFrames = 0) => ({ stage, currentFrame, totalFrames, percent: totalFrames ? Math.round((currentFrame / totalFrames) * 100) : 0 });
 
+const renderPng = async ({ page, render, outputPath, onProgress }) => {
+  onProgress?.(createProgress('capturing_png', 0, 1));
+  await seekFrame(page, 0.04);
+  await wait(120);
+  const buffer = await page.screenshot({ type: 'png', omitBackground: false, clip: { x: 0, y: 0, width: render.width, height: render.height } });
+  await writeFile(outputPath, buffer);
+  onProgress?.(createProgress('done', 1, 1));
+};
+
 const renderVideo = async ({ page, render, outputPath, onProgress }) => {
   const frameCount = Math.max(1, Math.round(render.duration * render.fps));
   log(`Rendering ${frameCount} frames for ${render.filename} (${render.width}x${render.height}, ${render.fps}fps, ${render.duration}s, ${RENDER_SCALE}x supersampling, high-quality text) using ${FFMPEG_PATH}`);
@@ -303,7 +312,8 @@ const renderToFile = async (payload, onProgress) => {
     onProgress?.(createProgress('opening_browser', 0, 0));
     browser = await chromium.launch({ args: ['--no-sandbox', '--disable-dev-shm-usage', '--hide-scrollbars', '--autoplay-policy=no-user-gesture-required', '--font-render-hinting=medium'] });
     const page = await createPage(browser, render);
-    await renderVideo({ page, render, outputPath, onProgress });
+    if (render.output === 'png') await renderPng({ page, render, outputPath, onProgress });
+    else await renderVideo({ page, render, outputPath, onProgress });
     return { ...render, filePath: outputPath, workdir, contentType: contentType(render.output) };
   } finally { if (browser) await browser.close().catch(() => {}); }
 };
@@ -313,7 +323,7 @@ const cleanupJob = async (id) => { const job = jobs.get(id); if (job?.workdir) a
 const runJob = async (id, payload) => { const job = jobs.get(id); if (!job) return; job.status = 'rendering'; job.progress = createProgress('starting', 0, 0); log(`Job ${id} started`); try { Object.assign(job, await renderToFile(payload, (progress) => { job.progress = progress; }), { status: 'done', progress: createProgress('done', 1, 1) }); log(`Job ${id} done: ${job.filename}`); } catch (error) { job.status = 'failed'; job.error = error instanceof Error ? error.message : String(error); job.progress = createProgress('failed', 0, 1); log(`Job ${id} failed: ${job.error}`); } };
 
 app.get('/drive-media/:fileId', async (request, response) => { try { const fileId = String(request.params.fileId || '').trim(); if (!/^[a-zA-Z0-9_-]+$/.test(fileId)) return response.status(400).json({ error: 'Invalid Google Drive file id.' }); const media = await fetchDriveMedia(fileId, request.headers.range || ''); response.status(media.status === 206 ? 206 : 200); response.setHeader('Content-Type', media.contentType); response.setHeader('Accept-Ranges', media.headers.get('accept-ranges') || 'bytes'); const contentRange = media.headers.get('content-range'); if (contentRange) response.setHeader('Content-Range', contentRange); response.setHeader('Content-Length', String(media.buffer.length)); response.setHeader('Cache-Control', 'public, max-age=3600'); return response.end(media.buffer); } catch (error) { return response.status(500).json({ error: 'Google Drive media proxy failed.', detail: error instanceof Error ? error.message : String(error) }); } });
-app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, renderScale: RENDER_SCALE, stableCssTimeline: true, gifConversion: true, gifConversionPipe: true, seekableVideoOverlayCapture: true, pngFramePipe: true, gifBackgroundConversion: true, driveMediaProxy: true, apiPromoRenderBlob: true, videoWait: true, renderReadyWait: true, embeddedDriveMedia: true, gifVideoFix: true, driveVideoTranscode: true, supersampledRender: true, highQualityText: true }));
+app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, renderScale: RENDER_SCALE, stableCssTimeline: true, gifConversion: true, gifConversionPipe: true, seekableVideoOverlayCapture: true, pngFramePipe: true, gifBackgroundConversion: true, driveMediaProxy: true, apiPromoRenderBlob: true, videoWait: true, renderReadyWait: true, embeddedDriveMedia: true, gifVideoFix: true, driveVideoTranscode: true, supersampledRender: true, highQualityText: true, pngStillCapture: true }));
 app.post('/api/promo-render', async (request, response) => { let result; try { result = await renderToFile(request.body || {}, () => {}); const buffer = await readFile(result.filePath); response.setHeader('Content-Type', result.contentType); response.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`); response.setHeader('Content-Length', String(buffer.length)); return response.end(buffer); } catch (error) { return response.status(500).json({ error: 'Render failed.', detail: error instanceof Error ? error.message : String(error) }); } finally { if (result?.workdir) await rm(result.workdir, { recursive: true, force: true }).catch(() => {}); } });
 app.post('/convert-gif', async (request, response) => { let result; try { result = await convertGifBufferToWebm(await downloadGifBuffer(request.body?.dataUrl || request.body?.url), 'gif-overlay'); response.setHeader('Content-Type', 'video/webm'); response.setHeader('Content-Disposition', 'attachment; filename="gif-overlay.webm"'); response.end(result.buffer); } catch (error) { response.status(400).json({ error: 'GIF conversion failed.', detail: error instanceof Error ? error.message : String(error) }); } finally { if (result?.workdir) await rm(result.workdir, { recursive: true, force: true }).catch(() => {}); } });
 app.post('/jobs', (request, response) => { const render = normalizePayload(request.body || {}); if (!render.html) return response.status(400).json({ error: 'Invalid render payload.', detail: 'Missing HTML.' }); const id = crypto.randomUUID(); log(`Job ${id} queued: ${render.output}, ${render.width}x${render.height}, ${render.fps}fps, ${render.duration}s, html ${render.html.length} chars`); jobs.set(id, { id, status: 'queued', output: render.output, filename: render.filename, progress: createProgress('queued', 0, 0) }); setTimeout(() => cleanupJob(id), JOB_TTL_MS).unref?.(); setImmediate(() => runJob(id, request.body || {})); return response.status(202).json(serializeJob(jobs.get(id))); });
