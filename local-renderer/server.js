@@ -46,6 +46,7 @@ const clampNumber = (value, fallback, min, max) => {
   if (!Number.isFinite(number)) return fallback;
   return Math.min(max, Math.max(min, number));
 };
+const RENDER_SCALE = clampNumber(process.env.RENDER_SCALE, 2, 1, 3);
 const outputType = (value) => (value === 'webm' ? 'webm' : 'mp4');
 const contentType = (output) => (output === 'webm' ? 'video/webm' : 'video/mp4');
 const videoSize = ({ width, height }) => width <= MAX_VIDEO_WIDTH ? { width, height } : { width: MAX_VIDEO_WIDTH, height: Math.round(height * (MAX_VIDEO_WIDTH / width)) };
@@ -229,7 +230,7 @@ const waitForVideos = async (page) => {
 };
 
 const createPage = async (browser, render) => {
-  const page = await browser.newPage({ viewport: { width: render.width, height: render.height }, deviceScaleFactor: 1 });
+  const page = await browser.newPage({ viewport: { width: render.width, height: render.height }, deviceScaleFactor: RENDER_SCALE });
   page.setDefaultTimeout(0); page.setDefaultNavigationTimeout(0);
   const html = await embedDriveMediaUrls(buildDocument(render));
   await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 0 });
@@ -260,18 +261,21 @@ const seekVideoOverlays = async (page, seconds) => {
 };
 const seekFrame = async (page, seconds) => { await seekCssAnimations(page, seconds * 1000); await seekVideoOverlays(page, seconds); };
 
-const ffmpegArgs = ({ output, outputPath, fps }) => {
-  const input = ['-y', '-f', 'image2pipe', '-framerate', String(fps), '-vcodec', 'png', '-i', 'pipe:0', '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2'];
-  return output === 'webm' ? [...input, '-c:v', 'libvpx-vp9', '-deadline', 'good', '-cpu-used', '4', '-b:v', '0', '-crf', '28', '-pix_fmt', 'yuv420p', outputPath] : [...input, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', outputPath];
+const ffmpegArgs = ({ output, outputPath, fps, width, height }) => {
+  const scaleFilter = `scale=${width}:${height}:flags=lanczos,format=yuv420p`;
+  const input = ['-y', '-f', 'image2pipe', '-framerate', String(fps), '-vcodec', 'png', '-i', 'pipe:0', '-vf', scaleFilter];
+  return output === 'webm'
+    ? [...input, '-c:v', 'libvpx-vp9', '-deadline', 'good', '-cpu-used', '4', '-b:v', '0', '-crf', '24', outputPath]
+    : [...input, '-c:v', 'libx264', '-preset', 'slow', '-crf', '16', '-movflags', '+faststart', outputPath];
 };
 const writeFrame = (ffmpeg, buffer) => new Promise((resolve, reject) => { const fail = (error) => reject(error); ffmpeg.stdin.once('error', fail); ffmpeg.stdin.write(buffer, () => { ffmpeg.stdin.off('error', fail); resolve(); }); });
 const createProgress = (stage, currentFrame = 0, totalFrames = 0) => ({ stage, currentFrame, totalFrames, percent: totalFrames ? Math.round((currentFrame / totalFrames) * 100) : 0 });
 
 const renderVideo = async ({ page, render, outputPath, onProgress }) => {
   const frameCount = Math.max(1, Math.round(render.duration * render.fps));
-  log(`Rendering ${frameCount} frames for ${render.filename} (${render.width}x${render.height}, ${render.fps}fps, ${render.duration}s) using ${FFMPEG_PATH}`);
+  log(`Rendering ${frameCount} frames for ${render.filename} (${render.width}x${render.height}, ${render.fps}fps, ${render.duration}s, ${RENDER_SCALE}x supersampling) using ${FFMPEG_PATH}`);
   onProgress?.(createProgress('capturing_frames', 0, frameCount));
-  const ffmpeg = spawn(FFMPEG_PATH, ffmpegArgs({ output: render.output, outputPath, fps: render.fps }), { stdio: ['pipe', 'ignore', 'pipe'] });
+  const ffmpeg = spawn(FFMPEG_PATH, ffmpegArgs({ output: render.output, outputPath, fps: render.fps, width: render.width, height: render.height }), { stdio: ['pipe', 'ignore', 'pipe'] });
   let stderr = '';
   const done = new Promise((resolve, reject) => { ffmpeg.stderr.on('data', (chunk) => { stderr += chunk.toString(); }); ffmpeg.on('error', reject); ffmpeg.on('close', (code) => code === 0 ? resolve() : reject(new Error(stderr || `ffmpeg exited with code ${code}`))); });
   try {
@@ -294,7 +298,7 @@ const renderToFile = async (payload, onProgress) => {
   const outputPath = path.join(workdir, render.filename);
   try {
     onProgress?.(createProgress('opening_browser', 0, 0));
-    browser = await chromium.launch({ args: ['--no-sandbox', '--disable-dev-shm-usage', '--hide-scrollbars', '--autoplay-policy=no-user-gesture-required'] });
+    browser = await chromium.launch({ args: ['--no-sandbox', '--disable-dev-shm-usage', '--hide-scrollbars', '--autoplay-policy=no-user-gesture-required', '--font-render-hinting=medium'] });
     const page = await createPage(browser, render);
     await renderVideo({ page, render, outputPath, onProgress });
     return { ...render, filePath: outputPath, workdir, contentType: contentType(render.output) };
@@ -306,7 +310,7 @@ const cleanupJob = async (id) => { const job = jobs.get(id); if (job?.workdir) a
 const runJob = async (id, payload) => { const job = jobs.get(id); if (!job) return; job.status = 'rendering'; job.progress = createProgress('starting', 0, 0); log(`Job ${id} started`); try { Object.assign(job, await renderToFile(payload, (progress) => { job.progress = progress; }), { status: 'done', progress: createProgress('done', 1, 1) }); log(`Job ${id} done: ${job.filename}`); } catch (error) { job.status = 'failed'; job.error = error instanceof Error ? error.message : String(error); job.progress = createProgress('failed', 0, 1); log(`Job ${id} failed: ${job.error}`); } };
 
 app.get('/drive-media/:fileId', async (request, response) => { try { const fileId = String(request.params.fileId || '').trim(); if (!/^[a-zA-Z0-9_-]+$/.test(fileId)) return response.status(400).json({ error: 'Invalid Google Drive file id.' }); const media = await fetchDriveMedia(fileId, request.headers.range || ''); response.status(media.status === 206 ? 206 : 200); response.setHeader('Content-Type', media.contentType); response.setHeader('Accept-Ranges', media.headers.get('accept-ranges') || 'bytes'); const contentRange = media.headers.get('content-range'); if (contentRange) response.setHeader('Content-Range', contentRange); response.setHeader('Content-Length', String(media.buffer.length)); response.setHeader('Cache-Control', 'public, max-age=3600'); return response.end(media.buffer); } catch (error) { return response.status(500).json({ error: 'Google Drive media proxy failed.', detail: error instanceof Error ? error.message : String(error) }); } });
-app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, stableCssTimeline: true, gifConversion: true, gifConversionPipe: true, seekableVideoOverlayCapture: true, pngFramePipe: true, gifBackgroundConversion: true, driveMediaProxy: true, apiPromoRenderBlob: true, videoWait: true, renderReadyWait: true, embeddedDriveMedia: true, gifVideoFix: true, driveVideoTranscode: true }));
+app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, renderScale: RENDER_SCALE, stableCssTimeline: true, gifConversion: true, gifConversionPipe: true, seekableVideoOverlayCapture: true, pngFramePipe: true, gifBackgroundConversion: true, driveMediaProxy: true, apiPromoRenderBlob: true, videoWait: true, renderReadyWait: true, embeddedDriveMedia: true, gifVideoFix: true, driveVideoTranscode: true, supersampledRender: true }));
 app.post('/api/promo-render', async (request, response) => { let result; try { result = await renderToFile(request.body || {}, () => {}); const buffer = await readFile(result.filePath); response.setHeader('Content-Type', result.contentType); response.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`); response.setHeader('Content-Length', String(buffer.length)); return response.end(buffer); } catch (error) { return response.status(500).json({ error: 'Render failed.', detail: error instanceof Error ? error.message : String(error) }); } finally { if (result?.workdir) await rm(result.workdir, { recursive: true, force: true }).catch(() => {}); } });
 app.post('/convert-gif', async (request, response) => { let result; try { result = await convertGifBufferToWebm(await downloadGifBuffer(request.body?.dataUrl || request.body?.url), 'gif-overlay'); response.setHeader('Content-Type', 'video/webm'); response.setHeader('Content-Disposition', 'attachment; filename="gif-overlay.webm"'); response.end(result.buffer); } catch (error) { response.status(400).json({ error: 'GIF conversion failed.', detail: error instanceof Error ? error.message : String(error) }); } finally { if (result?.workdir) await rm(result.workdir, { recursive: true, force: true }).catch(() => {}); } });
 app.post('/jobs', (request, response) => { const render = normalizePayload(request.body || {}); if (!render.html) return response.status(400).json({ error: 'Invalid render payload.', detail: 'Missing HTML.' }); const id = crypto.randomUUID(); log(`Job ${id} queued: ${render.output}, ${render.width}x${render.height}, ${render.fps}fps, ${render.duration}s, html ${render.html.length} chars`); jobs.set(id, { id, status: 'queued', output: render.output, filename: render.filename, progress: createProgress('queued', 0, 0) }); setTimeout(() => cleanupJob(id), JOB_TTL_MS).unref?.(); setImmediate(() => runJob(id, request.body || {})); return response.status(202).json(serializeJob(jobs.get(id))); });
