@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getFallbackImageBackground, sampleImageColor } from '../utils/imageColor.js';
+import { normalizeGoogleDriveImageUrl } from '../utils/imageUrls.js';
 import { SITE_BANNER_FORMAT, SITE_BANNER_SAFE_ZONES } from './siteBannerStorage.js';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, Number(value)));
@@ -32,6 +33,19 @@ const getPrice = (value) => {
 };
 
 const positionWithOffset = ({ x, y }, offsetX = 0, offsetY = 0) => ({ left: x + offsetX, top: y + offsetY });
+const normalizeCustomBackgroundUrl = (url) => normalizeGoogleDriveImageUrl(String(url || '').trim());
+const getBackgroundFit = (settings) => settings.backgroundFit === 'contain' || settings.backgroundFit === 'fill' ? settings.backgroundFit : 'cover';
+const getBackgroundDim = (settings) => clamp(settings.backgroundDim ?? 0, 0, 70) / 100;
+const backgroundMediaStyle = (settings) => {
+  const fit = getBackgroundFit(settings);
+  return { objectFit: fit === 'fill' ? 'fill' : fit };
+};
+
+function SiteBannerCustomBackground({ url, settings }) {
+  const normalizedUrl = normalizeCustomBackgroundUrl(url);
+  if (!normalizedUrl) return null;
+  return <img key={normalizedUrl} className="site-banner-custom-background" src={normalizedUrl} alt="" aria-hidden="true" style={backgroundMediaStyle(settings)} />;
+}
 
 export function SiteBannerPreview({ dish, settings, index = 0 }) {
   const [sampledColor, setSampledColor] = useState('');
@@ -47,6 +61,8 @@ export function SiteBannerPreview({ dish, settings, index = 0 }) {
   const productPosition = positionWithOffset({ x: 1040, y: 138 }, offsets.productX, offsets.productY);
   const ctaPosition = positionWithOffset({ x: 300, y: 680 }, offsets.ctaX, offsets.ctaY);
   const pricePosition = positionWithOffset({ x: 650, y: 640 }, offsets.priceX, offsets.priceY);
+  const customBackgroundUrl = settings.backgroundMode === 'custom' ? normalizeCustomBackgroundUrl(settings.customBackgroundUrl) : '';
+  const backgroundDim = getBackgroundDim(settings);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,13 +80,19 @@ export function SiteBannerPreview({ dish, settings, index = 0 }) {
     };
   }, [dish?.imageUrl]);
 
+  const sceneClass = [
+    'site-banner-scene',
+    customBackgroundUrl ? 'site-banner-scene-has-custom-background' : '',
+  ].filter(Boolean).join(' ');
+
   return (
     <section className="app-preview-shell" aria-label="Sushiwoki website banner preview">
       <div className="app-canvas-wrap site-banner-canvas-wrap" style={{ width: `${SITE_BANNER_FORMAT.previewWidth}px`, aspectRatio: `${SITE_BANNER_FORMAT.width} / ${SITE_BANNER_FORMAT.height}` }}>
-        <article className="site-banner-scene" style={{ width: `${SITE_BANNER_FORMAT.width}px`, height: `${SITE_BANNER_FORMAT.height}px`, transform: `scale(${previewScale})`, '--site-banner-bg': tunedBackground, '--site-banner-accent': settings.accentColor }}>
+        <article className={sceneClass} style={{ width: `${SITE_BANNER_FORMAT.width}px`, height: `${SITE_BANNER_FORMAT.height}px`, transform: `scale(${previewScale})`, '--site-banner-bg': tunedBackground, '--site-banner-accent': settings.accentColor, '--site-banner-background-dim': backgroundDim }}>
           <div className="site-banner-background" />
-          {settings.backgroundMode === 'custom' && settings.customBackgroundUrl ? <img className="site-banner-custom-background" src={settings.customBackgroundUrl} alt="" /> : null}
-          {settings.backgroundMode === 'auto' && dish?.imageUrl ? <img className="site-banner-edge-fill" src={dish.imageUrl} alt="" /> : null}
+          {customBackgroundUrl ? <SiteBannerCustomBackground url={customBackgroundUrl} settings={settings} /> : null}
+          {settings.backgroundMode === 'auto' && dish?.imageUrl ? <img className="site-banner-edge-fill" src={dish.imageUrl} alt="" crossOrigin="anonymous" /> : null}
+          {customBackgroundUrl ? <div className="site-banner-background-dimmer" aria-hidden="true" /> : null}
           <div className="site-banner-vignette" />
 
           {settings.showSafeZones ? (
@@ -92,7 +114,7 @@ export function SiteBannerPreview({ dish, settings, index = 0 }) {
           </div>
 
           <div className="site-banner-product-stage" style={{ ...productPosition, width: `${settings.productSize}px`, height: `${settings.productSize}px` }}>
-            {dish?.imageUrl ? <img className="site-banner-product-image" src={dish.imageUrl} alt={dish.nameEn || dish.nameGe || 'Dish'} /> : <div className="site-banner-product-placeholder">Select dish with image</div>}
+            {dish?.imageUrl ? <img className="site-banner-product-image" src={dish.imageUrl} alt={dish.nameEn || dish.nameGe || 'Dish'} crossOrigin="anonymous" /> : <div className="site-banner-product-placeholder">Select dish with image</div>}
           </div>
 
           {settings.showCta ? <div className="site-banner-cta" style={{ ...ctaPosition, color: settings.ctaColor, fontFamily: settings.ctaFont, fontSize: `${settings.ctaSize}px` }}>{settings.ctaText || 'ORDER NOW'}</div> : null}
