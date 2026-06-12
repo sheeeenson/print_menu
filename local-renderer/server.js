@@ -102,18 +102,52 @@ const fetchDriveMedia = async (fileId, range = '') => {
   return { buffer, contentType, status: upstream.status, headers: upstream.headers };
 };
 
+const transcodeVideoBufferToWebm = async (videoBuffer, label = 'drive-video') => {
+  const workdir = await mkdtemp(path.join(tmpdir(), 'print-menu-video-transcode-'));
+  const outputPath = path.join(workdir, `${label}.webm`);
+  try {
+    await runFfmpeg([
+      '-y',
+      '-i', 'pipe:0',
+      '-an',
+      '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+      '-c:v', 'libvpx-vp9',
+      '-deadline', 'good',
+      '-cpu-used', '4',
+      '-b:v', '0',
+      '-crf', '28',
+      '-pix_fmt', 'yuv420p',
+      outputPath,
+    ], { stdin: videoBuffer });
+    return { buffer: await readFile(outputPath), workdir };
+  } catch (error) {
+    await rm(workdir, { recursive: true, force: true }).catch(() => {});
+    throw error;
+  }
+};
+
 const embedDriveMediaUrls = async (html) => {
   const urls = Array.from(new Set(String(html).match(/http:\/\/localhost:3020\/drive-media\/[a-zA-Z0-9_-]+/g) || []));
   let nextHtml = html;
   for (const url of urls) {
     const fileId = url.split('/').pop();
+    let transcode;
     try {
       const media = await fetchDriveMedia(fileId);
-      const dataUrl = bufferToDataUrl(media.buffer, media.contentType);
+      let dataUrl;
+      if (/^video\//i.test(media.contentType)) {
+        transcode = await transcodeVideoBufferToWebm(media.buffer, `drive-${fileId}`);
+        dataUrl = bufferToDataUrl(transcode.buffer, 'video/webm');
+        log(`Transcoded Drive media ${fileId}: ${media.contentType} ${media.buffer.length} bytes -> video/webm ${transcode.buffer.length} bytes`);
+      } else {
+        dataUrl = bufferToDataUrl(media.buffer, media.contentType);
+        log(`Embedded Drive media ${fileId}: ${media.contentType}, ${media.buffer.length} bytes`);
+      }
       nextHtml = nextHtml.split(url).join(dataUrl);
-      log(`Embedded Drive media ${fileId}: ${media.contentType}, ${media.buffer.length} bytes`);
     } catch (error) {
-      log(`Could not embed Drive media ${fileId}: ${error instanceof Error ? error.message : String(error)}`);
+      log(`Could not embed/transcode Drive media ${fileId}: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      if (transcode?.workdir) await rm(transcode.workdir, { recursive: true, force: true }).catch(() => {});
     }
   }
   return nextHtml;
@@ -144,11 +178,7 @@ const convertGifBufferToWebm = async (gifBuffer, label = 'gif-overlay') => {
 };
 
 const replaceGifMediaWithVideos = async (page) => {
-  const gifMedia = await page.evaluate(() => Array.from(document.querySelectorAll('img.promo-gif-overlay[src], img.promo-background-media[src], video[src^="data:image/gif"]')).map((element, index) => ({
-    index,
-    tagName: element.tagName.toLowerCase(),
-    src: element.currentSrc || element.src || element.getAttribute('src') || '',
-  })));
+  const gifMedia = await page.evaluate(() => Array.from(document.querySelectorAll('img.promo-gif-overlay[src], img.promo-background-media[src], video[src^="data:image/gif"]')).map((element, index) => ({ index, tagName: element.tagName.toLowerCase(), src: element.currentSrc || element.src || element.getAttribute('src') || '' })));
   for (const item of gifMedia) {
     let result;
     try {
@@ -160,32 +190,18 @@ const replaceGifMediaWithVideos = async (page) => {
         if (!element) return;
         const video = element.tagName.toLowerCase() === 'video' ? element : document.createElement('video');
         if (video !== element) {
-          Array.from(element.attributes || []).forEach((attribute) => {
-            if (!['src', 'srcset', 'alt', 'loading', 'decoding', 'crossorigin'].includes(attribute.name)) video.setAttribute(attribute.name, attribute.value);
-          });
+          Array.from(element.attributes || []).forEach((attribute) => { if (!['src', 'srcset', 'alt', 'loading', 'decoding', 'crossorigin'].includes(attribute.name)) video.setAttribute(attribute.name, attribute.value); });
           video.className = element.className;
           video.style.cssText = element.style.cssText;
         }
         video.src = src;
-        video.muted = true;
-        video.loop = true;
-        video.autoplay = true;
-        video.playsInline = true;
-        video.setAttribute('muted', 'true');
-        video.setAttribute('loop', 'true');
-        video.setAttribute('autoplay', 'true');
-        video.setAttribute('playsinline', 'true');
-        video.setAttribute('preload', 'auto');
-        video.setAttribute('aria-hidden', 'true');
-        video.setAttribute('data-promo-gif-converted-video', 'true');
+        video.muted = true; video.loop = true; video.autoplay = true; video.playsInline = true;
+        video.setAttribute('muted', 'true'); video.setAttribute('loop', 'true'); video.setAttribute('autoplay', 'true'); video.setAttribute('playsinline', 'true'); video.setAttribute('preload', 'auto'); video.setAttribute('aria-hidden', 'true'); video.setAttribute('data-promo-gif-converted-video', 'true');
         if (video !== element) element.replaceWith(video);
       }, { index: item.index, src: dataUrl });
       log(`Converted GIF media ${item.index + 1} to WebM for render.`);
-    } catch (error) {
-      log(`Skipped GIF media ${item.index + 1}: ${error instanceof Error ? error.message : String(error)}`);
-    } finally {
-      if (result?.workdir) await rm(result.workdir, { recursive: true, force: true }).catch(() => {});
-    }
+    } catch (error) { log(`Skipped GIF media ${item.index + 1}: ${error instanceof Error ? error.message : String(error)}`); }
+    finally { if (result?.workdir) await rm(result.workdir, { recursive: true, force: true }).catch(() => {}); }
   }
 };
 
@@ -204,10 +220,7 @@ const waitForVideos = async (page) => {
         if (playPromise?.catch) playPromise.catch(() => undefined);
       } catch (error) {}
       if (video.readyState >= 2) return finish();
-      video.addEventListener('loadedmetadata', finish, { once: true });
-      video.addEventListener('loadeddata', finish, { once: true });
-      video.addEventListener('canplay', finish, { once: true });
-      video.addEventListener('error', finish, { once: true });
+      video.addEventListener('loadedmetadata', finish, { once: true }); video.addEventListener('loadeddata', finish, { once: true }); video.addEventListener('canplay', finish, { once: true }); video.addEventListener('error', finish, { once: true });
     })))).catch(() => undefined),
     wait(VIDEO_WAIT_MS),
   ]);
@@ -217,8 +230,7 @@ const waitForVideos = async (page) => {
 
 const createPage = async (browser, render) => {
   const page = await browser.newPage({ viewport: { width: render.width, height: render.height }, deviceScaleFactor: 1 });
-  page.setDefaultTimeout(0);
-  page.setDefaultNavigationTimeout(0);
+  page.setDefaultTimeout(0); page.setDefaultNavigationTimeout(0);
   const html = await embedDriveMediaUrls(buildDocument(render));
   await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 0 });
   await waitForRenderReady(page);
@@ -229,10 +241,7 @@ const createPage = async (browser, render) => {
   return page;
 };
 
-const seekCssAnimations = async (page, milliseconds) => {
-  await page.evaluate((time) => document.getAnimations({ subtree: true }).forEach((animation) => { try { animation.currentTime = time; animation.pause(); } catch (error) {} }), milliseconds);
-};
-
+const seekCssAnimations = async (page, milliseconds) => { await page.evaluate((time) => document.getAnimations({ subtree: true }).forEach((animation) => { try { animation.currentTime = time; animation.pause(); } catch (error) {} }), milliseconds); };
 const seekVideoOverlays = async (page, seconds) => {
   await page.evaluate(async ({ time, timeout }) => Promise.all(Array.from(document.querySelectorAll('video')).map((video) => new Promise((resolve) => {
     let finished = false;
@@ -243,8 +252,7 @@ const seekVideoOverlays = async (page, seconds) => {
       video.pause(); video.muted = true; video.playsInline = true;
       const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
       const targetTime = duration ? Math.min(Math.max(0.04, time % duration), Math.max(0.04, duration - 0.04)) : Math.max(0.04, time);
-      video.addEventListener('seeked', finish, { once: true });
-      video.addEventListener('error', finish, { once: true });
+      video.addEventListener('seeked', finish, { once: true }); video.addEventListener('error', finish, { once: true });
       if (Math.abs((video.currentTime || 0) - targetTime) < 0.01 && video.readyState >= 2) return finish();
       video.currentTime = targetTime;
     } catch (error) { finish(); }
@@ -254,9 +262,7 @@ const seekFrame = async (page, seconds) => { await seekCssAnimations(page, secon
 
 const ffmpegArgs = ({ output, outputPath, fps }) => {
   const input = ['-y', '-f', 'image2pipe', '-framerate', String(fps), '-vcodec', 'png', '-i', 'pipe:0', '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2'];
-  return output === 'webm'
-    ? [...input, '-c:v', 'libvpx-vp9', '-deadline', 'good', '-cpu-used', '4', '-b:v', '0', '-crf', '28', '-pix_fmt', 'yuv420p', outputPath]
-    : [...input, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', outputPath];
+  return output === 'webm' ? [...input, '-c:v', 'libvpx-vp9', '-deadline', 'good', '-cpu-used', '4', '-b:v', '0', '-crf', '28', '-pix_fmt', 'yuv420p', outputPath] : [...input, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', outputPath];
 };
 const writeFrame = (ffmpeg, buffer) => new Promise((resolve, reject) => { const fail = (error) => reject(error); ffmpeg.stdin.once('error', fail); ffmpeg.stdin.write(buffer, () => { ffmpeg.stdin.off('error', fail); resolve(); }); });
 const createProgress = (stage, currentFrame = 0, totalFrames = 0) => ({ stage, currentFrame, totalFrames, percent: totalFrames ? Math.round((currentFrame / totalFrames) * 100) : 0 });
@@ -276,12 +282,8 @@ const renderVideo = async ({ page, render, outputPath, onProgress }) => {
       onProgress?.(createProgress('capturing_frames', i + 1, frameCount));
     }
     onProgress?.(createProgress('encoding_video', frameCount, frameCount));
-    ffmpeg.stdin.end();
-    await done;
-    onProgress?.(createProgress('done', frameCount, frameCount));
-  } catch (error) {
-    ffmpeg.stdin.destroy(); ffmpeg.kill('SIGKILL'); throw error;
-  }
+    ffmpeg.stdin.end(); await done; onProgress?.(createProgress('done', frameCount, frameCount));
+  } catch (error) { ffmpeg.stdin.destroy(); ffmpeg.kill('SIGKILL'); throw error; }
 };
 
 const renderToFile = async (payload, onProgress) => {
@@ -296,40 +298,15 @@ const renderToFile = async (payload, onProgress) => {
     const page = await createPage(browser, render);
     await renderVideo({ page, render, outputPath, onProgress });
     return { ...render, filePath: outputPath, workdir, contentType: contentType(render.output) };
-  } finally {
-    if (browser) await browser.close().catch(() => {});
-  }
+  } finally { if (browser) await browser.close().catch(() => {}); }
 };
 
 const serializeJob = (job) => ({ id: job.id, status: job.status, output: job.output, filename: job.filename, error: job.error, progress: job.progress || createProgress(job.status || 'queued', 0, 0), downloadUrl: job.status === 'done' ? `/jobs/${job.id}/file` : null });
 const cleanupJob = async (id) => { const job = jobs.get(id); if (job?.workdir) await rm(job.workdir, { recursive: true, force: true }).catch(() => {}); jobs.delete(id); };
-const runJob = async (id, payload) => {
-  const job = jobs.get(id);
-  if (!job) return;
-  job.status = 'rendering'; job.progress = createProgress('starting', 0, 0); log(`Job ${id} started`);
-  try { Object.assign(job, await renderToFile(payload, (progress) => { job.progress = progress; }), { status: 'done', progress: createProgress('done', 1, 1) }); log(`Job ${id} done: ${job.filename}`); }
-  catch (error) { job.status = 'failed'; job.error = error instanceof Error ? error.message : String(error); job.progress = createProgress('failed', 0, 1); log(`Job ${id} failed: ${job.error}`); }
-};
+const runJob = async (id, payload) => { const job = jobs.get(id); if (!job) return; job.status = 'rendering'; job.progress = createProgress('starting', 0, 0); log(`Job ${id} started`); try { Object.assign(job, await renderToFile(payload, (progress) => { job.progress = progress; }), { status: 'done', progress: createProgress('done', 1, 1) }); log(`Job ${id} done: ${job.filename}`); } catch (error) { job.status = 'failed'; job.error = error instanceof Error ? error.message : String(error); job.progress = createProgress('failed', 0, 1); log(`Job ${id} failed: ${job.error}`); } };
 
-app.get('/drive-media/:fileId', async (request, response) => {
-  try {
-    const fileId = String(request.params.fileId || '').trim();
-    if (!/^[a-zA-Z0-9_-]+$/.test(fileId)) return response.status(400).json({ error: 'Invalid Google Drive file id.' });
-    const media = await fetchDriveMedia(fileId, request.headers.range || '');
-    response.status(media.status === 206 ? 206 : 200);
-    response.setHeader('Content-Type', media.contentType);
-    response.setHeader('Accept-Ranges', media.headers.get('accept-ranges') || 'bytes');
-    const contentRange = media.headers.get('content-range');
-    if (contentRange) response.setHeader('Content-Range', contentRange);
-    response.setHeader('Content-Length', String(media.buffer.length));
-    response.setHeader('Cache-Control', 'public, max-age=3600');
-    return response.end(media.buffer);
-  } catch (error) {
-    return response.status(500).json({ error: 'Google Drive media proxy failed.', detail: error instanceof Error ? error.message : String(error) });
-  }
-});
-
-app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, stableCssTimeline: true, gifConversion: true, gifConversionPipe: true, seekableVideoOverlayCapture: true, pngFramePipe: true, gifBackgroundConversion: true, driveMediaProxy: true, apiPromoRenderBlob: true, videoWait: true, renderReadyWait: true, embeddedDriveMedia: true, gifVideoFix: true }));
+app.get('/drive-media/:fileId', async (request, response) => { try { const fileId = String(request.params.fileId || '').trim(); if (!/^[a-zA-Z0-9_-]+$/.test(fileId)) return response.status(400).json({ error: 'Invalid Google Drive file id.' }); const media = await fetchDriveMedia(fileId, request.headers.range || ''); response.status(media.status === 206 ? 206 : 200); response.setHeader('Content-Type', media.contentType); response.setHeader('Accept-Ranges', media.headers.get('accept-ranges') || 'bytes'); const contentRange = media.headers.get('content-range'); if (contentRange) response.setHeader('Content-Range', contentRange); response.setHeader('Content-Length', String(media.buffer.length)); response.setHeader('Cache-Control', 'public, max-age=3600'); return response.end(media.buffer); } catch (error) { return response.status(500).json({ error: 'Google Drive media proxy failed.', detail: error instanceof Error ? error.message : String(error) }); } });
+app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, stableCssTimeline: true, gifConversion: true, gifConversionPipe: true, seekableVideoOverlayCapture: true, pngFramePipe: true, gifBackgroundConversion: true, driveMediaProxy: true, apiPromoRenderBlob: true, videoWait: true, renderReadyWait: true, embeddedDriveMedia: true, gifVideoFix: true, driveVideoTranscode: true }));
 app.post('/api/promo-render', async (request, response) => { let result; try { result = await renderToFile(request.body || {}, () => {}); const buffer = await readFile(result.filePath); response.setHeader('Content-Type', result.contentType); response.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`); response.setHeader('Content-Length', String(buffer.length)); return response.end(buffer); } catch (error) { return response.status(500).json({ error: 'Render failed.', detail: error instanceof Error ? error.message : String(error) }); } finally { if (result?.workdir) await rm(result.workdir, { recursive: true, force: true }).catch(() => {}); } });
 app.post('/convert-gif', async (request, response) => { let result; try { result = await convertGifBufferToWebm(await downloadGifBuffer(request.body?.dataUrl || request.body?.url), 'gif-overlay'); response.setHeader('Content-Type', 'video/webm'); response.setHeader('Content-Disposition', 'attachment; filename="gif-overlay.webm"'); response.end(result.buffer); } catch (error) { response.status(400).json({ error: 'GIF conversion failed.', detail: error instanceof Error ? error.message : String(error) }); } finally { if (result?.workdir) await rm(result.workdir, { recursive: true, force: true }).catch(() => {}); } });
 app.post('/jobs', (request, response) => { const render = normalizePayload(request.body || {}); if (!render.html) return response.status(400).json({ error: 'Invalid render payload.', detail: 'Missing HTML.' }); const id = crypto.randomUUID(); log(`Job ${id} queued: ${render.output}, ${render.width}x${render.height}, ${render.fps}fps, ${render.duration}s, html ${render.html.length} chars`); jobs.set(id, { id, status: 'queued', output: render.output, filename: render.filename, progress: createProgress('queued', 0, 0) }); setTimeout(() => cleanupJob(id), JOB_TTL_MS).unref?.(); setImmediate(() => runJob(id, request.body || {})); return response.status(202).json(serializeJob(jobs.get(id))); });
