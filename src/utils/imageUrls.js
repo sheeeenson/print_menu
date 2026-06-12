@@ -22,7 +22,9 @@ export function normalizeGoogleDriveImageUrl(value) {
   if (!url) return '';
 
   const fileId = extractGoogleDriveFileId(url);
-  if (fileId && url.includes('drive.google.com')) return `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}`;
+  if (fileId && (url.includes('drive.google.com') || url.includes('drive.usercontent.google.com'))) {
+    return `${LOCAL_RENDERER_BASE_URL}/drive-media/${encodeURIComponent(fileId)}`;
+  }
 
   return url;
 }
