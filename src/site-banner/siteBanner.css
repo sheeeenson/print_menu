@@ -80,9 +80,11 @@
 .site-banner-canvas-wrap { aspect-ratio: 2048 / 900; }
 .site-banner-scene { position: absolute; left: 0; top: 0; transform-origin: top left; overflow: hidden; background: var(--site-banner-bg); color: #fffaf2; isolation: isolate; font-family: inherit; }
 .site-banner-background { position: absolute; inset: 0; background: radial-gradient(circle at 74% 45%, rgba(255,255,255,0.24), transparent 34%), linear-gradient(120deg, rgba(35,31,32,0.82), rgba(155,28,49,0.52)), var(--site-banner-bg); z-index: 0; }
-.site-banner-custom-background { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; filter: saturate(1.04) contrast(1.02); }
+.site-banner-scene-has-custom-background .site-banner-background { background: #231f20; }
+.site-banner-custom-background { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; pointer-events: none; filter: saturate(1.04) contrast(1.02); }
 .site-banner-edge-fill { position: absolute; inset: -90px; width: calc(100% + 180px); height: calc(100% + 180px); object-fit: cover; z-index: 1; filter: blur(34px) saturate(1.35) brightness(0.72); opacity: 0.64; transform: scale(1.08); }
-.site-banner-vignette { position: absolute; inset: 0; z-index: 2; background: linear-gradient(90deg, rgba(35,31,32,0.72), rgba(35,31,32,0.22) 46%, rgba(35,31,32,0.2)), radial-gradient(circle at 76% 48%, rgba(255,250,242,0.14), transparent 31%); pointer-events: none; }
+.site-banner-background-dimmer { position: absolute; inset: 0; z-index: 2; pointer-events: none; background: rgba(0,0,0,var(--site-banner-background-dim, 0)); }
+.site-banner-vignette { position: absolute; inset: 0; z-index: 3; background: linear-gradient(90deg, rgba(35,31,32,0.72), rgba(35,31,32,0.22) 46%, rgba(35,31,32,0.2)), radial-gradient(circle at 76% 48%, rgba(255,250,242,0.14), transparent 31%); pointer-events: none; }
 .site-banner-guides { position: absolute; inset: 0; z-index: 20; pointer-events: none; }
 .site-banner-guide { position: absolute; border: 3px dashed rgba(255,250,242,0.82); box-shadow: inset 0 0 0 1px rgba(35,31,32,0.24); }
 .site-banner-guide span { position: absolute; left: 12px; top: 10px; border-radius: 999px; background: rgba(35,31,32,0.72); color: #fffaf2; padding: 7px 12px; font-size: 22px; font-weight: 900; letter-spacing: 0.02em; }
