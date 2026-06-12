@@ -17,7 +17,9 @@ const MAX_VIDEO_DURATION = Number(process.env.MAX_VIDEO_DURATION || 32);
 const MAX_VIDEO_WIDTH = Number(process.env.MAX_VIDEO_WIDTH || 1920);
 const MAX_GIF_DOWNLOAD_BYTES = Number(process.env.MAX_GIF_DOWNLOAD_BYTES || 25 * 1024 * 1024);
 const IMAGE_WAIT_MS = Number(process.env.IMAGE_WAIT_MS || 10000);
-const MEDIA_SEEK_TIMEOUT_MS = Number(process.env.MEDIA_SEEK_TIMEOUT_MS || 2000);
+const VIDEO_WAIT_MS = Number(process.env.VIDEO_WAIT_MS || 15000);
+const RENDER_READY_WAIT_MS = Number(process.env.RENDER_READY_WAIT_MS || 10000);
+const MEDIA_SEEK_TIMEOUT_MS = Number(process.env.MEDIA_SEEK_TIMEOUT_MS || 4000);
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const BUNDLED_FFMPEG_PATH = process.platform === 'win32'
   ? path.join(ROOT_DIR, 'bin', 'ffmpeg.exe')
@@ -83,6 +85,13 @@ const buildDocument = ({ html, width, height, duration }) => {
   return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=${width}, initial-scale=1"/><style>html,body{width:${width}px;height:${height}px;margin:0;padding:0;overflow:hidden;background:#231f20}*,*::before,*::after{box-sizing:border-box}.promo-scene{transform:none!important;transform-origin:top left!important;--promo-duration:${duration}s!important}.promo-scene,.promo-scene *{animation-duration:${duration}s!important}</style></head><body>${html}</body></html>`;
 };
 
+const waitForRenderReady = async (page) => {
+  await Promise.race([
+    page.waitForFunction(() => window.__PROMO_RENDER_READY__ === true, null, { timeout: RENDER_READY_WAIT_MS }).catch(() => undefined),
+    wait(RENDER_READY_WAIT_MS),
+  ]);
+};
+
 const waitForImages = async (page) => {
   await Promise.race([
     page.evaluate(async () => {
@@ -100,12 +109,69 @@ const waitForImages = async (page) => {
   ]);
 };
 
+const waitForVideos = async (page) => {
+  await Promise.race([
+    page.evaluate(async () => {
+      const videos = Array.from(document.querySelectorAll('video'));
+      await Promise.all(videos.map((video) => new Promise((resolve) => {
+        const finish = () => {
+          video.removeEventListener('loadedmetadata', finish);
+          video.removeEventListener('loadeddata', finish);
+          video.removeEventListener('canplay', finish);
+          video.removeEventListener('error', finish);
+          resolve();
+        };
+
+        try {
+          video.muted = true;
+          video.loop = true;
+          video.autoplay = true;
+          video.playsInline = true;
+          video.setAttribute('muted', 'true');
+          video.setAttribute('loop', 'true');
+          video.setAttribute('autoplay', 'true');
+          video.setAttribute('playsinline', 'true');
+          video.setAttribute('preload', 'auto');
+          video.load?.();
+          const playPromise = video.play?.();
+          if (playPromise?.catch) playPromise.catch(() => undefined);
+        } catch (error) {
+          // Continue to event wait / timeout.
+        }
+
+        if (video.readyState >= 2) {
+          finish();
+          return;
+        }
+
+        video.addEventListener('loadedmetadata', finish, { once: true });
+        video.addEventListener('loadeddata', finish, { once: true });
+        video.addEventListener('canplay', finish, { once: true });
+        video.addEventListener('error', finish, { once: true });
+      })));
+    }).catch(() => undefined),
+    wait(VIDEO_WAIT_MS),
+  ]);
+
+  const diagnostics = await page.evaluate(() => Array.from(document.querySelectorAll('video')).map((video, index) => ({
+    index,
+    className: video.className || '',
+    readyState: video.readyState,
+    currentTime: Number(video.currentTime || 0),
+    duration: Number.isFinite(video.duration) ? video.duration : null,
+    src: (video.currentSrc || video.src || '').slice(0, 140),
+  }))).catch(() => []);
+  if (diagnostics.length) log(`Video diagnostics: ${JSON.stringify(diagnostics)}`);
+};
+
 const createPage = async (browser, render) => {
   const page = await browser.newPage({ viewport: { width: render.width, height: render.height }, deviceScaleFactor: 1 });
   page.setDefaultTimeout(0);
   page.setDefaultNavigationTimeout(0);
   await page.setContent(buildDocument(render), { waitUntil: 'domcontentloaded', timeout: 0 });
+  await waitForRenderReady(page);
   await waitForImages(page);
+  await waitForVideos(page);
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   return page;
 };
@@ -127,33 +193,58 @@ const seekVideoOverlays = async (page, seconds) => {
   await page.evaluate(async ({ time, timeout }) => {
     const videos = Array.from(document.querySelectorAll('video'));
     await Promise.all(videos.map((video) => new Promise((resolve) => {
-      const done = () => {
-        video.removeEventListener('seeked', done);
-        video.removeEventListener('loadeddata', done);
+      let finished = false;
+      const cleanup = () => {
+        video.removeEventListener('loadedmetadata', onReady);
+        video.removeEventListener('loadeddata', onReady);
+        video.removeEventListener('canplay', onReady);
+        video.removeEventListener('seeked', onSeeked);
+        video.removeEventListener('error', finish);
+      };
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        window.clearTimeout(timer);
+        cleanup();
         resolve();
       };
-      const timer = window.setTimeout(done, timeout);
-      const finish = () => {
-        window.clearTimeout(timer);
-        done();
+      const onSeeked = () => finish();
+      const seek = () => {
+        try {
+          video.pause();
+          video.muted = true;
+          video.playsInline = true;
+          const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+          const targetTime = duration ? Math.min(Math.max(0.04, time % duration), Math.max(0.04, duration - 0.04)) : Math.max(0.04, time);
+          video.addEventListener('seeked', onSeeked, { once: true });
+          if (Math.abs((video.currentTime || 0) - targetTime) < 0.01 && video.readyState >= 2) {
+            finish();
+            return;
+          }
+          video.currentTime = targetTime;
+        } catch (error) {
+          finish();
+        }
       };
+      const onReady = () => seek();
+      const timer = window.setTimeout(finish, timeout);
 
       try {
-        video.pause();
         video.muted = true;
         video.playsInline = true;
-        const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
-        const targetTime = duration ? time % duration : time;
-        video.addEventListener('seeked', finish, { once: true });
-        video.addEventListener('loadeddata', finish, { once: true });
-        if (Math.abs((video.currentTime || 0) - targetTime) < 0.001 && video.readyState >= 2) {
-          finish();
+        video.setAttribute('muted', 'true');
+        video.setAttribute('playsinline', 'true');
+        video.load?.();
+        if (video.readyState >= 1) {
+          seek();
           return;
         }
-        video.currentTime = targetTime;
+        video.addEventListener('loadedmetadata', onReady, { once: true });
+        video.addEventListener('loadeddata', onReady, { once: true });
+        video.addEventListener('canplay', onReady, { once: true });
+        video.addEventListener('error', finish, { once: true });
       } catch (error) {
-        window.clearTimeout(timer);
-        done();
+        finish();
       }
     })));
   }, { time: seconds, timeout: MEDIA_SEEK_TIMEOUT_MS });
@@ -331,10 +422,11 @@ const replaceGifImagesWithVideos = async (page) => {
         video.src = src;
         video.muted = true;
         video.loop = true;
-        video.autoplay = false;
+        video.autoplay = true;
         video.playsInline = true;
         video.setAttribute('muted', 'true');
         video.setAttribute('loop', 'true');
+        video.setAttribute('autoplay', 'true');
         video.setAttribute('playsinline', 'true');
         video.setAttribute('preload', 'auto');
         video.setAttribute('aria-hidden', 'true');
@@ -362,6 +454,7 @@ const renderToFile = async (payload, onProgress) => {
     const page = await createPage(browser, render);
     await replaceGifImagesWithVideos(page);
     await waitForImages(page);
+    await waitForVideos(page);
     await renderVideo({ page, render, outputPath, onProgress });
     return { ...render, filePath: outputPath, workdir, contentType: contentType(render.output) };
   } finally {
@@ -436,7 +529,7 @@ app.get('/drive-media/:fileId', async (request, response) => {
   }
 });
 
-app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, stableCssTimeline: true, gifConversion: true, gifConversionPipe: true, seekableVideoOverlayCapture: true, pngFramePipe: true, gifBackgroundConversion: true, driveMediaProxy: true, apiPromoRenderBlob: true }));
+app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, stableCssTimeline: true, gifConversion: true, gifConversionPipe: true, seekableVideoOverlayCapture: true, pngFramePipe: true, gifBackgroundConversion: true, driveMediaProxy: true, apiPromoRenderBlob: true, videoWait: true, renderReadyWait: true }));
 
 app.post('/api/promo-render', async (request, response) => {
   let result;
