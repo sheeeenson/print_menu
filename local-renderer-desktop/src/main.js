@@ -17,6 +17,35 @@ const getRendererDirectory = () => {
   return path.resolve(__dirname, '..', '..', '..', 'local-renderer');
 };
 
+const getAppDirectory = () => {
+  if (app.isPackaged) return path.dirname(process.execPath);
+  return path.resolve(__dirname, '..');
+};
+
+const getFfmpegExecutableName = () => (process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg');
+
+const findFfmpegPath = (rendererDir) => {
+  if (process.env.FFMPEG_PATH && existsSync(process.env.FFMPEG_PATH)) return process.env.FFMPEG_PATH;
+
+  const executable = getFfmpegExecutableName();
+  const appDir = getAppDirectory();
+  const candidates = [
+    path.join(appDir, executable),
+    path.join(appDir, 'ffmpeg', executable),
+    path.join(appDir, 'bin', executable),
+    path.join(rendererDir, 'bin', executable),
+    path.join(process.resourcesPath || '', executable),
+    path.join(process.resourcesPath || '', 'ffmpeg', executable),
+    path.join(process.resourcesPath || '', 'bin', executable),
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate && existsSync(candidate)) return candidate;
+  }
+
+  return 'ffmpeg';
+};
+
 const sendToWindow = (channel, payload) => {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   mainWindow.webContents.send(channel, payload);
@@ -58,8 +87,10 @@ const startEmbeddedRenderer = async () => {
 
   process.env.PORT = process.env.PORT || String(PORT);
   process.env.RENDER_SCALE = process.env.RENDER_SCALE || '1';
+  process.env.FFMPEG_PATH = findFfmpegPath(rendererDir);
 
   appendLog(`Starting embedded renderer from ${rendererDir}`);
+  appendLog(`Using ffmpeg: ${process.env.FFMPEG_PATH}`);
   rendererImportPromise = import(pathToFileURL(serverPath).href);
   await rendererImportPromise;
   rendererStartedByApp = true;
