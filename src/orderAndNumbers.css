@@ -1,0 +1,79 @@
+.dish-order-shell {
+  display: grid;
+  gap: 8px;
+}
+
+.dish-order-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #eadfd4;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.dish-order-index {
+  margin-right: auto;
+  border-radius: 999px;
+  background: #231f20;
+  color: #fffaf2;
+  padding: 5px 10px;
+  font-weight: 900;
+  font-size: 0.78rem;
+}
+
+.dish-order-controls button {
+  border: 1px solid #ded1c1;
+  border-radius: 999px;
+  background: #fffaf2;
+  color: #574d45;
+  padding: 7px 11px;
+  font-weight: 850;
+}
+
+.dish-order-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
+.print-page .page-content,
+.print-page .preview-category,
+.print-page .classic-columns-grid,
+.print-page .auto-fill-dish-grid,
+.print-page .fit-all-dish-grid,
+.print-page .custom-grid,
+.print-page .fluid-grid,
+.print-page .free-resize-canvas {
+  counter-reset: menu-dish-number;
+}
+
+.print-page .preview-dish-card {
+  counter-increment: menu-dish-number;
+}
+
+.print-page .preview-image-box::after {
+  content: counter(menu-dish-number);
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  z-index: 4;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 8px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(35, 31, 32, 0.9);
+  color: #fffaf2;
+  font-size: max(10px, calc(var(--badge-size) * 1.08));
+  font-weight: 950;
+  line-height: 1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+  pointer-events: none;
+}
+
+.print-page .preview-image-box:has(.preview-image-placeholder)::after {
+  display: none;
+}
