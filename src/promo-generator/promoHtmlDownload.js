@@ -12,6 +12,12 @@ const PROMO_MEDIA_EXPORT_ID = 'data-promo-export-id';
 const PROMO_DISH_IMAGE_SELECTOR = 'img.promo-dish-image';
 const PROMO_BACKGROUND_MEDIA_SELECTOR = '.promo-background-media';
 const PROMO_GIF_OVERLAY_SELECTOR = 'img.promo-gif-overlay[src]';
+const GOOGLE_DRIVE_FILE_ID_PATTERNS = Object.freeze([
+  /\/drive-media\/([a-zA-Z0-9_-]+)/,
+  /\/file\/d\/([a-zA-Z0-9_-]+)/,
+  /[?&]id=([a-zA-Z0-9_-]+)/,
+  /lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/,
+]);
 
 const getDocumentCss = () => Array.from(document.styleSheets)
   .map((sheet) => {
@@ -85,6 +91,26 @@ const mediaSrcToDataUrl = async (currentSrc) => {
 
 const getElementMediaSrc = (element) => element?.currentSrc || element?.src || element?.getAttribute?.('src') || '';
 
+const extractGoogleDriveFileId = (value = '') => {
+  const input = String(value || '').trim();
+  if (!input) return '';
+
+  for (const pattern of GOOGLE_DRIVE_FILE_ID_PATTERNS) {
+    const match = input.match(pattern);
+    if (match?.[1]) return match[1];
+  }
+
+  return '';
+};
+
+const getLocalRendererMediaUrl = (value = '') => {
+  const currentSrc = String(value || '').trim();
+  if (!currentSrc || currentSrc.startsWith('data:') || currentSrc.startsWith('blob:')) return currentSrc;
+  const fileId = extractGoogleDriveFileId(currentSrc);
+  if (!fileId) return currentSrc;
+  return `${LOCAL_RENDERER_BASE_URL}/drive-media/${encodeURIComponent(fileId)}`;
+};
+
 const getClonedElementByExportId = (clone, exportId) => clone.querySelector(`[${PROMO_MEDIA_EXPORT_ID}="${exportId}"]`);
 
 const markPromoMediaForExport = (scene) => {
@@ -132,7 +158,7 @@ const makeVideoOverlayFromImage = (sourceImage, videoDataUrl) => {
 };
 
 const convertGifOverlayToVideoDataUrl = async (sourceImage) => {
-  const currentSrc = getElementMediaSrc(sourceImage);
+  const currentSrc = getLocalRendererMediaUrl(getElementMediaSrc(sourceImage));
   if (!currentSrc) return '';
 
   let payload = null;
@@ -213,7 +239,10 @@ const embedImagesInClone = async (scene, clone) => {
     resetClonedImageAttributes(clonedImage);
 
     const currentSrc = getElementMediaSrc(sourceImage);
-    if (currentSrc && !currentSrc.startsWith('blob:')) clonedImage.setAttribute('src', currentSrc);
+    const rendererSrc = getLocalRendererMediaUrl(currentSrc);
+    if (rendererSrc && !rendererSrc.startsWith('blob:')) clonedImage.setAttribute('src', rendererSrc);
+
+    if (rendererSrc !== currentSrc) return;
 
     try {
       const dataUrl = await imageElementToDataUrl(sourceImage);
@@ -251,7 +280,7 @@ const embedVideosInClone = async (scene, clone) => {
 
     configureClonedVideoForExport(clonedVideo);
 
-    const currentSrc = getElementMediaSrc(sourceVideo);
+    const currentSrc = getLocalRendererMediaUrl(getElementMediaSrc(sourceVideo));
     if (!currentSrc) return;
 
     clonedVideo.setAttribute('src', currentSrc);
@@ -431,6 +460,8 @@ const installDownloadButtons = () => {
 
   downloadGroup.dataset.promoDownloadEnhanced = 'true';
 };
+
+export const installPromoHtmlDownloadButton = installDownloadButtons;
 
 if (typeof window !== 'undefined') {
   window.addEventListener('load', installDownloadButtons);
