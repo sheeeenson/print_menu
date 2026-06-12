@@ -1,15 +1,14 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
-import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = 3020;
 const HEALTH_URL = `http://localhost:${PORT}/health`;
 
 let mainWindow = null;
-let rendererProcess = null;
+let rendererImportPromise = null;
 let rendererStartedByApp = false;
 
 const getRendererDirectory = () => {
@@ -17,8 +16,6 @@ const getRendererDirectory = () => {
   if (app.isPackaged && existsSync(packagedPath)) return packagedPath;
   return path.resolve(__dirname, '..', '..', '..', 'local-renderer');
 };
-
-const getNpmCommand = () => (process.platform === 'win32' ? 'npm.cmd' : 'npm');
 
 const sendToWindow = (channel, payload) => {
   if (!mainWindow || mainWindow.isDestroyed()) return;
@@ -50,6 +47,25 @@ const waitForHealth = async ({ timeoutMs = 30000 } = {}) => {
   return checkHealth();
 };
 
+const startEmbeddedRenderer = async () => {
+  if (rendererImportPromise) return rendererImportPromise;
+
+  const rendererDir = getRendererDirectory();
+  const serverPath = path.join(rendererDir, 'server.js');
+  if (!existsSync(serverPath)) {
+    throw new Error(`Renderer server.js not found: ${rendererDir}`);
+  }
+
+  process.env.PORT = process.env.PORT || String(PORT);
+  process.env.RENDER_SCALE = process.env.RENDER_SCALE || '1';
+
+  appendLog(`Starting embedded renderer from ${rendererDir}`);
+  rendererImportPromise = import(pathToFileURL(serverPath).href);
+  await rendererImportPromise;
+  rendererStartedByApp = true;
+  return rendererImportPromise;
+};
+
 const startRenderer = async () => {
   const existing = await checkHealth();
   if (existing.ok) {
@@ -58,55 +74,32 @@ const startRenderer = async () => {
     return existing;
   }
 
-  const rendererDir = getRendererDirectory();
-  if (!existsSync(path.join(rendererDir, 'server.js'))) {
-    const error = `Renderer server.js not found: ${rendererDir}`;
-    appendLog(error);
-    sendToWindow('renderer-status', { state: 'error', error });
-    return { ok: false, error };
+  try {
+    sendToWindow('renderer-status', { state: 'starting' });
+    await startEmbeddedRenderer();
+    const health = await waitForHealth();
+    sendToWindow('renderer-status', {
+      state: health.ok ? 'running' : 'error',
+      startedByApp: true,
+      ...health,
+    });
+    return health;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    appendLog(message);
+    sendToWindow('renderer-status', { state: 'error', error: message });
+    return { ok: false, error: message };
   }
-
-  appendLog(`Starting renderer from ${rendererDir}`);
-  rendererProcess = spawn(getNpmCommand(), ['start'], {
-    cwd: rendererDir,
-    shell: false,
-    env: {
-      ...process.env,
-      PORT: String(PORT),
-    },
-  });
-  rendererStartedByApp = true;
-
-  rendererProcess.stdout?.on('data', (chunk) => appendLog(String(chunk).trimEnd()));
-  rendererProcess.stderr?.on('data', (chunk) => appendLog(String(chunk).trimEnd()));
-  rendererProcess.on('exit', (code, signal) => {
-    appendLog(`Renderer process exited. code=${code ?? 'null'} signal=${signal ?? 'null'}`);
-    rendererProcess = null;
-    rendererStartedByApp = false;
-    sendToWindow('renderer-status', { state: 'stopped' });
-  });
-
-  sendToWindow('renderer-status', { state: 'starting' });
-  const health = await waitForHealth();
-  sendToWindow('renderer-status', {
-    state: health.ok ? 'running' : 'error',
-    startedByApp: true,
-    ...health,
-  });
-  return health;
 };
 
 const stopRenderer = () => {
-  if (!rendererProcess) {
+  if (!rendererStartedByApp) {
     appendLog('No renderer process started by this app.');
     return { ok: true };
   }
 
-  appendLog('Stopping renderer...');
-  rendererProcess.kill(process.platform === 'win32' ? undefined : 'SIGTERM');
-  rendererProcess = null;
-  rendererStartedByApp = false;
-  sendToWindow('renderer-status', { state: 'stopped' });
+  appendLog('Embedded renderer will stop when the app closes.');
+  sendToWindow('renderer-status', { state: 'running', startedByApp: true });
   return { ok: true };
 };
 
@@ -139,10 +132,6 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
-});
-
-app.on('before-quit', () => {
-  if (rendererStartedByApp && rendererProcess) stopRenderer();
 });
 
 app.on('window-all-closed', () => {
