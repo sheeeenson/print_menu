@@ -8,6 +8,10 @@ const LOCAL_RENDERER_WINDOWS_URL = 'https://drive.google.com/uc?export=download&
 const ALLOWED_DURATIONS = [8, 16, 32];
 const GIF_URL_PATTERN = /\.gif(?:[?#].*)?$/i;
 const GIF_EXPORT_IMAGE_SELECTOR = 'img.promo-gif-overlay[src], img.promo-background-media[src]';
+const PROMO_MEDIA_EXPORT_ID = 'data-promo-export-id';
+const PROMO_DISH_IMAGE_SELECTOR = 'img.promo-dish-image';
+const PROMO_BACKGROUND_MEDIA_SELECTOR = '.promo-background-media';
+const PROMO_GIF_OVERLAY_SELECTOR = 'img.promo-gif-overlay[src]';
 
 const getDocumentCss = () => Array.from(document.styleSheets)
   .map((sheet) => {
@@ -79,6 +83,27 @@ const mediaSrcToDataUrl = async (currentSrc) => {
   return blobToDataUrl(await response.blob());
 };
 
+const getElementMediaSrc = (element) => element?.currentSrc || element?.src || element?.getAttribute?.('src') || '';
+
+const getClonedElementByExportId = (clone, exportId) => clone.querySelector(`[${PROMO_MEDIA_EXPORT_ID}="${exportId}"]`);
+
+const markPromoMediaForExport = (scene) => {
+  const markedElements = Array.from(scene.querySelectorAll([
+    PROMO_DISH_IMAGE_SELECTOR,
+    PROMO_BACKGROUND_MEDIA_SELECTOR,
+    PROMO_GIF_OVERLAY_SELECTOR,
+  ].join(',')));
+
+  markedElements.forEach((element, index) => {
+    element.setAttribute(PROMO_MEDIA_EXPORT_ID, `promo-media-${index}`);
+  });
+};
+
+const cleanupPromoMediaExportMarks = (scene, clone) => {
+  scene.querySelectorAll(`[${PROMO_MEDIA_EXPORT_ID}]`).forEach((element) => element.removeAttribute(PROMO_MEDIA_EXPORT_ID));
+  clone.querySelectorAll(`[${PROMO_MEDIA_EXPORT_ID}]`).forEach((element) => element.removeAttribute(PROMO_MEDIA_EXPORT_ID));
+};
+
 const copyElementPresentation = (source, target) => {
   target.className = source.className;
   target.style.cssText = source.style.cssText;
@@ -94,10 +119,11 @@ const makeVideoOverlayFromImage = (sourceImage, videoDataUrl) => {
   video.src = videoDataUrl;
   video.muted = true;
   video.loop = true;
-  video.autoplay = false;
+  video.autoplay = true;
   video.playsInline = true;
   video.setAttribute('muted', 'true');
   video.setAttribute('loop', 'true');
+  video.setAttribute('autoplay', 'true');
   video.setAttribute('playsinline', 'true');
   video.setAttribute('preload', 'auto');
   video.setAttribute('aria-hidden', 'true');
@@ -106,7 +132,7 @@ const makeVideoOverlayFromImage = (sourceImage, videoDataUrl) => {
 };
 
 const convertGifOverlayToVideoDataUrl = async (sourceImage) => {
-  const currentSrc = sourceImage.currentSrc || sourceImage.src || sourceImage.getAttribute('src') || '';
+  const currentSrc = getElementMediaSrc(sourceImage);
   if (!currentSrc) return '';
 
   let payload = null;
@@ -138,11 +164,11 @@ const convertGifOverlayToVideoDataUrl = async (sourceImage) => {
 
 const replaceGifImagesWithVideosInClone = async (scene, clone) => {
   const sourceGifs = Array.from(scene.querySelectorAll(GIF_EXPORT_IMAGE_SELECTOR));
-  const clonedGifs = Array.from(clone.querySelectorAll(GIF_EXPORT_IMAGE_SELECTOR));
-  if (!sourceGifs.length || !clonedGifs.length) return;
+  if (!sourceGifs.length) return;
 
-  await Promise.all(sourceGifs.map(async (sourceImage, index) => {
-    const clonedImage = clonedGifs[index];
+  await Promise.all(sourceGifs.map(async (sourceImage) => {
+    const exportId = sourceImage.getAttribute(PROMO_MEDIA_EXPORT_ID);
+    const clonedImage = exportId ? getClonedElementByExportId(clone, exportId) : null;
     if (!clonedImage) return;
     try {
       const videoDataUrl = await convertGifOverlayToVideoDataUrl(sourceImage);
@@ -155,7 +181,7 @@ const replaceGifImagesWithVideosInClone = async (scene, clone) => {
 };
 
 const imageElementToDataUrl = async (sourceImage) => {
-  const currentSrc = sourceImage.currentSrc || sourceImage.src || sourceImage.getAttribute('src') || '';
+  const currentSrc = getElementMediaSrc(sourceImage);
   if (!currentSrc || currentSrc.startsWith('data:')) return currentSrc;
 
   const fetchedDataUrl = await mediaSrcToDataUrl(currentSrc).catch(() => '');
@@ -170,19 +196,23 @@ const imageElementToDataUrl = async (sourceImage) => {
   return canvas.toDataURL('image/png');
 };
 
+const resetClonedImageAttributes = (clonedImage) => {
+  clonedImage.removeAttribute('srcset');
+  clonedImage.removeAttribute('crossorigin');
+  clonedImage.removeAttribute('loading');
+  clonedImage.removeAttribute('decoding');
+};
+
 const embedImagesInClone = async (scene, clone) => {
   const sourceImages = Array.from(scene.querySelectorAll('img'));
-  const clonedImages = Array.from(clone.querySelectorAll('img'));
 
-  await Promise.all(sourceImages.map(async (sourceImage, index) => {
-    const clonedImage = clonedImages[index];
+  await Promise.all(sourceImages.map(async (sourceImage) => {
+    const exportId = sourceImage.getAttribute(PROMO_MEDIA_EXPORT_ID);
+    const clonedImage = exportId ? getClonedElementByExportId(clone, exportId) : null;
     if (!clonedImage) return;
-    clonedImage.removeAttribute('srcset');
-    clonedImage.removeAttribute('crossorigin');
-    clonedImage.removeAttribute('loading');
-    clonedImage.removeAttribute('decoding');
+    resetClonedImageAttributes(clonedImage);
 
-    const currentSrc = sourceImage.currentSrc || sourceImage.src || sourceImage.getAttribute('src') || '';
+    const currentSrc = getElementMediaSrc(sourceImage);
     if (currentSrc && !currentSrc.startsWith('blob:')) clonedImage.setAttribute('src', currentSrc);
 
     try {
@@ -194,29 +224,39 @@ const embedImagesInClone = async (scene, clone) => {
   }));
 };
 
+const configureClonedVideoForExport = (clonedVideo) => {
+  clonedVideo.removeAttribute('srcset');
+  clonedVideo.removeAttribute('crossorigin');
+  clonedVideo.removeAttribute('preload');
+  clonedVideo.muted = true;
+  clonedVideo.loop = true;
+  clonedVideo.autoplay = true;
+  clonedVideo.playsInline = true;
+  clonedVideo.setAttribute('muted', 'true');
+  clonedVideo.setAttribute('loop', 'true');
+  clonedVideo.setAttribute('autoplay', 'true');
+  clonedVideo.setAttribute('playsinline', 'true');
+  clonedVideo.setAttribute('preload', 'auto');
+  clonedVideo.setAttribute('aria-hidden', 'true');
+  clonedVideo.setAttribute('data-promo-video-overlay', 'true');
+};
+
 const embedVideosInClone = async (scene, clone) => {
   const sourceVideos = Array.from(scene.querySelectorAll('video'));
-  const clonedVideos = Array.from(clone.querySelectorAll('video'));
 
-  await Promise.all(sourceVideos.map(async (sourceVideo, index) => {
-    const clonedVideo = clonedVideos[index];
+  await Promise.all(sourceVideos.map(async (sourceVideo) => {
+    const exportId = sourceVideo.getAttribute(PROMO_MEDIA_EXPORT_ID);
+    const clonedVideo = exportId ? getClonedElementByExportId(clone, exportId) : null;
     if (!clonedVideo) return;
 
-    clonedVideo.removeAttribute('srcset');
-    clonedVideo.removeAttribute('crossorigin');
-    clonedVideo.removeAttribute('preload');
-    clonedVideo.muted = true;
-    clonedVideo.loop = true;
-    clonedVideo.playsInline = true;
-    clonedVideo.setAttribute('muted', 'true');
-    clonedVideo.setAttribute('loop', 'true');
-    clonedVideo.setAttribute('playsinline', 'true');
-    clonedVideo.setAttribute('preload', 'auto');
+    configureClonedVideoForExport(clonedVideo);
 
-    const currentSrc = sourceVideo.currentSrc || sourceVideo.src || sourceVideo.getAttribute('src') || '';
+    const currentSrc = getElementMediaSrc(sourceVideo);
     if (!currentSrc) return;
 
     clonedVideo.setAttribute('src', currentSrc);
+    if (sourceVideo.matches(PROMO_BACKGROUND_MEDIA_SELECTOR)) return;
+
     if (currentSrc.startsWith('blob:')) {
       try {
         const dataUrl = await mediaSrcToDataUrl(currentSrc);
@@ -238,6 +278,7 @@ export const getSceneHtmlDocument = async () => {
   const scene = document.querySelector('.promo-scene');
   if (!scene) throw new Error('Could not find the promo scene.');
 
+  markPromoMediaForExport(scene);
   const clone = scene.cloneNode(true);
   clone.style.transform = 'none';
   clone.style.transformOrigin = 'top left';
@@ -246,6 +287,7 @@ export const getSceneHtmlDocument = async () => {
   clone.style.top = '0';
 
   await embedMediaInClone(scene, clone);
+  cleanupPromoMediaExportMarks(scene, clone);
 
   const { width, height } = getSceneSize(scene);
 
