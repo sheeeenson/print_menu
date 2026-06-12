@@ -10,10 +10,14 @@ on:
       - local-renderer-desktop/**
       - .github/workflows/build-renderer-desktop.yml
 
+permissions:
+  contents: read
+
 jobs:
   build-windows:
     name: Build Windows installer
     runs-on: windows-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
