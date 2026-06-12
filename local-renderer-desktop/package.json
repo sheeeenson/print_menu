@@ -40,14 +40,16 @@
       "target": [
         "nsis",
         "portable"
-      ]
+      ],
+      "artifactName": "Print-Menu-Renderer-${version}-${arch}.${ext}"
     },
     "mac": {
       "target": [
         "dmg",
         "zip"
       ],
-      "category": "public.app-category.utilities"
+      "category": "public.app-category.utilities",
+      "artifactName": "Print-Menu-Renderer-${version}-${arch}.${ext}"
     }
   }
 }
