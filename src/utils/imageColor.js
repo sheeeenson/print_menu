@@ -45,7 +45,7 @@ const getDominantColor = (pixels) => {
     if (!bestBucket || bucket.count > bestBucket.count) bestBucket = bucket;
   });
 
-  if (!bestBucket) throw new Error('No dominant edge color found');
+  if (!bestBucket) throw new Error('No dominant color found');
   return {
     r: Math.round(bestBucket.r / bestBucket.count),
     g: Math.round(bestBucket.g / bestBucket.count),
@@ -78,19 +78,23 @@ export const sampleImageColor = (imageUrl) => new Promise((resolve, reject) => {
       context.drawImage(image, 0, 0, size, size);
       const { data } = context.getImageData(0, 0, size, size);
       const edgePixels = [];
+      const allUsefulPixels = [];
 
       for (let y = 0; y < size; y += 1) {
         for (let x = 0; x < size; x += 1) {
-          if (x >= edgeWidth && x < size - edgeWidth && y >= edgeWidth && y < size - edgeWidth) continue;
           const pixel = toRgb(data, (y * size + x) * 4);
           if (!isUsefulPixel(pixel)) continue;
-          edgePixels.push(pixel);
+          allUsefulPixels.push(pixel);
+          if (x < edgeWidth || x >= size - edgeWidth || y < edgeWidth || y >= size - edgeWidth) {
+            edgePixels.push(pixel);
+          }
         }
       }
 
-      if (!edgePixels.length) throw new Error('No useful edge pixels');
+      const sourcePixels = edgePixels.length ? edgePixels : allUsefulPixels;
+      if (!sourcePixels.length) throw new Error('No useful pixels');
 
-      const hex = rgbToHex(getDominantColor(edgePixels));
+      const hex = rgbToHex(getDominantColor(sourcePixels));
       colorCache.set(imageUrl, hex);
       resolve(hex);
     } catch (error) {
