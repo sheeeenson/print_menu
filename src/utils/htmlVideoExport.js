@@ -104,7 +104,9 @@ const getProgressText = ({ status, extension, rendererLabel, progress }) => {
     ? 'opening browser'
     : progress?.stage === 'encoding_video'
       ? 'encoding video'
-      : 'starting render';
+      : progress?.stage === 'capturing_png'
+        ? 'capturing PNG'
+        : 'starting render';
   return `Rendering ${extension.toUpperCase()} via ${label}... ${stage}`;
 };
 
@@ -168,7 +170,7 @@ export async function downloadHtmlRender({
 
   const cloudBaseUrl = endpoint ? endpoint.replace(/\/$/, '').replace(/\/render$/, '') : getRendererBaseUrl();
   const localBaseUrl = getLocalRendererBaseUrl();
-  const shouldUseLocalOnly = output === 'mp4' || output === 'webm';
+  const shouldUseLocalOnly = output === 'mp4' || output === 'webm' || output === 'png';
 
   if (shouldUseLocalOnly) {
     onStatus?.('Checking local renderer...');
