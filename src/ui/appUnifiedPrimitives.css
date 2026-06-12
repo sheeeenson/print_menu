@@ -1,0 +1,412 @@
+/*
+  Shared UI primitives layer.
+
+  This file is the canonical visual contract for app pages. New pages should use
+  app-* classes directly. Existing page-specific classes are bridged here so old
+  modules inherit the same layout, spacing, color, and card system without a risky
+  all-at-once rewrite.
+*/
+
+:root {
+  color-scheme: dark;
+  --app-ui-bg: var(--un-bg, #222633);
+  --app-ui-bg-deep: var(--un-bg-deep, #171922);
+  --app-ui-bg-dark: var(--un-bg-dark, #101116);
+  --app-ui-surface: var(--un-surface, #1c1f29);
+  --app-ui-surface-2: var(--un-surface-2, #222633);
+  --app-ui-surface-3: var(--un-surface-3, #2a2e3b);
+  --app-ui-border: var(--un-border, rgba(255, 255, 255, 0.11));
+  --app-ui-border-soft: var(--un-border-soft, rgba(255, 255, 255, 0.075));
+  --app-ui-border-strong: var(--un-border-strong, rgba(154, 92, 255, 0.72));
+  --app-ui-text: var(--un-text, #f7f4ee);
+  --app-ui-muted: var(--un-muted, #b7b0a8);
+  --app-ui-subtle: var(--un-subtle, #827c76);
+  --app-ui-accent: var(--un-accent, #8c3dff);
+  --app-ui-radius-sm: var(--un-radius-sm, 10px);
+  --app-ui-radius: var(--un-radius, 14px);
+  --app-ui-radius-lg: var(--un-radius-lg, 20px);
+  --app-ui-radius-xl: var(--un-radius-xl, 24px);
+  --app-ui-shadow-soft: var(--un-shadow-soft, 0 10px 28px rgba(0, 0, 0, 0.18));
+}
+
+/* Page frame */
+.app-page,
+.content-section,
+.layout-print-section,
+.image-menu-section,
+.promo-generator-section,
+.site-banner-generator-section {
+  display: grid;
+  grid-template-columns: minmax(320px, 390px) minmax(0, 1fr);
+  min-height: calc(100vh - 64px);
+  background: var(--app-ui-bg) !important;
+  color: var(--app-ui-text) !important;
+}
+
+.app-side-panel,
+.category-panel,
+.layout-admin-panel,
+.advanced-admin-panel,
+.image-menu-panel,
+.promo-generator-panel,
+.site-banner-generator-panel {
+  min-width: 0;
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  padding: 22px !important;
+  background: linear-gradient(180deg, var(--app-ui-bg-deep), var(--app-ui-bg-dark)) !important;
+  color: var(--app-ui-text) !important;
+  border-right: 1px solid var(--app-ui-border) !important;
+  box-shadow: none !important;
+}
+
+.app-preview-stage,
+.dish-workspace,
+.preview-stage,
+.image-menu-preview-stage,
+.promo-generator-preview-stage,
+.site-banner-generator-preview-stage {
+  min-width: 0;
+  padding: 28px !important;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: var(--app-ui-bg) !important;
+  color: var(--app-ui-text) !important;
+}
+
+/* Headers and toolbars */
+.app-panel-header,
+.promo-panel-header,
+.site-banner-panel-header,
+.advanced-panel-header {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 18px;
+  color: var(--app-ui-text) !important;
+}
+
+.app-toolbar,
+.workspace-toolbar,
+.preview-toolbar,
+.promo-generator-toolbar,
+.site-banner-generator-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+  color: var(--app-ui-text) !important;
+}
+
+.app-panel-header h1,
+.app-panel-header h2,
+.app-toolbar h1,
+.app-toolbar h2,
+.workspace-toolbar h1,
+.preview-toolbar h1,
+.promo-panel-header h2,
+.site-banner-panel-header h2,
+.promo-generator-toolbar h2,
+.site-banner-generator-toolbar h2 {
+  margin: 0;
+  color: var(--app-ui-text) !important;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+
+.app-kicker,
+.app-panel-header p,
+.app-toolbar p,
+.workspace-toolbar p,
+.preview-toolbar p,
+.promo-panel-header p,
+.site-banner-panel-header p,
+.promo-generator-toolbar p,
+.site-banner-generator-toolbar p {
+  margin: 0;
+  color: var(--app-ui-muted) !important;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+
+.app-helper,
+.app-panel-header span,
+.promo-panel-header span,
+.site-banner-panel-header span,
+.muted-text {
+  color: var(--app-ui-muted) !important;
+}
+
+/* Cards and control groups */
+.app-card,
+.app-control-group,
+.panel-section,
+.editor-card,
+.category-card,
+.page-list-item,
+.category-checkbox,
+.image-menu-page-list button,
+.image-menu-dish-picker > div,
+.promo-dish-picker > div,
+.site-banner-dish-picker > div,
+.image-menu-category-group,
+.promo-panel-group,
+.site-banner-panel-group,
+.advanced-control-card,
+.advanced-layout-section,
+.inline-advanced-controls,
+.settings-block,
+.badge-editor,
+.saved-grid-card,
+.empty-state,
+.placeholder-panel,
+details,
+summary {
+  background: var(--app-ui-surface) !important;
+  color: var(--app-ui-text) !important;
+  border: 1px solid var(--app-ui-border) !important;
+  border-radius: var(--app-ui-radius-lg) !important;
+  box-shadow: none !important;
+}
+
+.app-control-group,
+.panel-section,
+.promo-panel-group,
+.site-banner-panel-group,
+.advanced-layout-section,
+.advanced-control-card,
+.settings-block,
+.inline-advanced-controls {
+  padding: 16px !important;
+  margin-bottom: 14px !important;
+}
+
+.app-card.selected,
+.category-card.selected,
+.page-list-item.selected,
+.category-checkbox.selected,
+.image-menu-page-list button.selected,
+.image-menu-dish-picker > div.selected,
+.promo-dish-picker > div.selected,
+.site-banner-dish-picker > div.selected,
+.image-menu-grid-buttons button.active {
+  background: linear-gradient(135deg, rgba(140,61,255,0.30), rgba(140,61,255,0.10)) !important;
+  border-color: var(--app-ui-border-strong) !important;
+  box-shadow: inset 0 0 0 1px rgba(185,92,255,0.18) !important;
+}
+
+.app-control-group h3,
+.panel-section h2,
+.promo-panel-group h3,
+.site-banner-panel-group h3,
+.advanced-control-card h3,
+.settings-block h3,
+.inline-advanced-controls h3,
+.category-card span,
+.page-list-item span,
+.category-checkbox strong,
+.image-menu-page-list button strong,
+.image-menu-dish-picker strong,
+.promo-dish-picker strong,
+.site-banner-dish-picker strong {
+  color: var(--app-ui-text) !important;
+}
+
+/* Form controls */
+.app-field,
+.field-label,
+.slider-label,
+.image-menu-control,
+.color-label,
+.toggle-label,
+.app-toggle,
+.promo-toggle-field,
+.site-banner-toggle-field {
+  color: var(--app-ui-muted) !important;
+  font-size: 0.78rem !important;
+  font-weight: 780 !important;
+  gap: 7px !important;
+}
+
+.app-field input,
+.app-field textarea,
+.app-field select,
+.field-label input,
+.field-label textarea,
+.field-label select,
+.image-menu-control input,
+.image-menu-control textarea,
+.image-menu-control select,
+.color-label input:not([type='color']),
+.badge-row input,
+.badge-row select,
+.category-panel input,
+.category-panel select,
+.category-panel textarea,
+.layout-admin-panel input,
+.layout-admin-panel select,
+.layout-admin-panel textarea,
+.advanced-admin-panel input,
+.advanced-admin-panel select,
+.advanced-admin-panel textarea,
+.image-menu-panel input,
+.image-menu-panel select,
+.image-menu-panel textarea,
+.promo-generator-panel input,
+.promo-generator-panel select,
+.promo-generator-panel textarea,
+.site-banner-generator-panel input,
+.site-banner-generator-panel select,
+.site-banner-generator-panel textarea {
+  min-height: 40px !important;
+  padding: 9px 11px !important;
+  border-radius: var(--app-ui-radius-sm) !important;
+  background: var(--app-ui-surface-2) !important;
+  color: var(--app-ui-text) !important;
+  border: 1px solid var(--app-ui-border) !important;
+  box-shadow: none !important;
+}
+
+input[type='range'],
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--app-ui-accent) !important;
+}
+
+.app-toggle,
+.promo-toggle-field,
+.site-banner-toggle-field {
+  display: flex !important;
+  align-items: center;
+  gap: 10px !important;
+  padding: 10px 12px !important;
+  border-radius: var(--app-ui-radius) !important;
+  background: var(--app-ui-surface-2) !important;
+  border: 1px solid var(--app-ui-border) !important;
+  cursor: pointer;
+}
+
+/* Buttons, pills and preview shells */
+.app-segmented,
+.section-tabs,
+.project-actions,
+.print-top-actions,
+.image-menu-format-buttons,
+.promo-format-buttons,
+.promo-duration-buttons,
+.site-banner-export-buttons {
+  background: rgba(255,255,255,0.035) !important;
+  border: 1px solid var(--app-ui-border) !important;
+  border-radius: var(--app-ui-radius-lg) !important;
+  box-shadow: none !important;
+}
+
+.app-segmented button,
+.section-tabs button,
+.project-actions button,
+.print-top-actions button,
+.image-menu-format-buttons button,
+.promo-format-buttons button,
+.promo-duration-buttons button,
+.site-banner-export-buttons button {
+  border: 1px solid transparent !important;
+  border-radius: var(--app-ui-radius) !important;
+  background: transparent !important;
+  color: var(--app-ui-muted) !important;
+  font-weight: 800 !important;
+  box-shadow: none !important;
+}
+
+.app-segmented button.active,
+.app-segmented button:hover,
+.section-tabs button.active,
+.section-tabs button:hover,
+.project-actions button:hover,
+.print-top-actions button:hover,
+.image-menu-format-buttons button.active,
+.image-menu-format-buttons button:hover,
+.promo-format-buttons button.active,
+.promo-format-buttons button:hover,
+.promo-duration-buttons button.active,
+.promo-duration-buttons button:hover,
+.site-banner-export-buttons button:hover {
+  background: rgba(255,255,255,0.075) !important;
+  border-color: var(--app-ui-border) !important;
+  color: #ffffff !important;
+}
+
+.app-pill,
+.preview-toolbar span,
+.promo-output-pill,
+.site-banner-output-pill,
+.slider-label strong,
+.image-menu-control strong,
+.image-menu-section-heading small {
+  background: var(--app-ui-surface-2) !important;
+  color: var(--app-ui-text) !important;
+  border: 1px solid var(--app-ui-border) !important;
+  border-radius: 999px !important;
+  padding: 5px 9px !important;
+}
+
+.app-preview-shell,
+.paper-scroll,
+.image-menu-preview-shell,
+.promo-preview-shell,
+.site-banner-preview-shell {
+  overflow: auto;
+  display: grid;
+  justify-items: center;
+  align-items: start;
+  min-height: 0;
+  padding: 22px 26px 44px !important;
+  background: radial-gradient(circle at top, rgba(42,46,59,0.9), rgba(23,25,34,0.96)) !important;
+  border: 1px solid var(--app-ui-border-soft) !important;
+  border-radius: var(--app-ui-radius-xl) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.035) !important;
+}
+
+.app-canvas-wrap,
+.promo-canvas-wrap,
+.site-banner-canvas-wrap {
+  max-width: 100%;
+  position: relative;
+  border-radius: 28px;
+  overflow: hidden;
+  background: #231f20;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.22);
+}
+
+.app-preview-size,
+.promo-preview-size,
+.site-banner-preview-size {
+  margin-top: 12px;
+  color: var(--app-ui-muted) !important;
+  font-weight: 850;
+}
+
+@media (max-width: 900px) {
+  .app-page,
+  .content-section,
+  .layout-print-section,
+  .image-menu-section,
+  .promo-generator-section,
+  .site-banner-generator-section {
+    grid-template-columns: 1fr;
+  }
+
+  .app-side-panel,
+  .category-panel,
+  .layout-admin-panel,
+  .advanced-admin-panel,
+  .image-menu-panel,
+  .promo-generator-panel,
+  .site-banner-generator-panel {
+    max-height: none;
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--app-ui-border) !important;
+  }
+}
