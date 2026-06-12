@@ -9,6 +9,7 @@
     "lint": "node scripts/check-syntax.js"
   },
   "dependencies": {
+    "html2canvas": "latest",
     "vite": "latest",
     "react": "latest",
     "react-dom": "latest"

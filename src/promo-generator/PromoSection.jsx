@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { PromoPreview } from './PromoPreview.jsx';
-import { DEFAULT_PROMO_EFFECTS, DEFAULT_PROMO_LAYOUT_OFFSETS, getPromoFormat, loadPromoProject, PROMO_DURATIONS, PROMO_FONT_OPTIONS, PROMO_FORMATS, savePromoProject } from './promoStorage.js';
+import { DEFAULT_PROMO_EFFECTS, DEFAULT_PROMO_LAYOUT_OFFSETS, getPromoFormat, loadPromoProject, PROMO_DURATIONS, PROMO_FONT_OPTIONS, PROMO_FORMATS, PROMO_GIF_SHAPES, savePromoProject } from './promoStorage.js';
 import './promoGenerator.css';
 
 const EFFECT_GROUPS = [
@@ -11,6 +11,15 @@ const EFFECT_GROUPS = [
       ['fastEntrance', 'Fast Entrance'],
       ['stopMotion', 'Stop Motion'],
       ['pricePunch', 'Price Punch'],
+      ['textRise', 'Text Rise'],
+      ['headlineSplit', 'Headline Split'],
+      ['textWave', 'Text Wave'],
+      ['textGlitch', 'Text Glitch'],
+      ['dishSlide', 'Dish Slide'],
+      ['dishPulse', 'Dish Pulse'],
+      ['dishRotate', 'Dish Rotate'],
+      ['priceShake', 'Price Shake'],
+      ['priceFlip', 'Price Flip'],
     ],
   },
   {
@@ -18,12 +27,20 @@ const EFFECT_GROUPS = [
     items: [
       ['glow', 'Glow'],
       ['lightSweep', 'Light Sweep'],
+      ['backgroundOrbit', 'Background Orbit'],
+      ['backgroundPulse', 'Background Pulse'],
+      ['spotlightPulse', 'Spotlight Pulse'],
+      ['priceGlow', 'Price Glow'],
+      ['confetti', 'Confetti'],
+      ['vignette', 'Vignette'],
     ],
   },
   {
-    title: 'Media',
+    title: 'GIF Motion',
     items: [
       ['gifOverlay', 'GIF Overlay'],
+      ['gifSpin', 'GIF Spin'],
+      ['gifBounce', 'GIF Bounce'],
     ],
   },
 ];
@@ -36,9 +53,11 @@ const LAYOUT_CONTROL_GROUPS = [
   { title: 'GIF', x: 'gifX', y: 'gifY' },
 ];
 
+const GLOBAL_PROMO_KEYS = new Set(['gifUrl', 'gifPosition', 'gifSize', 'gifBorderRadius', 'gifShape', 'gifShadow', 'gifShadowColor', 'gifLibrary', 'selectedDishId', 'formatId']);
 const getDishTitle = (dish) => dish?.nameEn || dish?.nameGe || 'Untitled dish';
-const getActiveFormatSettings = (settings, formatId = settings.formatId) => settings.formats?.[formatId] ?? {};
 const getSafeFilename = (value) => String(value || 'promo').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'promo';
+const normalizeGifUrl = (value) => String(value || '').trim();
+const withFallback = (value, fallback) => value === undefined || value === null ? fallback : value;
 
 const getDocumentCss = () => Array.from(document.styleSheets)
   .map((sheet) => {
@@ -60,9 +79,9 @@ const downloadUrl = (url, filename) => {
   link.remove();
 };
 
-async function downloadPromoPng(format, selectedDish) {
+const getPromoSceneHtml = () => {
   const scene = document.querySelector('.promo-scene');
-  if (!scene) return;
+  if (!scene) return '';
 
   const clone = scene.cloneNode(true);
   clone.style.transform = 'none';
@@ -71,47 +90,56 @@ async function downloadPromoPng(format, selectedDish) {
   clone.style.left = '0';
   clone.style.top = '0';
 
-  const html = `
+  return `
     <style>${getDocumentCss()}</style>
     ${clone.outerHTML}
   `;
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${format.width}" height="${format.height}" viewBox="0 0 ${format.width} ${format.height}">
-      <foreignObject width="100%" height="100%">
-        <div xmlns="http://www.w3.org/1999/xhtml">${html}</div>
-      </foreignObject>
-    </svg>
-  `;
-  const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
-  const svgUrl = URL.createObjectURL(svgBlob);
+};
 
-  await new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = format.width;
-      canvas.height = format.height;
-      const context = canvas.getContext('2d');
-      context.drawImage(image, 0, 0, format.width, format.height);
-      URL.revokeObjectURL(svgUrl);
-      const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-${format.label.replace(':', 'x')}.png`;
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          reject(new Error('Could not create PNG file.'));
-          return;
-        }
-        const pngUrl = URL.createObjectURL(blob);
-        downloadUrl(pngUrl, filename);
-        setTimeout(() => URL.revokeObjectURL(pngUrl), 1000);
-        resolve();
-      }, 'image/png');
-    };
-    image.onerror = () => {
-      URL.revokeObjectURL(svgUrl);
-      reject(new Error('Could not render the promo preview as PNG.'));
-    };
-    image.src = svgUrl;
+async function downloadPromoExport(format, selectedDish, settings, output) {
+  const html = getPromoSceneHtml();
+  if (!html) throw new Error('Could not find the promo scene.');
+
+  const extension = output === 'png' ? 'png' : 'mp4';
+  const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-${format.label.replace(':', 'x')}.${extension}`;
+  const response = await fetch('/api/promo-render', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      output,
+      filename,
+      format,
+      duration: settings?.duration || 8,
+      fps: 30,
+      settings,
+      dish: selectedDish,
+      html,
+    }),
   });
+
+  if (!response.ok) {
+    const fallbackMessage = `${extension.toUpperCase()} export failed.`;
+    const responseText = await response.text();
+    let message = responseText || fallbackMessage;
+
+    if (responseText) {
+      try {
+        const payload = JSON.parse(responseText);
+        message = payload.detail || payload.error || responseText;
+      } catch (error) {
+        message = responseText;
+      }
+    }
+
+    throw new Error(message);
+  }
+
+  const fileBlob = await response.blob();
+  if (!fileBlob.size) throw new Error(`Renderer returned an empty ${extension.toUpperCase()} file.`);
+
+  const fileUrl = URL.createObjectURL(fileBlob);
+  downloadUrl(fileUrl, filename);
+  setTimeout(() => URL.revokeObjectURL(fileUrl), 1000);
 }
 
 function PromoControlGroup({ title, children }) {
@@ -188,6 +216,72 @@ function LayoutOffsetControls({ settings, updateLayoutOffset, resetLayoutOffsets
   );
 }
 
+function TextShadowControls({ settings, updateSettings }) {
+  return (
+    <div className="promo-style-block">
+      <ToggleField label="Enable text shadow" checked={Boolean(withFallback(settings.showTextShadow, true))} onChange={(showTextShadow) => updateSettings({ showTextShadow })} />
+      <ColorControl label="Shadow color" value={withFallback(settings.textShadowColor, '#000000')} onChange={(textShadowColor) => updateSettings({ textShadowColor })} />
+      <RangeControl label="Shadow opacity" value={withFallback(settings.textShadowOpacity, 34)} min={0} max={100} onChange={(textShadowOpacity) => updateSettings({ textShadowOpacity })} suffix="%" />
+      <RangeControl label="Shadow blur" value={withFallback(settings.textShadowBlur, 38)} min={0} max={90} onChange={(textShadowBlur) => updateSettings({ textShadowBlur })} suffix="px" />
+    </div>
+  );
+}
+
+function GifLibraryControls({ settings, updateSettings }) {
+  const gifUrl = normalizeGifUrl(settings.gifUrl);
+  const gifLibrary = Array.isArray(settings.gifLibrary) ? settings.gifLibrary : [];
+  const selectedLibraryUrl = gifLibrary.some((item) => item.url === gifUrl) ? gifUrl : '';
+
+  const saveCurrentGif = () => {
+    const url = normalizeGifUrl(settings.gifUrl);
+    if (!url) return;
+    const existing = gifLibrary.find((item) => item.url === url);
+    const nextItem = existing || { id: `gif_${Date.now()}`, name: `GIF ${gifLibrary.length + 1}`, url };
+    updateSettings({
+      gifLibrary: [nextItem, ...gifLibrary.filter((item) => item.url !== url)].slice(0, 60),
+      gifUrl: url,
+    });
+  };
+
+  const deleteGif = (url) => {
+    updateSettings({
+      gifLibrary: gifLibrary.filter((item) => item.url !== url),
+      gifUrl: gifUrl === url ? '' : gifUrl,
+    });
+  };
+
+  return (
+    <div className="promo-gif-library">
+      <label className="image-menu-control">
+        <span>GIF URL</span>
+        <input value={settings.gifUrl || ''} placeholder="Paste GIF URL" onChange={(event) => updateSettings({ gifUrl: event.target.value })} />
+      </label>
+      <div className="promo-gif-library-actions">
+        <button type="button" onClick={saveCurrentGif} disabled={!gifUrl}>Save current GIF</button>
+        {gifLibrary.length ? (
+          <select value={selectedLibraryUrl} onChange={(event) => event.target.value && updateSettings({ gifUrl: event.target.value })}>
+            <option value="">Choose saved GIF</option>
+            {gifLibrary.map((item) => <option key={item.id || item.url} value={item.url}>{item.name}</option>)}
+          </select>
+        ) : null}
+      </div>
+      {gifLibrary.length ? (
+        <div className="promo-gif-library-list">
+          {gifLibrary.map((item) => (
+            <div key={item.id || item.url} className={item.url === gifUrl ? 'active' : ''}>
+              <button type="button" onClick={() => updateSettings({ gifUrl: item.url })}>
+                <span>{item.name}</span>
+                <small>{item.url}</small>
+              </button>
+              <button type="button" className="danger" onClick={() => deleteGif(item.url)}>Delete</button>
+            </div>
+          ))}
+        </div>
+      ) : <small className="promo-preview-size">Saved GIFs will appear here after you save a URL.</small>}
+    </div>
+  );
+}
+
 export function PromoSection({ project }) {
   const contentCategories = useMemo(() => project.categories ?? [], [project.categories]);
   const contentDishes = useMemo(() => project.dishes ?? [], [project.dishes]);
@@ -197,7 +291,7 @@ export function PromoSection({ project }) {
     category,
     dishes: dishesWithImages.filter((dish) => dish.categoryId === category.id),
   })), [contentCategories, dishesWithImages]);
-  const [openCategoryIds, setOpenCategoryIds] = useState(() => new Set(contentCategories.map((category) => category.id)));
+  const [openCategoryIds, setOpenCategoryIds] = useState(() => new Set());
   const [settings, setSettings] = useState(() => loadPromoProject(dishesWithImages));
   const [exportStatus, setExportStatus] = useState('');
 
@@ -209,31 +303,29 @@ export function PromoSection({ project }) {
     savePromoProject(settings);
   }, [settings]);
 
-  useEffect(() => {
-    setOpenCategoryIds((current) => {
-      const next = new Set(current);
-      contentCategories.forEach((category) => next.add(category.id));
-      return next;
-    });
-  }, [contentCategories]);
-
   const selectedDish = dishesWithImages.find((dish) => dish.id === settings.selectedDishId) ?? dishesWithImages[0] ?? null;
   const selectedIndex = Math.max(0, dishesWithImages.findIndex((dish) => dish.id === selectedDish?.id));
   const activeFormat = getPromoFormat(settings.formatId);
 
+  const syncFormats = (current, changes = {}) => {
+    const formatChanges = Object.fromEntries(Object.entries(changes).filter(([key]) => !GLOBAL_PROMO_KEYS.has(key)));
+    const currentFormatSettings = current.formats?.[current.formatId] ?? {};
+    const syncedFormatSettings = { ...currentFormatSettings, ...formatChanges };
+    return Object.fromEntries(PROMO_FORMATS.map((format) => [
+      format.id,
+      {
+        ...(current.formats?.[format.id] ?? {}),
+        ...syncedFormatSettings,
+      },
+    ]));
+  };
+
   const updateSettings = (changes) => {
-    setSettings((current) => {
-      const activeFormatSettings = getActiveFormatSettings(current);
-      const nextFormatSettings = { ...activeFormatSettings, ...changes };
-      return {
-        ...current,
-        ...changes,
-        formats: {
-          ...(current.formats ?? {}),
-          [current.formatId]: nextFormatSettings,
-        },
-      };
-    });
+    setSettings((current) => ({
+      ...current,
+      ...changes,
+      formats: syncFormats(current, changes),
+    }));
   };
 
   const updateLayoutOffset = (key, value) => {
@@ -246,45 +338,48 @@ export function PromoSection({ project }) {
     });
   };
 
-  const resetLayoutOffsets = () => {
-    updateSettings({ layoutOffsets: { ...DEFAULT_PROMO_LAYOUT_OFFSETS } });
-  };
+  const resetLayoutOffsets = () => updateSettings({ layoutOffsets: { ...DEFAULT_PROMO_LAYOUT_OFFSETS } });
 
   const switchFormat = (formatId) => {
-    setSettings((current) => {
-      const currentFormatSettings = getActiveFormatSettings(current);
-      const nextFormatSettings = getActiveFormatSettings(current, formatId);
-      return {
-        ...current,
-        ...nextFormatSettings,
-        formatId,
-        formats: {
-          ...(current.formats ?? {}),
-          [current.formatId]: currentFormatSettings,
-        },
-      };
-    });
+    setSettings((current) => ({
+      ...current,
+      formatId,
+      formats: syncFormats(current),
+    }));
   };
 
   const updateEffect = (key, value) => {
-    updateSettings({
-      effects: { ...DEFAULT_PROMO_EFFECTS, ...(settings.effects ?? {}), [key]: value },
-    });
+    updateSettings({ effects: { ...DEFAULT_PROMO_EFFECTS, ...(settings.effects ?? {}), [key]: value } });
   };
 
   const handleDownloadPng = async () => {
+    if (!selectedDish) {
+      setExportStatus('Select a dish with an image before exporting PNG.');
+      return;
+    }
     try {
-      setExportStatus('Preparing PNG...');
-      await downloadPromoPng(activeFormat, selectedDish);
+      setExportStatus('Rendering PNG on server...');
+      await downloadPromoExport(activeFormat, selectedDish, settings, 'png');
       setExportStatus('PNG downloaded.');
     } catch (error) {
       console.error(error);
-      setExportStatus('PNG export failed. Try again after images finish loading.');
+      setExportStatus(error instanceof Error ? error.message : 'PNG export failed.');
     }
   };
 
-  const handleDownloadMp4 = () => {
-    setExportStatus('MP4 export needs the renderer service. This button is ready for the next backend step.');
+  const handleDownloadMp4 = async () => {
+    if (!selectedDish) {
+      setExportStatus('Select a dish with an image before exporting MP4.');
+      return;
+    }
+    try {
+      setExportStatus('Rendering MP4 on server...');
+      await downloadPromoExport(activeFormat, selectedDish, settings, 'mp4');
+      setExportStatus('MP4 video downloaded.');
+    } catch (error) {
+      console.error(error);
+      setExportStatus(error instanceof Error ? error.message : 'MP4 export failed.');
+    }
   };
 
   const toggleCategoryOpen = (categoryId) => {
@@ -302,28 +397,22 @@ export function PromoSection({ project }) {
         <header className="promo-panel-header">
           <p>TV Promo</p>
           <h2>Promo Generator</h2>
-          <span>{activeFormat.width} x {activeFormat.height} {activeFormat.name} scene.</span>
+          <span>{activeFormat.label} scene</span>
         </header>
 
-        <PromoControlGroup title="Export">
+        <PromoControlGroup title="Download">
           <div className="promo-duration-buttons">
-            <button type="button" onClick={handleDownloadPng}>Download PNG</button>
-            <button type="button" onClick={handleDownloadMp4}>Download MP4</button>
+            <button type="button" onClick={handleDownloadPng}>PNG</button>
+            <button type="button" onClick={handleDownloadMp4}>MP4</button>
           </div>
           {exportStatus ? <small className="promo-preview-size">{exportStatus}</small> : null}
         </PromoControlGroup>
 
         <PromoControlGroup title="Format">
-          <div className="promo-format-buttons">
+          <div className="promo-format-buttons promo-format-buttons-clean">
             {PROMO_FORMATS.map((format) => (
-              <button
-                key={format.id}
-                className={settings.formatId === format.id ? 'active' : ''}
-                type="button"
-                onClick={() => switchFormat(format.id)}
-              >
+              <button key={format.id} className={settings.formatId === format.id ? 'active' : ''} type="button" onClick={() => switchFormat(format.id)}>
                 <strong>{format.label}</strong>
-                <small>{format.width}×{format.height}</small>
               </button>
             ))}
           </div>
@@ -358,7 +447,7 @@ export function PromoSection({ project }) {
                           return (
                             <div key={dish.id} className={selected ? 'selected' : ''}>
                               <label>
-                                <input type="radio" name="tv-promo-dish" checked={selected} onChange={() => setSettings((current) => ({ ...current, selectedDishId: dish.id }))} />
+                                <input type="radio" name="tv-promo-dish" checked={selected} onChange={() => updateSettings({ selectedDishId: dish.id })} />
                                 {dish.imageUrl ? <img src={dish.imageUrl} alt="" /> : <span className="image-menu-mini-placeholder" />}
                                 <span><strong>{dish.nameEn}</strong><small>{dish.nameGe}</small></span>
                               </label>
@@ -377,45 +466,28 @@ export function PromoSection({ project }) {
         <PromoControlGroup title="Duration">
           <div className="promo-duration-buttons">
             {PROMO_DURATIONS.map((duration) => (
-              <button
-                key={duration}
-                className={settings.duration === duration ? 'active' : ''}
-                type="button"
-                onClick={() => updateSettings({ duration })}
-              >
-                {duration}s
-              </button>
+              <button key={duration} className={settings.duration === duration ? 'active' : ''} type="button" onClick={() => updateSettings({ duration })}>{duration}s</button>
             ))}
           </div>
         </PromoControlGroup>
 
         <PromoControlGroup title="Offer">
           <ToggleField label="Show offer text" checked={Boolean(settings.showOffer)} onChange={(showOffer) => updateSettings({ showOffer })} />
-          <label className="image-menu-control">
-            <span>Headline</span>
-            <input value={settings.headline} placeholder={selectedDish ? getDishTitle(selectedDish) : 'Promo headline'} onChange={(event) => updateSettings({ headline: event.target.value })} />
-          </label>
-          <label className="image-menu-control">
-            <span>Offer text</span>
-            <input value={settings.offerText} placeholder="New, Today only, -20%" onChange={(event) => updateSettings({ offerText: event.target.value })} />
-          </label>
+          <label className="image-menu-control"><span>Headline</span><input value={settings.headline} placeholder={selectedDish ? getDishTitle(selectedDish) : 'Promo headline'} onChange={(event) => updateSettings({ headline: event.target.value })} /></label>
+          <label className="image-menu-control"><span>Offer text</span><input value={settings.offerText} placeholder="New, Today only, -20%" onChange={(event) => updateSettings({ offerText: event.target.value })} /></label>
           <ToggleField label="Show CTA" checked={Boolean(settings.showCta)} onChange={(showCta) => updateSettings({ showCta })} />
-          <label className="image-menu-control">
-            <span>CTA</span>
-            <input value={settings.ctaText} placeholder="ORDER NOW" onChange={(event) => updateSettings({ ctaText: event.target.value })} />
-          </label>
+          <label className="image-menu-control"><span>CTA</span><input value={settings.ctaText} placeholder="ORDER NOW" onChange={(event) => updateSettings({ ctaText: event.target.value })} /></label>
         </PromoControlGroup>
 
         <PromoControlGroup title="Appearance">
           <RangeControl label="Background tone" value={settings.backgroundTone} min={-40} max={40} onChange={(backgroundTone) => updateSettings({ backgroundTone })} />
-          <RangeControl label="Dish size" value={settings.dishSize} min={100} max={650} onChange={(dishSize) => updateSettings({ dishSize })} suffix="px" />
+          <RangeControl label="Dish size" value={settings.dishSize} min={100} max={900} onChange={(dishSize) => updateSettings({ dishSize })} suffix="px" />
           <ToggleField label="Show description" checked={Boolean(settings.showDescription)} onChange={(showDescription) => updateSettings({ showDescription })} />
           <RangeControl label="Description vertical offset" value={settings.descriptionOffsetY} min={-180} max={180} onChange={(descriptionOffsetY) => updateSettings({ descriptionOffsetY })} suffix="px" />
         </PromoControlGroup>
 
-        <PromoControlGroup title="Layout">
-          <LayoutOffsetControls settings={settings} updateLayoutOffset={updateLayoutOffset} resetLayoutOffsets={resetLayoutOffsets} />
-        </PromoControlGroup>
+        <PromoControlGroup title="Text shadow"><TextShadowControls settings={settings} updateSettings={updateSettings} /></PromoControlGroup>
+        <PromoControlGroup title="Layout"><LayoutOffsetControls settings={settings} updateLayoutOffset={updateLayoutOffset} resetLayoutOffsets={resetLayoutOffsets} /></PromoControlGroup>
 
         <PromoControlGroup title="Text styles">
           <TextStyleControls title="Offer label" prefix="offer" settings={settings} updateSettings={updateSettings} sizeMin={16} sizeMax={76} />
@@ -433,19 +505,14 @@ export function PromoSection({ project }) {
         {EFFECT_GROUPS.map((group) => (
           <PromoControlGroup key={group.title} title={group.title}>
             <div className="promo-toggle-list">
-              {group.items.map(([key, label]) => (
-                <ToggleField key={key} label={label} checked={Boolean(settings.effects?.[key])} onChange={(value) => updateEffect(key, value)} />
-              ))}
+              {group.items.map(([key, label]) => <ToggleField key={key} label={label} checked={Boolean(settings.effects?.[key])} onChange={(value) => updateEffect(key, value)} />)}
             </div>
           </PromoControlGroup>
         ))}
 
         {settings.effects?.gifOverlay ? (
           <PromoControlGroup title="GIF Overlay">
-            <label className="image-menu-control">
-              <span>GIF URL</span>
-              <input value={settings.gifUrl} placeholder="Paste GIF URL" onChange={(event) => updateSettings({ gifUrl: event.target.value })} />
-            </label>
+            <GifLibraryControls settings={settings} updateSettings={updateSettings} />
             <label className="image-menu-control">
               <span>Position</span>
               <select value={settings.gifPosition} onChange={(event) => updateSettings({ gifPosition: event.target.value })}>
@@ -457,20 +524,23 @@ export function PromoSection({ project }) {
               </select>
             </label>
             <label className="image-menu-control">
-              <span>Size <strong>{settings.gifSize}%</strong></span>
-              <input type="range" min="6" max="42" value={settings.gifSize} onChange={(event) => updateSettings({ gifSize: Number(event.target.value) })} />
+              <span>Shape</span>
+              <select value={settings.gifShape || 'rectangle'} onChange={(event) => updateSettings({ gifShape: event.target.value })}>
+                {PROMO_GIF_SHAPES.map((shape) => <option key={shape.id} value={shape.id}>{shape.label}</option>)}
+              </select>
             </label>
+            <RangeControl label="Size" value={settings.gifSize} min={6} max={42} onChange={(gifSize) => updateSettings({ gifSize })} suffix="%" />
+            <RangeControl label="Corner radius" value={settings.gifBorderRadius ?? 0} min={0} max={500} onChange={(gifBorderRadius) => updateSettings({ gifBorderRadius })} suffix="px" />
+            <ToggleField label="Enable GIF shadow" checked={Boolean(settings.gifShadow)} onChange={(gifShadow) => updateSettings({ gifShadow })} />
+            <ColorControl label="GIF shadow color" value={settings.gifShadowColor || '#000000'} onChange={(gifShadowColor) => updateSettings({ gifShadowColor })} />
           </PromoControlGroup>
         ) : null}
       </aside>
 
       <main className="promo-generator-preview-stage">
         <div className="promo-generator-toolbar">
-          <div>
-            <p>Preview</p>
-            <h2>{selectedDish ? getDishTitle(selectedDish) : 'Select dish'}</h2>
-          </div>
-          <div className="promo-output-pill">{activeFormat.label} · {activeFormat.width} × {activeFormat.height}</div>
+          <div><p>Preview</p><h2>{selectedDish ? getDishTitle(selectedDish) : 'Select dish'}</h2></div>
+          <div className="promo-output-pill">{activeFormat.label}</div>
         </div>
         <PromoPreview dish={selectedDish} settings={settings} index={selectedIndex} />
       </main>

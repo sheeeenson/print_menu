@@ -1,0 +1,15 @@
+{
+  "name": "print-menu-local-renderer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "node -e \"process.env.RENDER_SCALE=process.env.RENDER_SCALE||'1'; import('./server.js')\"",
+    "setup": "playwright install chromium",
+    "package": "node scripts/package-renderer.mjs"
+  },
+  "dependencies": {
+    "express": "latest",
+    "playwright": "1.49.1"
+  }
+}

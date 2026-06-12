@@ -1,23 +1,71 @@
+const GOOGLE_DRIVE_ID_PATTERNS = Object.freeze([
+  /\/file\/d\/([a-zA-Z0-9_-]+)/,
+  /[?&]id=([a-zA-Z0-9_-]+)/,
+]);
+
+const LOCAL_RENDERER_BASE_URL = 'http://localhost:3020';
+
+export function extractGoogleDriveFileId(value = '') {
+  const input = String(value || '').trim();
+  if (!input) return '';
+
+  for (const pattern of GOOGLE_DRIVE_ID_PATTERNS) {
+    const match = input.match(pattern);
+    if (match?.[1]) return match[1];
+  }
+
+  return '';
+}
+
 export function normalizeGoogleDriveImageUrl(value) {
   const url = String(value || '').trim();
   if (!url) return '';
 
-  const filePathMarker = 'drive.google.com/file/d/';
-  if (url.includes(filePathMarker)) {
-    const afterMarker = url.split(filePathMarker)[1] || '';
-    const fileId = afterMarker.split('/')[0];
-    return fileId ? `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}` : url;
-  }
-
-  if (url.includes('drive.google.com/open?id=')) {
-    const fileId = new URL(url).searchParams.get('id');
-    return fileId ? `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}` : url;
-  }
-
-  if (url.includes('drive.google.com/uc?')) {
-    const fileId = new URL(url).searchParams.get('id');
-    return fileId ? `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}` : url;
+  const fileId = extractGoogleDriveFileId(url);
+  if (fileId && url.includes('drive.google.com')) {
+    return `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}`;
   }
 
   return url;
+}
+
+export function normalizeGoogleDriveMediaUrl(value) {
+  const url = String(value || '').trim();
+  if (!url) return '';
+
+  const fileId = extractGoogleDriveFileId(url);
+  if (fileId && url.includes('drive.google.com')) {
+    return `https://drive.google.com/uc?export=view&id=${encodeURIComponent(fileId)}`;
+  }
+
+  return url;
+}
+
+export function normalizeGoogleDriveVideoUrl(value) {
+  const url = String(value || '').trim();
+  if (!url) return '';
+
+  const fileId = extractGoogleDriveFileId(url);
+  if (fileId && (url.includes('drive.google.com') || url.includes('drive.usercontent.google.com'))) {
+    return `${LOCAL_RENDERER_BASE_URL}/drive-media/${encodeURIComponent(fileId)}`;
+  }
+
+  return url;
+}
+
+export function isVideoLikeUrl(value = '') {
+  const url = String(value || '').trim().toLowerCase();
+  if (!url) return false;
+  if (/\/drive-media\/[a-z0-9_-]+/i.test(url)) return true;
+  if (url.includes('drive.usercontent.google.com/download')) return true;
+  if (/\.(mp4|webm|mov|m4v)(?:\?|#|$)/i.test(url)) return true;
+  return false;
+}
+
+export function guessMediaTypeFromUrl(value = '') {
+  const url = String(value || '').trim().toLowerCase();
+  if (!url) return 'auto';
+  if (isVideoLikeUrl(url)) return 'video';
+  if (/\.(png|jpg|jpeg|webp|gif|avif)(?:\?|#|$)/i.test(url)) return 'image';
+  return 'auto';
 }

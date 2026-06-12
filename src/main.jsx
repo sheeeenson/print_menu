@@ -14,7 +14,24 @@ import './pizzaSizeLayoutFix.js';
 import './pizzaBaselineFix.css';
 import './blurImageFix.css';
 import './finalPizzaPriceAlign.css';
+import './orderAndNumbers.css';
 import './ui/appTheme.css';
+import './mobileFixes.css';
+import './advancedResponsiveFix.css';
+import './unifiedAppTheme.css';
+import './mobileUxEnhancements.css';
+import './promoEnhancements.css';
+import './removeGifCornerRadius.css';
+import './gifOverlayControls.css';
+import './dishSizeBoost.js';
+import './promoExtraEffects.js';
+import './promoWideMovement.js';
+import './promoSafeAreaOverlay.js';
+import './promoDurationExportFix.js';
+import './promoRenderProgressBar.js';
+import './promoRenderProgressBridge.js';
+import './promoRenderProgressInlineOverride.js';
+import './promoVideoOverlaySupport.js';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>

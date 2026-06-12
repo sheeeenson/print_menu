@@ -1,0 +1,438 @@
+/* Mobile-first UX polish loaded after the unified theme. */
+
+@media (hover: none) {
+  button:hover {
+    transform: none !important;
+  }
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(185, 92, 255, 0.42) !important;
+  outline-offset: 2px;
+}
+
+@media (max-width: 920px) {
+  html,
+  body,
+  #root {
+    min-height: 100svh;
+  }
+
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .workspace {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 16px) !important;
+  }
+
+  .main-navigation,
+  .main-navigation.top-nav {
+    position: sticky !important;
+    top: 0 !important;
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    align-items: center !important;
+    padding: max(8px, env(safe-area-inset-top)) 10px 10px !important;
+    gap: 8px !important;
+    min-height: 0 !important;
+    background: rgba(16, 17, 22, 0.96) !important;
+    backdrop-filter: blur(16px);
+  }
+
+  .brand-block,
+  .compact-brand-block {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    width: 40px !important;
+    min-width: 40px !important;
+  }
+
+  .brand-mark {
+    width: 38px !important;
+    height: 38px !important;
+    font-size: 17px !important;
+  }
+
+  .save-status {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    display: block !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    justify-self: stretch !important;
+    padding: 8px 10px !important;
+    border-radius: 14px !important;
+    text-align: left !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .section-tabs {
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    z-index: auto !important;
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 48px !important;
+    padding: 5px !important;
+    gap: 6px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    border-radius: 18px !important;
+    background: rgba(255,255,255,0.045) !important;
+    border: 1px solid rgba(255,255,255,0.11) !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .section-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .section-tabs button {
+    flex: 0 0 auto !important;
+    min-width: max-content !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 40px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 9px 14px !important;
+    border-radius: 14px !important;
+    font-size: 0.9rem !important;
+    line-height: 1.1 !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+    letter-spacing: -0.02em !important;
+    scroll-snap-align: start;
+  }
+
+  .section-tabs button::before {
+    content: none !important;
+  }
+
+  .section-tabs button.active,
+  .section-tabs button[aria-selected='true'] {
+    background: linear-gradient(180deg, rgba(140,61,255,0.34), rgba(140,61,255,0.12)) !important;
+    border-color: rgba(185,92,255,0.42) !important;
+    color: #ffffff !important;
+    box-shadow: inset 0 -2px 0 rgba(185,92,255,0.85) !important;
+  }
+
+  .project-actions {
+    grid-column: 1 / -1 !important;
+    grid-row: 3 !important;
+    display: flex !important;
+    gap: 8px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding: 8px !important;
+    border-radius: 18px !important;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .project-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .project-actions button {
+    flex: 0 0 auto !important;
+    min-width: 132px !important;
+    min-height: 44px !important;
+    padding: 9px 12px !important;
+    border-radius: 14px !important;
+    scroll-snap-align: start;
+    white-space: nowrap;
+  }
+
+  .project-actions .primary-action {
+    min-width: 116px !important;
+    box-shadow: none !important;
+  }
+
+  .content-section,
+  .layout-print-section,
+  .image-menu-section,
+  .promo-generator-section {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+  }
+
+  .category-panel,
+  .layout-admin-panel,
+  .advanced-admin-panel,
+  .image-menu-panel,
+  .promo-generator-panel,
+  .dish-workspace,
+  .preview-stage,
+  .image-menu-preview-stage,
+  .promo-generator-preview-stage {
+    padding: 12px !important;
+  }
+
+  .category-panel,
+  .layout-admin-panel,
+  .advanced-admin-panel,
+  .image-menu-panel,
+  .promo-generator-panel {
+    border-right: 0 !important;
+    border-left: 0 !important;
+    border-bottom: 1px solid rgba(255,255,255,0.10) !important;
+  }
+
+  .workspace-toolbar,
+  .preview-toolbar,
+  .promo-generator-toolbar,
+  .panel-title-row,
+  .editor-card-title,
+  .subsection-title,
+  .advanced-panel-header,
+  .advanced-card-title,
+  .image-menu-section-heading {
+    padding: 14px !important;
+    border-radius: 18px !important;
+  }
+
+  .workspace-toolbar h1,
+  .preview-toolbar h1,
+  .promo-generator-toolbar h2,
+  .panel-title-row h2,
+  .promo-panel-header h2,
+  .advanced-panel-header h2 {
+    font-size: clamp(1.18rem, 5vw, 1.48rem) !important;
+    line-height: 1.08 !important;
+  }
+
+  .panel-section,
+  .editor-card,
+  .promo-panel-group,
+  .advanced-layout-section,
+  .advanced-control-card,
+  .settings-block,
+  .inline-advanced-controls {
+    padding: 14px !important;
+    border-radius: 18px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .category-card,
+  .page-list-item,
+  .category-checkbox,
+  .image-menu-page-list button,
+  .image-menu-dish-picker > div,
+  .promo-dish-picker > div {
+    min-height: 56px !important;
+    border-radius: 16px !important;
+  }
+
+  .field-label,
+  .slider-label,
+  .image-menu-control,
+  .color-label,
+  .toggle-label {
+    font-size: 0.82rem !important;
+    margin-bottom: 13px !important;
+  }
+
+  .field-label input,
+  .field-label textarea,
+  .field-label select,
+  .image-menu-control input,
+  .image-menu-control textarea,
+  .image-menu-control select,
+  .color-label input:not([type='color']),
+  .badge-row input,
+  .badge-row select,
+  .category-panel input,
+  .category-panel select,
+  .category-panel textarea,
+  .layout-admin-panel input,
+  .layout-admin-panel select,
+  .layout-admin-panel textarea,
+  .advanced-admin-panel input,
+  .advanced-admin-panel select,
+  .advanced-admin-panel textarea,
+  .image-menu-panel input,
+  .image-menu-panel select,
+  .image-menu-panel textarea,
+  .promo-generator-panel input,
+  .promo-generator-panel select,
+  .promo-generator-panel textarea {
+    min-height: 46px !important;
+    border-radius: 14px !important;
+    font-size: 16px !important;
+  }
+
+  .action-row,
+  .print-action-row,
+  .page-actions,
+  .image-menu-page-actions,
+  .image-menu-category-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  .action-row button,
+  .print-action-row button,
+  .page-actions button,
+  .image-menu-page-actions button,
+  .image-menu-category-actions button,
+  .secondary-action,
+  .primary-action {
+    min-height: 46px !important;
+    border-radius: 14px !important;
+  }
+
+  .promo-generator-panel > .promo-panel-group:first-of-type,
+  .image-menu-panel > .image-menu-select-section:first-of-type,
+  .layout-admin-panel > .layout-print-controls {
+    position: sticky !important;
+    top: calc(max(8px, env(safe-area-inset-top)) + 144px) !important;
+    z-index: 25 !important;
+    box-shadow: 0 14px 34px rgba(0,0,0,0.26) !important;
+  }
+
+  .promo-generator-panel > .promo-panel-group:first-of-type {
+    background: linear-gradient(180deg, rgba(42,46,59,0.98), rgba(28,31,41,0.98)) !important;
+    border-color: rgba(185,92,255,0.26) !important;
+  }
+
+  .promo-generator-panel > .promo-panel-group:first-of-type .promo-duration-buttons {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  .promo-generator-panel > .promo-panel-group:first-of-type button {
+    min-height: 52px !important;
+  }
+
+  .promo-preview-shell,
+  .paper-scroll,
+  .image-menu-preview-shell {
+    min-height: 360px !important;
+    border-radius: 20px !important;
+    scroll-padding: 14px;
+  }
+
+  .promo-canvas-wrap {
+    margin-inline: auto !important;
+  }
+
+  .paper-page,
+  .image-menu-page,
+  .promo-scene {
+    touch-action: pan-x pan-y;
+  }
+
+  .image-menu-dish-picker label,
+  .promo-dish-picker label {
+    gap: 12px !important;
+  }
+
+  .image-menu-dish-picker img,
+  .promo-dish-picker img,
+  .image-menu-mini-placeholder {
+    width: 48px !important;
+    height: 48px !important;
+  }
+
+  .image-menu-dish-picker label strong,
+  .promo-dish-picker label strong {
+    font-size: 0.94rem !important;
+  }
+
+  .image-menu-dish-picker label small,
+  .promo-dish-picker label small {
+    font-size: 0.78rem !important;
+  }
+
+  .advanced-admin-panel {
+    order: 3 !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .main-navigation,
+  .main-navigation.top-nav {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  .project-actions button {
+    min-width: 118px !important;
+    font-size: 0.82rem !important;
+  }
+
+  .section-tabs {
+    padding: 5px !important;
+    border-radius: 18px !important;
+  }
+
+  .section-tabs button {
+    border-radius: 14px !important;
+    font-size: 0.84rem !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .category-panel,
+  .layout-admin-panel,
+  .advanced-admin-panel,
+  .image-menu-panel,
+  .promo-generator-panel,
+  .dish-workspace,
+  .preview-stage,
+  .image-menu-preview-stage,
+  .promo-generator-preview-stage {
+    padding: 10px !important;
+  }
+
+  .action-row,
+  .print-action-row,
+  .page-actions,
+  .image-menu-page-actions,
+  .image-menu-category-actions,
+  .promo-generator-panel > .promo-panel-group:first-of-type .promo-duration-buttons {
+    grid-template-columns: 1fr !important;
+  }
+
+  .panel-section,
+  .editor-card,
+  .promo-panel-group,
+  .advanced-layout-section,
+  .advanced-control-card,
+  .settings-block,
+  .inline-advanced-controls {
+    padding: 12px !important;
+  }
+
+  .promo-preview-shell,
+  .paper-scroll,
+  .image-menu-preview-shell {
+    min-height: 320px !important;
+  }
+}
