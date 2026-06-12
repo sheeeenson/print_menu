@@ -69,8 +69,8 @@ export function SiteBannerPreview({ dish, settings, index = 0 }) {
       <div className="app-canvas-wrap site-banner-canvas-wrap" style={{ width: `${SITE_BANNER_FORMAT.previewWidth}px`, aspectRatio: `${SITE_BANNER_FORMAT.width} / ${SITE_BANNER_FORMAT.height}` }}>
         <article className="site-banner-scene" style={{ width: `${SITE_BANNER_FORMAT.width}px`, height: `${SITE_BANNER_FORMAT.height}px`, transform: `scale(${previewScale})`, '--site-banner-bg': tunedBackground, '--site-banner-accent': settings.accentColor }}>
           <div className="site-banner-background" />
-          {settings.backgroundMode === 'custom' && settings.customBackgroundUrl ? <img className="site-banner-custom-background" src={settings.customBackgroundUrl} alt="" crossOrigin="anonymous" /> : null}
-          {settings.backgroundMode === 'auto' && dish?.imageUrl ? <img className="site-banner-edge-fill" src={dish.imageUrl} alt="" crossOrigin="anonymous" /> : null}
+          {settings.backgroundMode === 'custom' && settings.customBackgroundUrl ? <img className="site-banner-custom-background" src={settings.customBackgroundUrl} alt="" /> : null}
+          {settings.backgroundMode === 'auto' && dish?.imageUrl ? <img className="site-banner-edge-fill" src={dish.imageUrl} alt="" /> : null}
           <div className="site-banner-vignette" />
 
           {settings.showSafeZones ? (
@@ -92,7 +92,7 @@ export function SiteBannerPreview({ dish, settings, index = 0 }) {
           </div>
 
           <div className="site-banner-product-stage" style={{ ...productPosition, width: `${settings.productSize}px`, height: `${settings.productSize}px` }}>
-            {dish?.imageUrl ? <img className="site-banner-product-image" src={dish.imageUrl} alt={dish.nameEn || dish.nameGe || 'Dish'} crossOrigin="anonymous" /> : <div className="site-banner-product-placeholder">Select dish with image</div>}
+            {dish?.imageUrl ? <img className="site-banner-product-image" src={dish.imageUrl} alt={dish.nameEn || dish.nameGe || 'Dish'} /> : <div className="site-banner-product-placeholder">Select dish with image</div>}
           </div>
 
           {settings.showCta ? <div className="site-banner-cta" style={{ ...ctaPosition, color: settings.ctaColor, fontFamily: settings.ctaFont, fontSize: `${settings.ctaSize}px` }}>{settings.ctaText || 'ORDER NOW'}</div> : null}
