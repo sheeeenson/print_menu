@@ -65,8 +65,8 @@ export function SiteBannerPreview({ dish, settings, index = 0 }) {
   }, [dish?.imageUrl]);
 
   return (
-    <section className="promo-preview-shell" aria-label="Sushiwoki website banner preview">
-      <div className="promo-canvas-wrap site-banner-canvas-wrap" style={{ width: `${SITE_BANNER_FORMAT.previewWidth}px`, aspectRatio: `${SITE_BANNER_FORMAT.width} / ${SITE_BANNER_FORMAT.height}` }}>
+    <section className="app-preview-shell" aria-label="Sushiwoki website banner preview">
+      <div className="app-canvas-wrap site-banner-canvas-wrap" style={{ width: `${SITE_BANNER_FORMAT.previewWidth}px`, aspectRatio: `${SITE_BANNER_FORMAT.width} / ${SITE_BANNER_FORMAT.height}` }}>
         <article className="site-banner-scene" style={{ width: `${SITE_BANNER_FORMAT.width}px`, height: `${SITE_BANNER_FORMAT.height}px`, transform: `scale(${previewScale})`, '--site-banner-bg': tunedBackground, '--site-banner-accent': settings.accentColor }}>
           <div className="site-banner-background" />
           {settings.backgroundMode === 'custom' && settings.customBackgroundUrl ? <img className="site-banner-custom-background" src={settings.customBackgroundUrl} alt="" crossOrigin="anonymous" /> : null}
@@ -105,7 +105,7 @@ export function SiteBannerPreview({ dish, settings, index = 0 }) {
           ) : null}
         </article>
       </div>
-      <small className="promo-preview-size">Output canvas: {SITE_BANNER_FORMAT.width} × {SITE_BANNER_FORMAT.height}px</small>
+      <small className="app-preview-size">Output canvas: {SITE_BANNER_FORMAT.width} × {SITE_BANNER_FORMAT.height}px</small>
     </section>
   );
 }
