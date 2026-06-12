@@ -71,6 +71,37 @@ const imageElementToDataUrl = async (sourceImage) => {
   return blobToDataUrl(await response.blob());
 };
 
+const waitForSceneMedia = async (scene) => {
+  await Promise.all(Array.from(scene.querySelectorAll('img')).map((image) => {
+    if (image.complete && image.naturalWidth > 0) return Promise.resolve();
+    if (typeof image.decode === 'function') return image.decode().catch(() => undefined);
+    return new Promise((resolve) => {
+      image.addEventListener('load', resolve, { once: true });
+      image.addEventListener('error', resolve, { once: true });
+    });
+  }));
+
+  await Promise.all(Array.from(scene.querySelectorAll('video')).map((video) => new Promise((resolve) => {
+    const finish = () => {
+      video.removeEventListener('loadeddata', finish);
+      video.removeEventListener('canplay', finish);
+      video.removeEventListener('error', finish);
+      resolve();
+    };
+    try {
+      video.load?.();
+      if (video.readyState >= 2) return finish();
+      video.addEventListener('loadeddata', finish, { once: true });
+      video.addEventListener('canplay', finish, { once: true });
+      video.addEventListener('error', finish, { once: true });
+    } catch (error) {
+      finish();
+    }
+  })));
+
+  await wait(120);
+};
+
 const embedImagesInClone = async (scene, clone) => {
   const sourceImages = Array.from(scene.querySelectorAll('img'));
   const clonedImages = Array.from(clone.querySelectorAll('img'));
@@ -97,6 +128,7 @@ export const getPromoHtmlDocument = async () => {
   const scene = document.querySelector('.promo-scene');
   if (!scene) throw new Error('Could not find the promo scene.');
 
+  await waitForSceneMedia(scene);
   const clone = scene.cloneNode(true);
   clone.style.transform = 'none';
   clone.style.transformOrigin = 'top left';
@@ -134,31 +166,57 @@ const withUnscaledScene = async (callback) => {
   const scene = document.querySelector('.promo-scene');
   if (!scene) throw new Error('Could not find the promo scene.');
 
+  await waitForSceneMedia(scene);
   const originalTransform = scene.style.transform;
   const originalTransformOrigin = scene.style.transformOrigin;
+  const originalPosition = scene.style.position;
+  const originalLeft = scene.style.left;
+  const originalTop = scene.style.top;
   scene.style.transform = 'none';
   scene.style.transformOrigin = 'top left';
+  scene.style.position = 'relative';
+  scene.style.left = '0';
+  scene.style.top = '0';
 
   try {
+    await waitForSceneMedia(scene);
     return await callback(scene);
   } finally {
     scene.style.transform = originalTransform;
     scene.style.transformOrigin = originalTransformOrigin;
+    scene.style.position = originalPosition;
+    scene.style.left = originalLeft;
+    scene.style.top = originalTop;
   }
 };
 
 const renderSceneToCanvas = async () => {
   const { width, height } = getPromoSceneSize();
   return withUnscaledScene((scene) => html2canvas(scene, {
-    backgroundColor: '#231f20',
+    backgroundColor: null,
     width,
     height,
     windowWidth: width,
     windowHeight: height,
-    scale: 1,
+    scrollX: 0,
+    scrollY: 0,
+    scale: 2,
     useCORS: true,
     allowTaint: true,
+    foreignObjectRendering: true,
     logging: false,
+    onclone: (documentClone) => {
+      const clonedScene = documentClone.querySelector('.promo-scene');
+      if (clonedScene) {
+        clonedScene.style.transform = 'none';
+        clonedScene.style.transformOrigin = 'top left';
+        clonedScene.style.position = 'relative';
+        clonedScene.style.left = '0';
+        clonedScene.style.top = '0';
+        clonedScene.style.width = `${width}px`;
+        clonedScene.style.height = `${height}px`;
+      }
+    },
   }));
 };
 
@@ -219,6 +277,11 @@ export const downloadPromoHtml = async ({ filename }) => {
 };
 
 export const downloadPromoRender = async ({ output, filename, duration = 8, fps = 24, onStatus }) => {
+  if (output === 'png') {
+    await downloadBrowserPng({ filename, onStatus });
+    return;
+  }
+
   const html = await getPromoHtmlDocument();
   const { width, height } = getPromoSceneSize();
 
@@ -234,11 +297,6 @@ export const downloadPromoRender = async ({ output, filename, duration = 8, fps 
     });
   } catch (error) {
     console.error(error);
-    if (output === 'png') {
-      onStatus?.('Renderer unavailable. Trying browser PNG fallback...');
-      await downloadBrowserPng({ filename, onStatus });
-      return;
-    }
     if (output === 'webm') {
       onStatus?.('Renderer unavailable. Trying browser WebM fallback...');
       await downloadBrowserWebm({ filename, onStatus });
