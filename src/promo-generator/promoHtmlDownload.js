@@ -308,7 +308,6 @@ const embedVideosInClone = async (scene, clone) => {
     if (!currentSrc) return;
 
     clonedVideo.setAttribute('src', currentSrc);
-    if (sourceVideo.matches(PROMO_BACKGROUND_MEDIA_SELECTOR)) return;
 
     if (currentSrc.startsWith('blob:')) {
       try {
@@ -421,12 +420,12 @@ const withUnscaledScene = async (callback) => {
   }
 };
 
-const downloadCurrentPromoPng = async (downloadGroup) => {
+const downloadCurrentPromoPngFallback = async (downloadGroup) => {
   const scene = document.querySelector('.promo-scene');
   if (!scene) throw new Error('Could not find the promo scene.');
 
   const { width, height } = getSceneSize(scene);
-  setDownloadStatus(downloadGroup, 'Creating PNG in browser...');
+  setDownloadStatus(downloadGroup, 'Local renderer unavailable. Creating PNG in browser...');
   const canvas = await withUnscaledScene((unscaledScene) => html2canvas(unscaledScene, {
     backgroundColor: '#231f20',
     width,
@@ -442,6 +441,32 @@ const downloadCurrentPromoPng = async (downloadGroup) => {
   if (!blob) throw new Error('Browser could not create PNG.');
   downloadBlob(blob, getOutputFilename('png'));
   setDownloadStatus(downloadGroup, 'PNG downloaded.');
+};
+
+const downloadCurrentPromoPng = async (downloadGroup) => {
+  const scene = document.querySelector('.promo-scene');
+  if (!scene) throw new Error('Could not find the promo scene.');
+
+  const html = await getSceneHtmlDocument();
+  const { width, height } = getSceneSize(scene);
+  const filename = getOutputFilename('png');
+
+  try {
+    setDownloadStatus(downloadGroup, 'Preparing PNG render...');
+    await downloadHtmlRender({
+      output: 'png',
+      filename,
+      format: { width, height, label: getPromoFormatLabel() },
+      duration: 1,
+      fps: 1,
+      html,
+      onStatus: (message) => setDownloadStatus(downloadGroup, message),
+    });
+    setDownloadStatus(downloadGroup, 'PNG downloaded.');
+  } catch (error) {
+    console.error(error);
+    await downloadCurrentPromoPngFallback(downloadGroup);
+  }
 };
 
 const downloadCurrentPromoHtml = async () => {
