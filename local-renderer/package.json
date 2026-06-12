@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
+    "start": "node -e \"process.env.RENDER_SCALE=process.env.RENDER_SCALE||'1'; import('./server.js')\"",
     "setup": "playwright install chromium",
     "package": "node scripts/package-renderer.mjs"
   },
