@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { SiteBannerPreview } from './SiteBannerPreview.jsx';
 import { DEFAULT_SITE_BANNER_LAYOUT, SITE_BANNER_FONT_OPTIONS, SITE_BANNER_FORMAT, loadSiteBannerProject, saveSiteBannerProject } from './siteBannerStorage.js';
+import '../promo-generator/promoGenerator.css';
 import './siteBanner.css';
 
 const getDishTitle = (dish) => dish?.nameEn || dish?.nameGe || 'Untitled dish';
@@ -83,11 +84,11 @@ async function downloadSiteBannerImage(mimeType, extension, selectedDish) {
 }
 
 function ControlGroup({ title, children }) {
-  return <section className="site-banner-panel-group"><h3>{title}</h3>{children}</section>;
+  return <section className="promo-panel-group"><h3>{title}</h3>{children}</section>;
 }
 
 function ToggleField({ checked, label, onChange }) {
-  return <label className="site-banner-toggle-field"><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} /><span>{label}</span></label>;
+  return <label className="promo-toggle-field"><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} /><span>{label}</span></label>;
 }
 
 function RangeControl({ label, value, min, max, step = 1, suffix = '', onChange }) {
@@ -111,7 +112,7 @@ function FontControl({ label, value, onChange }) {
 
 function TextStyleControls({ title, prefix, settings, updateSettings, sizeMin = 12, sizeMax = 160 }) {
   return (
-    <div className="site-banner-style-block">
+    <div className="promo-style-block">
       <h4>{title}</h4>
       <ColorControl label="Color" value={settings[`${prefix}Color`]} onChange={(value) => updateSettings({ [`${prefix}Color`]: value })} />
       <FontControl label="Font" value={settings[`${prefix}Font`]} onChange={(value) => updateSettings({ [`${prefix}Font`]: value })} />
@@ -123,7 +124,7 @@ function TextStyleControls({ title, prefix, settings, updateSettings, sizeMin = 
 function LayoutOffsetControls({ settings, updateLayoutOffset, resetLayoutOffsets }) {
   const offsets = settings.layoutOffsets ?? DEFAULT_SITE_BANNER_LAYOUT;
   return (
-    <div className="site-banner-style-block">
+    <div className="promo-style-block">
       <button className="secondary-button" type="button" onClick={resetLayoutOffsets}>Reset Layout</button>
       {[
         { title: 'Text block', x: 'textX', y: 'textY' },
@@ -131,7 +132,7 @@ function LayoutOffsetControls({ settings, updateLayoutOffset, resetLayoutOffsets
         { title: 'CTA', x: 'ctaX', y: 'ctaY' },
         { title: 'Price', x: 'priceX', y: 'priceY' },
       ].map((group) => (
-        <div key={group.title} className="site-banner-style-block compact">
+        <div key={group.title} className="promo-style-block">
           <h4>{group.title}</h4>
           <RangeControl label="X" value={offsets[group.x] ?? 0} min={-900} max={900} onChange={(value) => updateLayoutOffset(group.x, value)} suffix="px" />
           <RangeControl label="Y" value={offsets[group.y] ?? 0} min={-500} max={500} onChange={(value) => updateLayoutOffset(group.y, value)} suffix="px" />
@@ -195,26 +196,26 @@ export function SiteBannerSection({ project }) {
   };
 
   return (
-    <section className="site-banner-generator-section">
-      <aside className="site-banner-generator-panel">
-        <header className="site-banner-panel-header">
+    <section className="promo-generator-section">
+      <aside className="promo-generator-panel">
+        <header className="promo-panel-header">
           <p>Website Banner</p>
           <h2>Sushiwoki Banner</h2>
           <span>{SITE_BANNER_FORMAT.width} x {SITE_BANNER_FORMAT.height}px canvas with safer center-focused zones.</span>
         </header>
 
         <ControlGroup title="Export">
-          <div className="site-banner-export-buttons">
+          <div className="promo-duration-buttons site-banner-export-row">
             <button type="button" onClick={() => handleDownload('image/png', 'png')}>PNG</button>
             <button type="button" onClick={() => handleDownload('image/jpeg', 'jpg')}>JPG</button>
             <button type="button" onClick={() => handleDownload('image/webp', 'webp')}>WebP</button>
           </div>
-          {exportStatus ? <small className="site-banner-preview-size">{exportStatus}</small> : null}
+          {exportStatus ? <small className="promo-preview-size">{exportStatus}</small> : null}
         </ControlGroup>
 
-        <div className="panel-section site-banner-select-section">
+        <div className="panel-section promo-select-section">
           <div className="image-menu-section-heading"><div><h2>Select product</h2><small>{contentCategories.length} content categories</small></div><small>{selectedDish ? '1/1 selected' : '0/1 selected'}</small></div>
-          <div className="image-menu-category-picker site-banner-category-picker">
+          <div className="image-menu-category-picker promo-category-picker">
             {categoryGroups.length === 0 ? <p className="muted-text">No categories in Content yet.</p> : null}
             {categoryGroups.map(({ category, dishes: categoryDishes }) => {
               const isOpen = openCategoryIds.has(category.id);
@@ -224,7 +225,7 @@ export function SiteBannerSection({ project }) {
                   <button className="image-menu-category-toggle" type="button" onClick={() => toggleCategoryOpen(category.id)} aria-expanded={isOpen}><span>{isOpen ? '▾' : '▸'}</span><strong>{category.nameEn || category.nameGe || 'Untitled category'}</strong><small>{selectedCount}/{categoryDishes.length}</small></button>
                   {isOpen ? (
                     <div className="image-menu-category-body">
-                      <div className="image-menu-dish-picker site-banner-dish-picker">
+                      <div className="image-menu-dish-picker promo-dish-picker">
                         {categoryDishes.length === 0 ? <p className="muted-text">No products with images in this category.</p> : null}
                         {categoryDishes.map((dish) => {
                           const selected = dish.id === selectedDish?.id;
@@ -271,8 +272,8 @@ export function SiteBannerSection({ project }) {
         </ControlGroup>
       </aside>
 
-      <main className="site-banner-generator-preview-stage">
-        <div className="site-banner-generator-toolbar"><div><p>Preview</p><h2>{selectedDish ? getDishTitle(selectedDish) : 'Select product'}</h2></div><div className="site-banner-output-pill">{SITE_BANNER_FORMAT.label}</div></div>
+      <main className="promo-generator-preview-stage">
+        <div className="promo-generator-toolbar"><div><p>Preview</p><h2>{selectedDish ? getDishTitle(selectedDish) : 'Select product'}</h2></div><div className="promo-output-pill">{SITE_BANNER_FORMAT.label}</div></div>
         <SiteBannerPreview dish={selectedDish} settings={settings} index={selectedIndex} />
       </main>
     </section>
