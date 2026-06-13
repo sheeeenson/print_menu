@@ -55,6 +55,7 @@ export function SiteBannerPreview({ dish, settings, index = 0 }) {
   const previewScale = SITE_BANNER_FORMAT.previewWidth / SITE_BANNER_FORMAT.width;
   const offsets = settings.layoutOffsets ?? {};
   const headline = settings.headline || dish?.nameEn || 'Sushiwoki Banner';
+  const offerText = settings.offerText || 'SUSHIWOKI';
   const salePrice = getPrice(dish?.newPrice);
   const oldPrice = getPrice(dish?.oldPrice);
   const textPosition = positionWithOffset({ x: 300, y: 136 }, offsets.textX, offsets.textY);
@@ -106,7 +107,7 @@ export function SiteBannerPreview({ dish, settings, index = 0 }) {
           ) : null}
 
           <div className="site-banner-copy" style={textPosition}>
-            <p className="site-banner-eyebrow">SUSHIWOKI</p>
+            {settings.showOffer ? <p className="site-banner-eyebrow" style={{ color: settings.offerColor, fontFamily: settings.offerFont, fontSize: `${settings.offerSize}px` }}>{offerText}</p> : null}
             <h2 style={{ color: settings.headlineColor, fontFamily: settings.headlineFont, fontSize: `${settings.headlineSize}px` }}>{headline}</h2>
             {settings.showSubheadline ? <p className="site-banner-subheadline" style={{ color: settings.subheadlineColor, fontFamily: settings.subheadlineFont, fontSize: `${settings.subheadlineSize}px` }}>{settings.subheadline}</p> : null}
           </div>
