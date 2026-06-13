@@ -99,7 +99,7 @@
 .site-banner-product-image { position: relative; z-index: 2; max-width: 100%; max-height: 100%; object-fit: contain; filter: none; }
 .site-banner-product-placeholder { width: 620px; height: 360px; border-radius: 34px; display: grid; place-items: center; background: rgba(255,255,255,0.18); color: rgba(255,250,242,0.82); font-size: 48px; font-weight: 950; }
 .site-banner-cta { position: absolute; z-index: 7; border-radius: 999px; background: #fffaf2; padding: 22px 34px; font-weight: 950; letter-spacing: 0.1em; text-transform: uppercase; box-shadow: 0 18px 40px rgba(0,0,0,0.2); }
-.site-banner-price { position: absolute; z-index: 7; display: grid; gap: 8px; line-height: 1; text-shadow: 0 20px 44px rgba(0,0,0,0.32); }
-.site-banner-price span { justify-self: start; position: relative; border-radius: 18px; background: rgba(35,31,32,0.42); color: rgba(255,250,242,0.82); padding: 12px 18px; font-size: 0.56em; font-weight: 900; }
+.site-banner-price { position: absolute; z-index: 16; display: grid; gap: 8px; line-height: 1; text-shadow: none; }
+.site-banner-price span { justify-self: start; position: relative; border-radius: 18px; background: rgba(35,31,32,0.72); color: rgba(255,250,242,0.92); padding: 12px 18px; font-size: 0.56em; font-weight: 900; }
 .site-banner-price span::after { content: ''; position: absolute; left: 12px; right: 12px; top: 50%; height: 4px; background: currentColor; transform: rotate(-8deg); }
-.site-banner-price strong { font-size: 1em; letter-spacing: -0.08em; }
+.site-banner-price strong { justify-self: start; border-radius: 24px; background: rgba(35,31,32,0.82); color: #fffaf2; padding: 14px 22px; font-size: 1em; letter-spacing: -0.08em; font-weight: 950; }
