@@ -41,7 +41,7 @@
 .site-banner-generator-toolbar p,
 .promo-generator-toolbar p,
 .site-banner-preview-size,
-promo-preview-size {
+.promo-preview-size {
   color: var(--un-muted, #b7b0a8) !important;
 }
 
