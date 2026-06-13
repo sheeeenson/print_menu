@@ -25,7 +25,7 @@
 .site-banner-panel-header,
 .promo-panel-header,
 .site-banner-generator-toolbar,
-promo-generator-toolbar {
+.promo-generator-toolbar {
   color: var(--un-text, #f7f4ee) !important;
 }
 
