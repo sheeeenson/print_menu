@@ -1,3 +1,4 @@
+import html2canvas from 'html2canvas';
 import { useEffect, useMemo, useState } from 'react';
 import { SiteBannerPreview } from './SiteBannerPreview.jsx';
 import { DEFAULT_SITE_BANNER_LAYOUT, SITE_BANNER_FONT_OPTIONS, SITE_BANNER_FORMAT, loadSiteBannerProject, saveSiteBannerProject } from './siteBannerStorage.js';
@@ -5,17 +6,6 @@ import './siteBanner.css';
 
 const getDishTitle = (dish) => dish?.nameEn || dish?.nameGe || 'Untitled dish';
 const getSafeFilename = (value) => String(value || 'sushiwoki-banner').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'sushiwoki-banner';
-
-const getDocumentCss = () => Array.from(document.styleSheets)
-  .map((sheet) => {
-    try {
-      return Array.from(sheet.cssRules ?? []).map((rule) => rule.cssText).join('\n');
-    } catch (error) {
-      return '';
-    }
-  })
-  .filter(Boolean)
-  .join('\n');
 
 const downloadUrl = (url, filename) => {
   const link = document.createElement('a');
@@ -26,84 +16,52 @@ const downloadUrl = (url, filename) => {
   link.remove();
 };
 
-const blobToDataUrl = (blob) => new Promise((resolve, reject) => {
-  const reader = new FileReader();
-  reader.onload = () => resolve(reader.result);
-  reader.onerror = () => reject(new Error('Could not read image data.'));
-  reader.readAsDataURL(blob);
+const canvasToBlob = (canvas, mimeType) => new Promise((resolve, reject) => {
+  canvas.toBlob((blob) => {
+    if (!blob) {
+      reject(new Error('Could not create banner file.'));
+      return;
+    }
+    resolve(blob);
+  }, mimeType, 0.94);
 });
-
-const inlineImageSource = async (image) => {
-  const source = image.currentSrc || image.src;
-  if (!source || source.startsWith('data:')) return;
-  const response = await fetch(source, { mode: 'cors', credentials: 'omit' });
-  if (!response.ok) throw new Error(`Could not load export image: ${response.status}`);
-  const blob = await response.blob();
-  image.setAttribute('src', await blobToDataUrl(blob));
-  image.removeAttribute('srcset');
-  image.removeAttribute('crossorigin');
-};
-
-const inlineCloneImages = async (clone) => {
-  const images = Array.from(clone.querySelectorAll('img'));
-  await Promise.all(images.map((image) => inlineImageSource(image)));
-};
 
 async function downloadSiteBannerImage(mimeType, extension, selectedDish) {
   const scene = document.querySelector('.site-banner-scene');
-  if (!scene) return;
+  if (!scene) throw new Error('Banner preview is not ready yet.');
 
-  const clone = scene.cloneNode(true);
-  clone.style.transform = 'none';
-  clone.style.transformOrigin = 'top left';
-  clone.style.position = 'relative';
-  clone.style.left = '0';
-  clone.style.top = '0';
+  if (document.fonts?.ready) await document.fonts.ready;
 
-  clone.querySelectorAll('.site-banner-guides').forEach((node) => node.remove());
-  await inlineCloneImages(clone);
-
-  const html = `
-    <style>${getDocumentCss()}</style>
-    ${clone.outerHTML}
-  `;
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${SITE_BANNER_FORMAT.width}" height="${SITE_BANNER_FORMAT.height}" viewBox="0 0 ${SITE_BANNER_FORMAT.width} ${SITE_BANNER_FORMAT.height}">
-      <foreignObject width="100%" height="100%">
-        <div xmlns="http://www.w3.org/1999/xhtml">${html}</div>
-      </foreignObject>
-    </svg>
-  `;
-  const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
-  const svgUrl = URL.createObjectURL(svgBlob);
-
-  await new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = SITE_BANNER_FORMAT.width;
-      canvas.height = SITE_BANNER_FORMAT.height;
-      const context = canvas.getContext('2d');
-      context.drawImage(image, 0, 0, SITE_BANNER_FORMAT.width, SITE_BANNER_FORMAT.height);
-      URL.revokeObjectURL(svgUrl);
-      const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-sushiwoki-2048x900.${extension}`;
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          reject(new Error('Could not create banner file.'));
-          return;
-        }
-        const outputUrl = URL.createObjectURL(blob);
-        downloadUrl(outputUrl, filename);
-        setTimeout(() => URL.revokeObjectURL(outputUrl), 1000);
-        resolve();
-      }, mimeType, 0.94);
-    };
-    image.onerror = () => {
-      URL.revokeObjectURL(svgUrl);
-      reject(new Error('Could not render the website banner preview.'));
-    };
-    image.src = svgUrl;
+  const canvas = await html2canvas(scene, {
+    backgroundColor: null,
+    canvas: document.createElement('canvas'),
+    height: SITE_BANNER_FORMAT.height,
+    width: SITE_BANNER_FORMAT.width,
+    windowHeight: SITE_BANNER_FORMAT.height,
+    windowWidth: SITE_BANNER_FORMAT.width,
+    scale: 1,
+    useCORS: true,
+    allowTaint: false,
+    logging: false,
+    ignoreElements: (element) => element.classList?.contains('site-banner-guides'),
+    onclone: (clonedDocument) => {
+      const clonedScene = clonedDocument.querySelector('.site-banner-scene');
+      if (!clonedScene) return;
+      clonedScene.style.transform = 'none';
+      clonedScene.style.transformOrigin = 'top left';
+      clonedScene.style.left = '0';
+      clonedScene.style.top = '0';
+      clonedScene.style.width = `${SITE_BANNER_FORMAT.width}px`;
+      clonedScene.style.height = `${SITE_BANNER_FORMAT.height}px`;
+      clonedScene.querySelectorAll('.site-banner-guides').forEach((node) => node.remove());
+    },
   });
+
+  const blob = await canvasToBlob(canvas, mimeType);
+  const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-sushiwoki-2048x900.${extension}`;
+  const outputUrl = URL.createObjectURL(blob);
+  downloadUrl(outputUrl, filename);
+  setTimeout(() => URL.revokeObjectURL(outputUrl), 1000);
 }
 
 function ControlGroup({ title, children }) {
@@ -216,7 +174,7 @@ export function SiteBannerSection({ project }) {
       setExportStatus(`${extension.toUpperCase()} downloaded.`);
     } catch (error) {
       console.error(error);
-      setExportStatus('Export failed. Check that the product image is loaded, then try again.');
+      setExportStatus(error?.message || 'Export failed. Check that the product image is loaded, then try again.');
     }
   };
 
