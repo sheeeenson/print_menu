@@ -76,7 +76,7 @@
   padding: 22px 26px 44px !important;
 }
 
-.site-banner-export-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.site-banner-export-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .site-banner-canvas-wrap { aspect-ratio: 2048 / 900; }
 .site-banner-scene { position: absolute; left: 0; top: 0; transform-origin: top left; overflow: hidden; background: var(--site-banner-bg); color: #fffaf2; isolation: isolate; font-family: inherit; }
 .site-banner-background { position: absolute; inset: 0; background: var(--site-banner-bg); z-index: 0; }
