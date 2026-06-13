@@ -285,6 +285,10 @@ export function SiteBannerSection({ project }) {
           <ToggleField label="Show price" checked={Boolean(settings.showPrice)} onChange={(showPrice) => updateSettings({ showPrice })} />
         </ControlGroup>
 
+        <ControlGroup title="Text shadow">
+          <TextShadowControls settings={settings} updateSettings={updateSettings} />
+        </ControlGroup>
+
         <ControlGroup title="Background">
           <label className="app-field"><span>Mode</span><select value={settings.backgroundMode} onChange={(event) => updateSettings({ backgroundMode: event.target.value })}><option value="auto">Auto fill from product image</option><option value="custom">Custom background URL</option></select></label>
           <label className="app-field"><span>Custom background URL</span><input value={settings.customBackgroundUrl} placeholder="Paste background image URL" onChange={(event) => updateSettings({ customBackgroundUrl: event.target.value })} /></label>
@@ -306,9 +310,6 @@ export function SiteBannerSection({ project }) {
           <TextStyleControls title="Subheadline" prefix="subheadline" settings={settings} updateSettings={updateSettings} sizeMin={20} sizeMax={76} />
           <TextStyleControls title="CTA" prefix="cta" settings={settings} updateSettings={updateSettings} sizeMin={18} sizeMax={60} />
           <TextStyleControls title="Price" prefix="price" settings={settings} updateSettings={updateSettings} sizeMin={34} sizeMax={130} />
-        </ControlGroup>
-        <ControlGroup title="Text shadow">
-          <TextShadowControls settings={settings} updateSettings={updateSettings} />
         </ControlGroup>
       </aside>
 
