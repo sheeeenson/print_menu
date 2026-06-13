@@ -1,11 +1,9 @@
 import html2canvas from 'html2canvas';
 import { useEffect, useMemo, useState } from 'react';
 import { SiteBannerPreview } from './SiteBannerPreview.jsx';
+import { getQualityOptimizedPng, PNG_OPTIMIZED_TARGET_BYTES } from './pngOptimization.js';
 import { DEFAULT_SITE_BANNER_LAYOUT, SITE_BANNER_FONT_OPTIONS, SITE_BANNER_FORMAT, loadSiteBannerProject, saveSiteBannerProject } from './siteBannerStorage.js';
 import './siteBanner.css';
-
-const PNG_MAX_BYTES = 500 * 1024;
-const PNG_POSTERIZE_STEPS = [8, 12, 16, 24];
 
 const getDishTitle = (dish) => dish?.nameEn || dish?.nameGe || 'Untitled dish';
 const getSafeFilename = (value) => String(value || 'sushiwoki-banner').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'sushiwoki-banner';
@@ -29,38 +27,6 @@ const canvasToBlob = (canvas, mimeType) => new Promise((resolve, reject) => {
     resolve(blob);
   }, mimeType, 0.94);
 });
-
-const posterizeCanvas = (sourceCanvas, step) => {
-  const outputCanvas = document.createElement('canvas');
-  outputCanvas.width = sourceCanvas.width;
-  outputCanvas.height = sourceCanvas.height;
-  const context = outputCanvas.getContext('2d');
-  context.drawImage(sourceCanvas, 0, 0);
-  const imageData = context.getImageData(0, 0, outputCanvas.width, outputCanvas.height);
-  const { data } = imageData;
-
-  for (let index = 0; index < data.length; index += 4) {
-    data[index] = Math.min(255, Math.round(data[index] / step) * step);
-    data[index + 1] = Math.min(255, Math.round(data[index + 1] / step) * step);
-    data[index + 2] = Math.min(255, Math.round(data[index + 2] / step) * step);
-  }
-
-  context.putImageData(imageData, 0, 0);
-  return outputCanvas;
-};
-
-const getSameSizePngUnderLimit = async (sourceCanvas, maxBytes = PNG_MAX_BYTES) => {
-  let blob = await canvasToBlob(sourceCanvas, 'image/png');
-  if (blob.size <= maxBytes) return { blob, width: sourceCanvas.width, height: sourceCanvas.height };
-
-  for (const step of PNG_POSTERIZE_STEPS) {
-    const posterizedCanvas = posterizeCanvas(sourceCanvas, step);
-    blob = await canvasToBlob(posterizedCanvas, 'image/png');
-    if (blob.size <= maxBytes) return { blob, width: sourceCanvas.width, height: sourceCanvas.height };
-  }
-
-  throw new Error(`PNG is ${(blob.size / 1024).toFixed(0)}KB at 2048x900. Keeping size/quality, it cannot fit under 500KB. Use JPG/WebP for this banner or simplify the background.`);
-};
 
 const createFullSizeExportNode = (scene) => {
   const wrapper = document.createElement('div');
@@ -118,10 +84,10 @@ async function downloadSiteBannerImage(mimeType, extension, selectedDish, option
       throw new Error(`Export size mismatch: ${canvas.width}x${canvas.height}.`);
     }
 
-    const exportResult = options.maxBytes && mimeType === 'image/png'
-      ? await getSameSizePngUnderLimit(canvas, options.maxBytes)
+    const exportResult = options.optimizePng && mimeType === 'image/png'
+      ? await getQualityOptimizedPng(canvas, options.targetBytes)
       : { blob: await canvasToBlob(canvas, mimeType), width: canvas.width, height: canvas.height };
-    const suffix = options.maxBytes ? `-under-${Math.round(options.maxBytes / 1024)}kb` : '';
+    const suffix = options.optimizePng ? '-optimized' : '';
     const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-sushiwoki-${exportResult.width}x${exportResult.height}${suffix}.${extension}`;
     const outputUrl = URL.createObjectURL(exportResult.blob);
     downloadUrl(outputUrl, filename);
@@ -272,7 +238,7 @@ export function SiteBannerSection({ project }) {
     try {
       setExportStatus(`Preparing ${label}...`);
       const result = await downloadSiteBannerImage(mimeType, extension, selectedDish, options);
-      const details = options.maxBytes ? ` ${result.width}x${result.height}, ${result.sizeKb}KB` : '';
+      const details = options.optimizePng ? ` ${result.width}x${result.height}, ${result.sizeKb}KB` : '';
       setExportStatus(`${label} downloaded.${details}`);
     } catch (error) {
       console.error(error);
@@ -301,7 +267,7 @@ export function SiteBannerSection({ project }) {
         <ControlGroup title="Export">
           <div className="app-segmented site-banner-export-row">
             <button type="button" onClick={() => handleDownload('image/png', 'png')}>PNG</button>
-            <button type="button" onClick={() => handleDownload('image/png', 'png', { maxBytes: PNG_MAX_BYTES, label: 'PNG <500KB' })}>PNG &lt;500KB</button>
+            <button type="button" onClick={() => handleDownload('image/png', 'png', { optimizePng: true, targetBytes: PNG_OPTIMIZED_TARGET_BYTES, label: 'PNG optimized' })}>PNG optimized</button>
             <button type="button" onClick={() => handleDownload('image/jpeg', 'jpg')}>JPG</button>
             <button type="button" onClick={() => handleDownload('image/webp', 'webp')}>WebP</button>
           </div>
