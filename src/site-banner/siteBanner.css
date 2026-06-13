@@ -41,7 +41,7 @@
 .site-banner-generator-toolbar p,
 .promo-generator-toolbar p,
 .site-banner-preview-size,
-.promo-preview-size {
+promo-preview-size {
   color: var(--un-muted, #b7b0a8) !important;
 }
 
@@ -95,8 +95,8 @@
 .site-banner-copy h2 { margin: 0; line-height: 0.9; letter-spacing: -0.08em; max-width: 650px; }
 .site-banner-subheadline { margin: 0; line-height: 1.12; font-weight: 780; max-width: 540px; opacity: 0.92; }
 .site-banner-product-stage { position: absolute; z-index: 5; display: grid; place-items: center; }
-.site-banner-product-stage::before { content: ''; position: absolute; width: 78%; height: 78%; border-radius: 999px; background: var(--site-banner-accent); filter: blur(62px); opacity: 0.42; }
-.site-banner-product-image { position: relative; z-index: 2; max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 38px 48px rgba(0,0,0,0.32)); }
+.site-banner-product-stage::before { content: none; }
+.site-banner-product-image { position: relative; z-index: 2; max-width: 100%; max-height: 100%; object-fit: contain; filter: none; }
 .site-banner-product-placeholder { width: 620px; height: 360px; border-radius: 34px; display: grid; place-items: center; background: rgba(255,255,255,0.18); color: rgba(255,250,242,0.82); font-size: 48px; font-weight: 950; }
 .site-banner-cta { position: absolute; z-index: 7; border-radius: 999px; background: #fffaf2; padding: 22px 34px; font-weight: 950; letter-spacing: 0.1em; text-transform: uppercase; box-shadow: 0 18px 40px rgba(0,0,0,0.2); }
 .site-banner-price { position: absolute; z-index: 7; display: grid; gap: 8px; line-height: 1; text-shadow: 0 20px 44px rgba(0,0,0,0.32); }
