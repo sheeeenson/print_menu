@@ -5,7 +5,7 @@ import { DEFAULT_SITE_BANNER_LAYOUT, SITE_BANNER_FONT_OPTIONS, SITE_BANNER_FORMA
 import './siteBanner.css';
 
 const PNG_MAX_BYTES = 500 * 1024;
-const MIN_COMPRESSED_WIDTH = 640;
+const PNG_POSTERIZE_STEPS = [8, 12, 16, 24];
 
 const getDishTitle = (dish) => dish?.nameEn || dish?.nameGe || 'Untitled dish';
 const getSafeFilename = (value) => String(value || 'sushiwoki-banner').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'sushiwoki-banner';
@@ -30,36 +30,36 @@ const canvasToBlob = (canvas, mimeType) => new Promise((resolve, reject) => {
   }, mimeType, 0.94);
 });
 
-const resizeCanvas = (sourceCanvas, width, height) => {
+const posterizeCanvas = (sourceCanvas, step) => {
   const outputCanvas = document.createElement('canvas');
-  outputCanvas.width = width;
-  outputCanvas.height = height;
+  outputCanvas.width = sourceCanvas.width;
+  outputCanvas.height = sourceCanvas.height;
   const context = outputCanvas.getContext('2d');
-  context.imageSmoothingEnabled = true;
-  context.imageSmoothingQuality = 'high';
-  context.drawImage(sourceCanvas, 0, 0, width, height);
+  context.drawImage(sourceCanvas, 0, 0);
+  const imageData = context.getImageData(0, 0, outputCanvas.width, outputCanvas.height);
+  const { data } = imageData;
+
+  for (let index = 0; index < data.length; index += 4) {
+    data[index] = Math.min(255, Math.round(data[index] / step) * step);
+    data[index + 1] = Math.min(255, Math.round(data[index + 1] / step) * step);
+    data[index + 2] = Math.min(255, Math.round(data[index + 2] / step) * step);
+  }
+
+  context.putImageData(imageData, 0, 0);
   return outputCanvas;
 };
 
-const getCompressedPngBlob = async (sourceCanvas, maxBytes = PNG_MAX_BYTES) => {
-  let outputCanvas = sourceCanvas;
-  let blob = await canvasToBlob(outputCanvas, 'image/png');
-  let width = sourceCanvas.width;
-  let height = sourceCanvas.height;
+const getSameSizePngUnderLimit = async (sourceCanvas, maxBytes = PNG_MAX_BYTES) => {
+  let blob = await canvasToBlob(sourceCanvas, 'image/png');
+  if (blob.size <= maxBytes) return { blob, width: sourceCanvas.width, height: sourceCanvas.height };
 
-  while (blob.size > maxBytes && width > MIN_COMPRESSED_WIDTH) {
-    const ratio = Math.max(0.72, Math.min(0.92, Math.sqrt(maxBytes / blob.size) * 0.96));
-    width = Math.max(MIN_COMPRESSED_WIDTH, Math.round(width * ratio));
-    height = Math.round(width * (SITE_BANNER_FORMAT.height / SITE_BANNER_FORMAT.width));
-    outputCanvas = resizeCanvas(sourceCanvas, width, height);
-    blob = await canvasToBlob(outputCanvas, 'image/png');
+  for (const step of PNG_POSTERIZE_STEPS) {
+    const posterizedCanvas = posterizeCanvas(sourceCanvas, step);
+    blob = await canvasToBlob(posterizedCanvas, 'image/png');
+    if (blob.size <= maxBytes) return { blob, width: sourceCanvas.width, height: sourceCanvas.height };
   }
 
-  if (blob.size > maxBytes) {
-    throw new Error(`PNG is still ${(blob.size / 1024).toFixed(0)}KB after compression. Try a simpler background or fewer large icons.`);
-  }
-
-  return { blob, width, height };
+  throw new Error(`PNG is ${(blob.size / 1024).toFixed(0)}KB at 2048x900. Keeping size/quality, it cannot fit under 500KB. Use JPG/WebP for this banner or simplify the background.`);
 };
 
 const createFullSizeExportNode = (scene) => {
@@ -119,7 +119,7 @@ async function downloadSiteBannerImage(mimeType, extension, selectedDish, option
     }
 
     const exportResult = options.maxBytes && mimeType === 'image/png'
-      ? await getCompressedPngBlob(canvas, options.maxBytes)
+      ? await getSameSizePngUnderLimit(canvas, options.maxBytes)
       : { blob: await canvasToBlob(canvas, mimeType), width: canvas.width, height: canvas.height };
     const suffix = options.maxBytes ? `-under-${Math.round(options.maxBytes / 1024)}kb` : '';
     const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-sushiwoki-${exportResult.width}x${exportResult.height}${suffix}.${extension}`;
