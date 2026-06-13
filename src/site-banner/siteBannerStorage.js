@@ -66,6 +66,9 @@ export const DEFAULT_SITE_BANNER_SETTINGS = Object.freeze({
   priceColor: '#fffaf2',
   priceFont: SITE_BANNER_FONT_OPTIONS[0],
   priceSize: 78,
+  textShadowEnabled: true,
+  textShadowColor: '#000000',
+  textShadowBlur: 38,
   accentColor: '#9b1c31',
   layoutOffsets: { ...DEFAULT_SITE_BANNER_LAYOUT },
 });
@@ -121,6 +124,9 @@ export const normalizeSiteBannerProject = (project = {}, dishes = []) => {
     priceColor: normalizeColor(project.priceColor, DEFAULT_SITE_BANNER_SETTINGS.priceColor),
     priceFont: normalizeFont(project.priceFont, DEFAULT_SITE_BANNER_SETTINGS.priceFont),
     priceSize: normalizeNumber(project.priceSize, DEFAULT_SITE_BANNER_SETTINGS.priceSize, 34, 130),
+    textShadowEnabled: project.textShadowEnabled === undefined ? DEFAULT_SITE_BANNER_SETTINGS.textShadowEnabled : Boolean(project.textShadowEnabled),
+    textShadowColor: normalizeColor(project.textShadowColor, DEFAULT_SITE_BANNER_SETTINGS.textShadowColor),
+    textShadowBlur: normalizeNumber(project.textShadowBlur, DEFAULT_SITE_BANNER_SETTINGS.textShadowBlur, 0, 100),
     accentColor: normalizeColor(project.accentColor, DEFAULT_SITE_BANNER_SETTINGS.accentColor),
     layoutOffsets: normalizeLayoutOffsets(project.layoutOffsets),
   };
