@@ -33,18 +33,23 @@ const getPrice = (value) => {
 };
 
 const positionWithOffset = ({ x, y }, offsetX = 0, offsetY = 0) => ({ left: x + offsetX, top: y + offsetY });
-const normalizeCustomBackgroundUrl = (url) => normalizeGoogleDriveImageUrl(String(url || '').trim());
+const normalizeBackgroundImageUrl = (url) => normalizeGoogleDriveImageUrl(String(url || '').trim());
 const getBackgroundFit = (settings) => settings.backgroundFit === 'contain' || settings.backgroundFit === 'fill' ? settings.backgroundFit : 'cover';
-const getBackgroundDim = (settings) => clamp(settings.backgroundDim ?? 0, 0, 70) / 100;
+const getBackgroundDim = (settings, hasMedia) => clamp(settings.backgroundDim ?? (hasMedia ? 18 : 0), 0, 70) / 100;
+const isTransparentProduct = (dish) => dish?.imageMode === 'transparent' || dish?.transparentImage === true;
+const getAutoBackgroundUrl = (dish) => {
+  if (!dish) return '';
+  return normalizeBackgroundImageUrl((isTransparentProduct(dish) && dish.promoBackgroundUrl) || dish.imageUrl);
+};
 const backgroundMediaStyle = (settings) => {
   const fit = getBackgroundFit(settings);
   return { objectFit: fit === 'fill' ? 'fill' : fit };
 };
 
-function SiteBannerCustomBackground({ url, settings }) {
-  const normalizedUrl = normalizeCustomBackgroundUrl(url);
+function SiteBannerBackgroundMedia({ url, settings, variant }) {
+  const normalizedUrl = normalizeBackgroundImageUrl(url);
   if (!normalizedUrl) return null;
-  return <img key={normalizedUrl} className="site-banner-custom-background" src={normalizedUrl} alt="" aria-hidden="true" style={backgroundMediaStyle(settings)} />;
+  return <img key={`${variant}-${normalizedUrl}`} className={`site-banner-background-media site-banner-${variant}-background`} src={normalizedUrl} alt="" aria-hidden="true" style={backgroundMediaStyle(settings)} />;
 }
 
 export function SiteBannerPreview({ dish, settings, index = 0 }) {
@@ -61,8 +66,11 @@ export function SiteBannerPreview({ dish, settings, index = 0 }) {
   const productPosition = positionWithOffset({ x: 1040, y: 138 }, offsets.productX, offsets.productY);
   const ctaPosition = positionWithOffset({ x: 300, y: 680 }, offsets.ctaX, offsets.ctaY);
   const pricePosition = positionWithOffset({ x: 650, y: 640 }, offsets.priceX, offsets.priceY);
-  const customBackgroundUrl = settings.backgroundMode === 'custom' ? normalizeCustomBackgroundUrl(settings.customBackgroundUrl) : '';
-  const backgroundDim = getBackgroundDim(settings);
+  const customBackgroundUrl = settings.backgroundMode === 'custom' ? normalizeBackgroundImageUrl(settings.customBackgroundUrl) : '';
+  const autoBackgroundUrl = settings.backgroundMode === 'auto' ? getAutoBackgroundUrl(dish) : '';
+  const backgroundUrl = customBackgroundUrl || autoBackgroundUrl;
+  const backgroundVariant = customBackgroundUrl ? 'custom' : 'auto';
+  const backgroundDim = getBackgroundDim(settings, Boolean(backgroundUrl));
 
   useEffect(() => {
     let cancelled = false;
@@ -82,7 +90,9 @@ export function SiteBannerPreview({ dish, settings, index = 0 }) {
 
   const sceneClass = [
     'site-banner-scene',
+    backgroundUrl ? 'site-banner-scene-has-background-media' : '',
     customBackgroundUrl ? 'site-banner-scene-has-custom-background' : '',
+    autoBackgroundUrl ? 'site-banner-scene-has-auto-background' : '',
   ].filter(Boolean).join(' ');
 
   return (
@@ -90,9 +100,8 @@ export function SiteBannerPreview({ dish, settings, index = 0 }) {
       <div className="app-canvas-wrap site-banner-canvas-wrap" style={{ width: `${SITE_BANNER_FORMAT.previewWidth}px`, aspectRatio: `${SITE_BANNER_FORMAT.width} / ${SITE_BANNER_FORMAT.height}` }}>
         <article className={sceneClass} style={{ width: `${SITE_BANNER_FORMAT.width}px`, height: `${SITE_BANNER_FORMAT.height}px`, transform: `scale(${previewScale})`, '--site-banner-bg': tunedBackground, '--site-banner-accent': settings.accentColor, '--site-banner-background-dim': backgroundDim }}>
           <div className="site-banner-background" />
-          {customBackgroundUrl ? <SiteBannerCustomBackground url={customBackgroundUrl} settings={settings} /> : null}
-          {settings.backgroundMode === 'auto' && dish?.imageUrl ? <img className="site-banner-edge-fill" src={dish.imageUrl} alt="" crossOrigin="anonymous" /> : null}
-          {customBackgroundUrl ? <div className="site-banner-background-dimmer" aria-hidden="true" /> : null}
+          {backgroundUrl ? <SiteBannerBackgroundMedia url={backgroundUrl} settings={settings} variant={backgroundVariant} /> : null}
+          {backgroundUrl ? <div className="site-banner-background-dimmer" aria-hidden="true" /> : null}
           <div className="site-banner-vignette" />
 
           {settings.showSafeZones ? (
