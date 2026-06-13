@@ -34,6 +34,7 @@ const getPrice = (value) => {
 const getPrimaryPriceVariant = (dish) => (dish?.priceVariants ?? []).find((variant) => Number(variant?.newPrice ?? variant?.price ?? variant?.oldPrice) > 0);
 const getDishOldPrice = (dish) => dish?.oldPrice ?? getPrimaryPriceVariant(dish)?.oldPrice;
 const getDishNewPrice = (dish) => dish?.newPrice ?? getPrimaryPriceVariant(dish)?.newPrice ?? getPrimaryPriceVariant(dish)?.price;
+const getTextShadow = (settings) => settings.textShadowEnabled ? `0 18px ${settings.textShadowBlur}px ${settings.textShadowColor}` : 'none';
 
 const positionWithOffset = ({ x, y }, offsetX = 0, offsetY = 0) => ({ left: x + offsetX, top: y + offsetY });
 const normalizeBackgroundImageUrl = (url) => normalizeGoogleDriveImageUrl(String(url || '').trim());
@@ -61,6 +62,7 @@ export function SiteBannerPreview({ dish, settings, index = 0 }) {
   const offerText = settings.offerText || 'SUSHIWOKI';
   const salePrice = getPrice(getDishNewPrice(dish));
   const oldPrice = getPrice(getDishOldPrice(dish));
+  const textShadow = getTextShadow(settings);
   const textPosition = positionWithOffset({ x: 300, y: 136 }, offsets.textX, offsets.textY);
   const productPosition = positionWithOffset({ x: 1040, y: 138 }, offsets.productX, offsets.productY);
   const ctaPosition = positionWithOffset({ x: 300, y: 680 }, offsets.ctaX, offsets.ctaY);
@@ -110,7 +112,7 @@ export function SiteBannerPreview({ dish, settings, index = 0 }) {
             </div>
           ) : null}
 
-          <div className="site-banner-copy" style={textPosition}>
+          <div className="site-banner-copy" style={{ ...textPosition, textShadow }}>
             {settings.showOffer ? <p className="site-banner-eyebrow" style={{ color: settings.offerColor, fontFamily: settings.offerFont, fontSize: `${settings.offerSize}px` }}>{offerText}</p> : null}
             <h2 style={{ color: settings.headlineColor, fontFamily: settings.headlineFont, fontSize: `${settings.headlineSize}px` }}>{headline}</h2>
             {settings.showSubheadline ? <p className="site-banner-subheadline" style={{ color: settings.subheadlineColor, fontFamily: settings.subheadlineFont, fontSize: `${settings.subheadlineSize}px` }}>{settings.subheadline}</p> : null}
@@ -120,10 +122,10 @@ export function SiteBannerPreview({ dish, settings, index = 0 }) {
             {dish?.imageUrl ? <img className="site-banner-product-image" src={dish.imageUrl} alt={dish.nameEn || dish.nameGe || 'Dish'} crossOrigin="anonymous" /> : <div className="site-banner-product-placeholder">Select dish with image</div>}
           </div>
 
-          {settings.showCta ? <div className="site-banner-cta" style={{ ...ctaPosition, color: settings.ctaColor, fontFamily: settings.ctaFont, fontSize: `${settings.ctaSize}px` }}>{settings.ctaText || 'ORDER NOW'}</div> : null}
+          {settings.showCta ? <div className="site-banner-cta" style={{ ...ctaPosition, color: settings.ctaColor, fontFamily: settings.ctaFont, fontSize: `${settings.ctaSize}px`, textShadow }}>{settings.ctaText || 'ORDER NOW'}</div> : null}
 
           {settings.showPrice && (salePrice || oldPrice) ? (
-            <div className="site-banner-price" style={{ ...pricePosition, color: settings.priceColor, fontFamily: settings.priceFont, fontSize: `${settings.priceSize}px` }}>
+            <div className="site-banner-price" style={{ ...pricePosition, color: settings.priceColor, fontFamily: settings.priceFont, fontSize: `${settings.priceSize}px`, textShadow }}>
               {oldPrice ? <span>{oldPrice}</span> : null}
               {salePrice ? <strong>{salePrice}</strong> : null}
             </div>
