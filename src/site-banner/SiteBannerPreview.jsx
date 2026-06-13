@@ -31,6 +31,9 @@ const getPrice = (value) => {
   if (!Number.isFinite(number) || number <= 0) return '';
   return `${number.toFixed(2)}₾`;
 };
+const getPrimaryPriceVariant = (dish) => (dish?.priceVariants ?? []).find((variant) => Number(variant?.newPrice ?? variant?.price ?? variant?.oldPrice) > 0);
+const getDishOldPrice = (dish) => dish?.oldPrice ?? getPrimaryPriceVariant(dish)?.oldPrice;
+const getDishNewPrice = (dish) => dish?.newPrice ?? getPrimaryPriceVariant(dish)?.newPrice ?? getPrimaryPriceVariant(dish)?.price;
 
 const positionWithOffset = ({ x, y }, offsetX = 0, offsetY = 0) => ({ left: x + offsetX, top: y + offsetY });
 const normalizeBackgroundImageUrl = (url) => normalizeGoogleDriveImageUrl(String(url || '').trim());
@@ -56,8 +59,8 @@ export function SiteBannerPreview({ dish, settings, index = 0 }) {
   const offsets = settings.layoutOffsets ?? {};
   const headline = settings.headline || dish?.nameEn || 'Sushiwoki Banner';
   const offerText = settings.offerText || 'SUSHIWOKI';
-  const salePrice = getPrice(dish?.newPrice);
-  const oldPrice = getPrice(dish?.oldPrice);
+  const salePrice = getPrice(getDishNewPrice(dish));
+  const oldPrice = getPrice(getDishOldPrice(dish));
   const textPosition = positionWithOffset({ x: 300, y: 136 }, offsets.textX, offsets.textY);
   const productPosition = positionWithOffset({ x: 1040, y: 138 }, offsets.productX, offsets.productY);
   const ctaPosition = positionWithOffset({ x: 300, y: 680 }, offsets.ctaX, offsets.ctaY);
