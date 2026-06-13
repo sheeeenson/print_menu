@@ -26,42 +26,70 @@ const canvasToBlob = (canvas, mimeType) => new Promise((resolve, reject) => {
   }, mimeType, 0.94);
 });
 
+const createFullSizeExportNode = (scene) => {
+  const wrapper = document.createElement('div');
+  wrapper.setAttribute('aria-hidden', 'true');
+  wrapper.style.position = 'fixed';
+  wrapper.style.left = '0';
+  wrapper.style.top = '0';
+  wrapper.style.width = `${SITE_BANNER_FORMAT.width}px`;
+  wrapper.style.height = `${SITE_BANNER_FORMAT.height}px`;
+  wrapper.style.overflow = 'hidden';
+  wrapper.style.pointerEvents = 'none';
+  wrapper.style.zIndex = '-9999';
+  wrapper.style.background = 'transparent';
+
+  const clone = scene.cloneNode(true);
+  clone.style.transform = 'none';
+  clone.style.transformOrigin = 'top left';
+  clone.style.position = 'relative';
+  clone.style.left = '0';
+  clone.style.top = '0';
+  clone.style.width = `${SITE_BANNER_FORMAT.width}px`;
+  clone.style.height = `${SITE_BANNER_FORMAT.height}px`;
+  clone.querySelectorAll('.site-banner-guides').forEach((node) => node.remove());
+
+  wrapper.appendChild(clone);
+  document.body.appendChild(wrapper);
+  return { wrapper, clone };
+};
+
 async function downloadSiteBannerImage(mimeType, extension, selectedDish) {
   const scene = document.querySelector('.site-banner-scene');
   if (!scene) throw new Error('Banner preview is not ready yet.');
 
   if (document.fonts?.ready) await document.fonts.ready;
 
-  const canvas = await html2canvas(scene, {
-    backgroundColor: null,
-    canvas: document.createElement('canvas'),
-    height: SITE_BANNER_FORMAT.height,
-    width: SITE_BANNER_FORMAT.width,
-    windowHeight: SITE_BANNER_FORMAT.height,
-    windowWidth: SITE_BANNER_FORMAT.width,
-    scale: 1,
-    useCORS: true,
-    allowTaint: false,
-    logging: false,
-    ignoreElements: (element) => element.classList?.contains('site-banner-guides'),
-    onclone: (clonedDocument) => {
-      const clonedScene = clonedDocument.querySelector('.site-banner-scene');
-      if (!clonedScene) return;
-      clonedScene.style.transform = 'none';
-      clonedScene.style.transformOrigin = 'top left';
-      clonedScene.style.left = '0';
-      clonedScene.style.top = '0';
-      clonedScene.style.width = `${SITE_BANNER_FORMAT.width}px`;
-      clonedScene.style.height = `${SITE_BANNER_FORMAT.height}px`;
-      clonedScene.querySelectorAll('.site-banner-guides').forEach((node) => node.remove());
-    },
-  });
+  const { wrapper, clone } = createFullSizeExportNode(scene);
 
-  const blob = await canvasToBlob(canvas, mimeType);
-  const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-sushiwoki-2048x900.${extension}`;
-  const outputUrl = URL.createObjectURL(blob);
-  downloadUrl(outputUrl, filename);
-  setTimeout(() => URL.revokeObjectURL(outputUrl), 1000);
+  try {
+    const canvas = await html2canvas(clone, {
+      backgroundColor: null,
+      height: SITE_BANNER_FORMAT.height,
+      width: SITE_BANNER_FORMAT.width,
+      windowHeight: SITE_BANNER_FORMAT.height,
+      windowWidth: SITE_BANNER_FORMAT.width,
+      scrollX: 0,
+      scrollY: 0,
+      scale: 1,
+      useCORS: true,
+      allowTaint: false,
+      logging: false,
+      ignoreElements: (element) => element.classList?.contains('site-banner-guides'),
+    });
+
+    if (canvas.width !== SITE_BANNER_FORMAT.width || canvas.height !== SITE_BANNER_FORMAT.height) {
+      throw new Error(`Export size mismatch: ${canvas.width}x${canvas.height}.`);
+    }
+
+    const blob = await canvasToBlob(canvas, mimeType);
+    const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-sushiwoki-2048x900.${extension}`;
+    const outputUrl = URL.createObjectURL(blob);
+    downloadUrl(outputUrl, filename);
+    setTimeout(() => URL.revokeObjectURL(outputUrl), 1000);
+  } finally {
+    wrapper.remove();
+  }
 }
 
 function ControlGroup({ title, children }) {
