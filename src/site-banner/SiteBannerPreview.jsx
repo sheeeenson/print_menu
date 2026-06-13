@@ -65,7 +65,7 @@ export function SiteBannerPreview({ dish, settings, index = 0 }) {
   const productPosition = positionWithOffset({ x: 1040, y: 138 }, offsets.productX, offsets.productY);
   const ctaPosition = positionWithOffset({ x: 300, y: 680 }, offsets.ctaX, offsets.ctaY);
   const basePricePosition = settings.showCta ? { x: 650, y: 640 } : { x: 300, y: 680 };
-  const pricePosition = positionWithOffset(basePricePosition, settings.showCta ? offsets.priceX : offsets.ctaX, settings.showCta ? offsets.priceY : offsets.ctaY);
+  const pricePosition = positionWithOffset(basePricePosition, offsets.priceX, offsets.priceY);
   const customBackgroundUrl = settings.backgroundMode === 'custom' ? normalizeBackgroundImageUrl(settings.customBackgroundUrl) : '';
   const backgroundDim = getBackgroundDim(settings, Boolean(customBackgroundUrl));
 
