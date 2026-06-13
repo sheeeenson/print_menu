@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { getFallbackImageBackground, sampleImageAutofillColor } from '../utils/imageColor.js';
 import { normalizeGoogleDriveImageUrl } from '../utils/imageUrls.js';
 import { SITE_BANNER_FORMAT, SITE_BANNER_SAFE_ZONES } from './siteBannerStorage.js';
@@ -52,7 +52,59 @@ function SiteBannerCustomBackground({ url, settings }) {
   return <div key={normalizedUrl} className="site-banner-background-media site-banner-custom-background" aria-hidden="true" style={{ backgroundImage: `url("${normalizedUrl}")`, backgroundSize: getBackgroundSize(settings), backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }} />;
 }
 
-export function SiteBannerPreview({ dish, settings, index = 0 }) {
+function SiteBannerIcon({ icon, previewScale, onDragIcon }) {
+  const normalizedUrl = normalizeBackgroundImageUrl(icon.url);
+  const dragRef = useRef(null);
+  if (!icon.visible || !normalizedUrl) return null;
+
+  const handlePointerDown = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startX: icon.x,
+      startY: icon.y,
+    };
+  };
+
+  const handlePointerMove = (event) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const nextX = drag.startX + ((event.clientX - drag.startClientX) / previewScale);
+    const nextY = drag.startY + ((event.clientY - drag.startClientY) / previewScale);
+    onDragIcon(icon.id, { x: Math.round(nextX), y: Math.round(nextY) });
+  };
+
+  const handlePointerEnd = (event) => {
+    if (dragRef.current?.pointerId === event.pointerId) dragRef.current = null;
+  };
+
+  return (
+    <img
+      className="site-banner-icon"
+      src={normalizedUrl}
+      alt=""
+      crossOrigin="anonymous"
+      draggable="false"
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerEnd}
+      onPointerCancel={handlePointerEnd}
+      style={{
+        left: `${icon.x}px`,
+        top: `${icon.y}px`,
+        width: `${icon.size}px`,
+        opacity: icon.opacity,
+        transform: `translate(-50%, -50%) rotate(${icon.rotation}deg)`,
+      }}
+    />
+  );
+}
+
+export function SiteBannerPreview({ dish, settings, index = 0, onDragIcon }) {
   const [sampledColor, setSampledColor] = useState('');
   const fallbackColor = getFallbackImageBackground(index);
   const edgeColor = sampledColor || fallbackColor;
@@ -100,6 +152,8 @@ export function SiteBannerPreview({ dish, settings, index = 0 }) {
           <div className="site-banner-background" />
           {customBackgroundUrl ? <SiteBannerCustomBackground url={customBackgroundUrl} settings={settings} /> : null}
           {customBackgroundUrl ? <div className="site-banner-background-dimmer" aria-hidden="true" /> : null}
+
+          {(settings.icons ?? []).map((icon) => <SiteBannerIcon key={icon.id} icon={icon} previewScale={previewScale} onDragIcon={onDragIcon} />)}
 
           {settings.showSafeZones ? (
             <div className="site-banner-guides" aria-hidden="true">
