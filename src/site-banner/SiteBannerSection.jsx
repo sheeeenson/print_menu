@@ -144,6 +144,17 @@ function TextStyleControls({ title, prefix, settings, updateSettings, sizeMin = 
   );
 }
 
+function TextShadowControls({ settings, updateSettings }) {
+  return (
+    <div className="app-card site-banner-style-block">
+      <h4>Text shadow</h4>
+      <ToggleField label="Show text shadow" checked={Boolean(settings.textShadowEnabled)} onChange={(textShadowEnabled) => updateSettings({ textShadowEnabled })} />
+      <ColorControl label="Shadow color" value={settings.textShadowColor} onChange={(textShadowColor) => updateSettings({ textShadowColor })} />
+      <RangeControl label="Shadow radius" value={settings.textShadowBlur} min={0} max={100} onChange={(textShadowBlur) => updateSettings({ textShadowBlur })} suffix="px" />
+    </div>
+  );
+}
+
 function LayoutOffsetControls({ settings, updateLayoutOffset, resetLayoutOffsets }) {
   const offsets = settings.layoutOffsets ?? DEFAULT_SITE_BANNER_LAYOUT;
   return (
@@ -295,6 +306,9 @@ export function SiteBannerSection({ project }) {
           <TextStyleControls title="Subheadline" prefix="subheadline" settings={settings} updateSettings={updateSettings} sizeMin={20} sizeMax={76} />
           <TextStyleControls title="CTA" prefix="cta" settings={settings} updateSettings={updateSettings} sizeMin={18} sizeMax={60} />
           <TextStyleControls title="Price" prefix="price" settings={settings} updateSettings={updateSettings} sizeMin={34} sizeMax={130} />
+        </ControlGroup>
+        <ControlGroup title="Text shadow">
+          <TextShadowControls settings={settings} updateSettings={updateSettings} />
         </ControlGroup>
       </aside>
 
