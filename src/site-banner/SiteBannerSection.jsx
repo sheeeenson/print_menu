@@ -6,6 +6,7 @@ import './siteBanner.css';
 
 const getDishTitle = (dish) => dish?.nameEn || dish?.nameGe || 'Untitled dish';
 const getSafeFilename = (value) => String(value || 'sushiwoki-banner').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'sushiwoki-banner';
+const createIconId = () => `icon-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 const downloadUrl = (url, filename) => {
   const link = document.createElement('a');
@@ -141,6 +142,28 @@ function TextShadowControls({ settings, updateSettings }) {
   );
 }
 
+function IconControls({ icons, addIcon, updateIcon, removeIcon }) {
+  return (
+    <div className="site-banner-style-stack">
+      <button type="button" className="secondary-button" onClick={addIcon}>Add PNG icon</button>
+      {icons.length === 0 ? <p className="muted-text">Add PNG icons by URL, then drag them directly on the preview.</p> : null}
+      {icons.map((icon, index) => (
+        <div key={icon.id} className="app-card site-banner-style-block site-banner-icon-panel">
+          <h4>Icon {index + 1}</h4>
+          <ToggleField label="Visible" checked={Boolean(icon.visible)} onChange={(visible) => updateIcon(icon.id, { visible })} />
+          <label className="app-field"><span>PNG URL</span><input value={icon.url} placeholder="https://.../icon.png" onChange={(event) => updateIcon(icon.id, { url: event.target.value })} /></label>
+          <RangeControl label="X" value={icon.x} min={-400} max={SITE_BANNER_FORMAT.width + 400} onChange={(x) => updateIcon(icon.id, { x })} suffix="px" />
+          <RangeControl label="Y" value={icon.y} min={-400} max={SITE_BANNER_FORMAT.height + 400} onChange={(y) => updateIcon(icon.id, { y })} suffix="px" />
+          <RangeControl label="Size" value={icon.size} min={10} max={700} onChange={(size) => updateIcon(icon.id, { size })} suffix="px" />
+          <RangeControl label="Opacity" value={icon.opacity} min={0} max={1} step={0.01} onChange={(opacity) => updateIcon(icon.id, { opacity })} />
+          <RangeControl label="Rotation" value={icon.rotation} min={-180} max={180} onChange={(rotation) => updateIcon(icon.id, { rotation })} suffix="°" />
+          <div className="site-banner-icon-actions"><button type="button" className="danger-button" onClick={() => removeIcon(icon.id)}>Delete icon</button></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function LayoutOffsetControls({ settings, updateLayoutOffset, resetLayoutOffsets }) {
   const offsets = settings.layoutOffsets ?? DEFAULT_SITE_BANNER_LAYOUT;
   return (
@@ -190,10 +213,20 @@ export function SiteBannerSection({ project }) {
 
   const selectedDish = dishesWithImages.find((dish) => dish.id === settings.selectedDishId) ?? dishesWithImages[0] ?? null;
   const selectedIndex = Math.max(0, dishesWithImages.findIndex((dish) => dish.id === selectedDish?.id));
+  const icons = settings.icons ?? [];
 
   const updateSettings = (changes) => setSettings((current) => ({ ...current, ...changes }));
   const updateLayoutOffset = (key, value) => updateSettings({ layoutOffsets: { ...DEFAULT_SITE_BANNER_LAYOUT, ...(settings.layoutOffsets ?? {}), [key]: value } });
   const resetLayoutOffsets = () => updateSettings({ layoutOffsets: { ...DEFAULT_SITE_BANNER_LAYOUT } });
+  const updateIcon = (iconId, changes) => setSettings((current) => ({ ...current, icons: (current.icons ?? []).map((icon) => icon.id === iconId ? { ...icon, ...changes } : icon) }));
+  const addIcon = () => setSettings((current) => ({
+    ...current,
+    icons: [
+      ...(current.icons ?? []),
+      { id: createIconId(), url: '', x: 420, y: 420, size: 140, opacity: 1, rotation: 0, visible: true },
+    ],
+  }));
+  const removeIcon = (iconId) => setSettings((current) => ({ ...current, icons: (current.icons ?? []).filter((icon) => icon.id !== iconId) }));
 
   const handleDownload = async (mimeType, extension) => {
     try {
@@ -275,6 +308,10 @@ export function SiteBannerSection({ project }) {
           <TextShadowControls settings={settings} updateSettings={updateSettings} />
         </ControlGroup>
 
+        <ControlGroup title="PNG icons">
+          <IconControls icons={icons} addIcon={addIcon} updateIcon={updateIcon} removeIcon={removeIcon} />
+        </ControlGroup>
+
         <ControlGroup title="Background">
           <label className="app-field"><span>Mode</span><select value={settings.backgroundMode} onChange={(event) => updateSettings({ backgroundMode: event.target.value })}><option value="auto">Auto fill from product image</option><option value="custom">Custom background URL</option></select></label>
           <label className="app-field"><span>Custom background URL</span><input value={settings.customBackgroundUrl} placeholder="Paste background image URL" onChange={(event) => updateSettings({ customBackgroundUrl: event.target.value })} /></label>
@@ -301,7 +338,7 @@ export function SiteBannerSection({ project }) {
 
       <main className="app-preview-stage site-banner-preview-stage">
         <div className="app-toolbar"><div><p>Preview</p><h2>{selectedDish ? getDishTitle(selectedDish) : 'Select product'}</h2></div><div className="app-pill">{SITE_BANNER_FORMAT.label}</div></div>
-        <SiteBannerPreview dish={selectedDish} settings={settings} index={selectedIndex} />
+        <SiteBannerPreview dish={selectedDish} settings={settings} index={selectedIndex} onDragIcon={updateIcon} />
       </main>
     </section>
   );
