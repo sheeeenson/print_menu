@@ -70,6 +70,7 @@ export const DEFAULT_SITE_BANNER_SETTINGS = Object.freeze({
   textShadowColor: '#000000',
   textShadowBlur: 38,
   accentColor: '#9b1c31',
+  icons: [],
   layoutOffsets: { ...DEFAULT_SITE_BANNER_LAYOUT },
 });
 
@@ -85,6 +86,19 @@ const normalizeNumber = (value, fallback, min, max) => {
 const normalizeLayoutOffsets = (layoutOffsets = {}) => Object.fromEntries(
   Object.entries(DEFAULT_SITE_BANNER_LAYOUT).map(([key, fallback]) => [key, normalizeNumber(layoutOffsets[key], fallback, -900, 900)]),
 );
+
+const normalizeIcons = (icons = []) => Array.isArray(icons) ? icons
+  .filter((icon) => icon && typeof icon === 'object')
+  .map((icon, index) => ({
+    id: String(icon.id || `icon-${Date.now()}-${index}`),
+    url: String(icon.url || ''),
+    x: normalizeNumber(icon.x, 420 + index * 90, -400, SITE_BANNER_FORMAT.width + 400),
+    y: normalizeNumber(icon.y, 420, -400, SITE_BANNER_FORMAT.height + 400),
+    size: normalizeNumber(icon.size, 140, 10, 700),
+    opacity: normalizeNumber(icon.opacity, 1, 0, 1),
+    rotation: normalizeNumber(icon.rotation, 0, -180, 180),
+    visible: icon.visible === undefined ? true : Boolean(icon.visible),
+  })) : [];
 
 export const normalizeSiteBannerProject = (project = {}, dishes = []) => {
   const availableDishIds = new Set(dishes.filter((dish) => dish.visible !== false && dish.imageUrl).map((dish) => dish.id));
@@ -128,6 +142,7 @@ export const normalizeSiteBannerProject = (project = {}, dishes = []) => {
     textShadowColor: normalizeColor(project.textShadowColor, DEFAULT_SITE_BANNER_SETTINGS.textShadowColor),
     textShadowBlur: normalizeNumber(project.textShadowBlur, DEFAULT_SITE_BANNER_SETTINGS.textShadowBlur, 0, 100),
     accentColor: normalizeColor(project.accentColor, DEFAULT_SITE_BANNER_SETTINGS.accentColor),
+    icons: normalizeIcons(project.icons),
     layoutOffsets: normalizeLayoutOffsets(project.layoutOffsets),
   };
 };
