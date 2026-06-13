@@ -40,15 +40,16 @@ const positionWithOffset = ({ x, y }, offsetX = 0, offsetY = 0) => ({ left: x + 
 const normalizeBackgroundImageUrl = (url) => normalizeGoogleDriveImageUrl(String(url || '').trim());
 const getBackgroundFit = (settings) => settings.backgroundFit === 'contain' || settings.backgroundFit === 'fill' ? settings.backgroundFit : 'cover';
 const getBackgroundDim = (settings, hasCustomBackground) => clamp(settings.backgroundDim ?? (hasCustomBackground ? 0 : 0), 0, 70) / 100;
-const backgroundMediaStyle = (settings) => {
+const getBackgroundSize = (settings) => {
   const fit = getBackgroundFit(settings);
-  return { objectFit: fit === 'fill' ? 'fill' : fit };
+  if (fit === 'fill') return '100% 100%';
+  return fit;
 };
 
 function SiteBannerCustomBackground({ url, settings }) {
   const normalizedUrl = normalizeBackgroundImageUrl(url);
   if (!normalizedUrl) return null;
-  return <img key={normalizedUrl} className="site-banner-background-media site-banner-custom-background" src={normalizedUrl} alt="" aria-hidden="true" style={backgroundMediaStyle(settings)} />;
+  return <div key={normalizedUrl} className="site-banner-background-media site-banner-custom-background" aria-hidden="true" style={{ backgroundImage: `url("${normalizedUrl}")`, backgroundSize: getBackgroundSize(settings), backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }} />;
 }
 
 export function SiteBannerPreview({ dish, settings, index = 0 }) {
