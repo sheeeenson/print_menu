@@ -26,6 +26,29 @@ const downloadUrl = (url, filename) => {
   link.remove();
 };
 
+const blobToDataUrl = (blob) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = () => reject(new Error('Could not read image data.'));
+  reader.readAsDataURL(blob);
+});
+
+const inlineImageSource = async (image) => {
+  const source = image.currentSrc || image.src;
+  if (!source || source.startsWith('data:')) return;
+  const response = await fetch(source, { mode: 'cors', credentials: 'omit' });
+  if (!response.ok) throw new Error(`Could not load export image: ${response.status}`);
+  const blob = await response.blob();
+  image.setAttribute('src', await blobToDataUrl(blob));
+  image.removeAttribute('srcset');
+  image.removeAttribute('crossorigin');
+};
+
+const inlineCloneImages = async (clone) => {
+  const images = Array.from(clone.querySelectorAll('img'));
+  await Promise.all(images.map((image) => inlineImageSource(image)));
+};
+
 async function downloadSiteBannerImage(mimeType, extension, selectedDish) {
   const scene = document.querySelector('.site-banner-scene');
   if (!scene) return;
@@ -38,6 +61,7 @@ async function downloadSiteBannerImage(mimeType, extension, selectedDish) {
   clone.style.top = '0';
 
   clone.querySelectorAll('.site-banner-guides').forEach((node) => node.remove());
+  await inlineCloneImages(clone);
 
   const html = `
     <style>${getDocumentCss()}</style>
@@ -181,7 +205,7 @@ export function SiteBannerSection({ project }) {
       setExportStatus(`${extension.toUpperCase()} downloaded.`);
     } catch (error) {
       console.error(error);
-      setExportStatus('Export failed. Try again after images finish loading.');
+      setExportStatus('Export failed. Check that the product image is loaded, then try again.');
     }
   };
 
