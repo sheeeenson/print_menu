@@ -240,6 +240,8 @@ export function SiteBannerSection({ project }) {
         </div>
 
         <ControlGroup title="Copy">
+          <ToggleField label="Show offer" checked={Boolean(settings.showOffer)} onChange={(showOffer) => updateSettings({ showOffer })} />
+          <label className="app-field"><span>Offer</span><input value={settings.offerText} placeholder="SUSHIWOKI" onChange={(event) => updateSettings({ offerText: event.target.value })} /></label>
           <label className="app-field"><span>Headline</span><input value={settings.headline} placeholder={selectedDish ? getDishTitle(selectedDish) : 'Banner headline'} onChange={(event) => updateSettings({ headline: event.target.value })} /></label>
           <ToggleField label="Show subheadline" checked={Boolean(settings.showSubheadline)} onChange={(showSubheadline) => updateSettings({ showSubheadline })} />
           <label className="app-field"><span>Subheadline</span><input value={settings.subheadline} placeholder="Fresh sushi, rolls and wok delivery" onChange={(event) => updateSettings({ subheadline: event.target.value })} /></label>
@@ -264,6 +266,7 @@ export function SiteBannerSection({ project }) {
         <ControlGroup title="Appearance"><RangeControl label="Product size" value={settings.productSize} min={260} max={980} onChange={(productSize) => updateSettings({ productSize })} suffix="px" /></ControlGroup>
         <ControlGroup title="Layout"><LayoutOffsetControls settings={settings} updateLayoutOffset={updateLayoutOffset} resetLayoutOffsets={resetLayoutOffsets} /></ControlGroup>
         <ControlGroup title="Text styles">
+          <TextStyleControls title="Offer" prefix="offer" settings={settings} updateSettings={updateSettings} sizeMin={18} sizeMax={60} />
           <TextStyleControls title="Headline" prefix="headline" settings={settings} updateSettings={updateSettings} sizeMin={54} sizeMax={180} />
           <TextStyleControls title="Subheadline" prefix="subheadline" settings={settings} updateSettings={updateSettings} sizeMin={20} sizeMax={76} />
           <TextStyleControls title="CTA" prefix="cta" settings={settings} updateSettings={updateSettings} sizeMin={18} sizeMax={60} />
