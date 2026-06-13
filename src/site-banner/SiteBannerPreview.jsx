@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getFallbackImageBackground, sampleImageColor } from '../utils/imageColor.js';
+import { getFallbackImageBackground, sampleImageAutofillColor } from '../utils/imageColor.js';
 import { normalizeGoogleDriveImageUrl } from '../utils/imageUrls.js';
 import { SITE_BANNER_FORMAT, SITE_BANNER_SAFE_ZONES } from './siteBannerStorage.js';
 
@@ -68,7 +68,7 @@ export function SiteBannerPreview({ dish, settings, index = 0 }) {
     let cancelled = false;
     setSampledColor('');
     if (!dish?.imageUrl) return undefined;
-    sampleImageColor(dish.imageUrl)
+    sampleImageAutofillColor(dish.imageUrl)
       .then((color) => {
         if (!cancelled) setSampledColor(color);
       })
