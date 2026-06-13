@@ -4,6 +4,9 @@ import { SiteBannerPreview } from './SiteBannerPreview.jsx';
 import { DEFAULT_SITE_BANNER_LAYOUT, SITE_BANNER_FONT_OPTIONS, SITE_BANNER_FORMAT, loadSiteBannerProject, saveSiteBannerProject } from './siteBannerStorage.js';
 import './siteBanner.css';
 
+const PNG_MAX_BYTES = 500 * 1024;
+const MIN_COMPRESSED_WIDTH = 640;
+
 const getDishTitle = (dish) => dish?.nameEn || dish?.nameGe || 'Untitled dish';
 const getSafeFilename = (value) => String(value || 'sushiwoki-banner').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'sushiwoki-banner';
 const createIconId = () => `icon-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -26,6 +29,38 @@ const canvasToBlob = (canvas, mimeType) => new Promise((resolve, reject) => {
     resolve(blob);
   }, mimeType, 0.94);
 });
+
+const resizeCanvas = (sourceCanvas, width, height) => {
+  const outputCanvas = document.createElement('canvas');
+  outputCanvas.width = width;
+  outputCanvas.height = height;
+  const context = outputCanvas.getContext('2d');
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = 'high';
+  context.drawImage(sourceCanvas, 0, 0, width, height);
+  return outputCanvas;
+};
+
+const getCompressedPngBlob = async (sourceCanvas, maxBytes = PNG_MAX_BYTES) => {
+  let outputCanvas = sourceCanvas;
+  let blob = await canvasToBlob(outputCanvas, 'image/png');
+  let width = sourceCanvas.width;
+  let height = sourceCanvas.height;
+
+  while (blob.size > maxBytes && width > MIN_COMPRESSED_WIDTH) {
+    const ratio = Math.max(0.72, Math.min(0.92, Math.sqrt(maxBytes / blob.size) * 0.96));
+    width = Math.max(MIN_COMPRESSED_WIDTH, Math.round(width * ratio));
+    height = Math.round(width * (SITE_BANNER_FORMAT.height / SITE_BANNER_FORMAT.width));
+    outputCanvas = resizeCanvas(sourceCanvas, width, height);
+    blob = await canvasToBlob(outputCanvas, 'image/png');
+  }
+
+  if (blob.size > maxBytes) {
+    throw new Error(`PNG is still ${(blob.size / 1024).toFixed(0)}KB after compression. Try a simpler background or fewer large icons.`);
+  }
+
+  return { blob, width, height };
+};
 
 const createFullSizeExportNode = (scene) => {
   const wrapper = document.createElement('div');
@@ -55,7 +90,7 @@ const createFullSizeExportNode = (scene) => {
   return { wrapper, clone };
 };
 
-async function downloadSiteBannerImage(mimeType, extension, selectedDish) {
+async function downloadSiteBannerImage(mimeType, extension, selectedDish, options = {}) {
   const scene = document.querySelector('.site-banner-scene');
   if (!scene) throw new Error('Banner preview is not ready yet.');
 
@@ -83,11 +118,15 @@ async function downloadSiteBannerImage(mimeType, extension, selectedDish) {
       throw new Error(`Export size mismatch: ${canvas.width}x${canvas.height}.`);
     }
 
-    const blob = await canvasToBlob(canvas, mimeType);
-    const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-sushiwoki-2048x900.${extension}`;
-    const outputUrl = URL.createObjectURL(blob);
+    const exportResult = options.maxBytes && mimeType === 'image/png'
+      ? await getCompressedPngBlob(canvas, options.maxBytes)
+      : { blob: await canvasToBlob(canvas, mimeType), width: canvas.width, height: canvas.height };
+    const suffix = options.maxBytes ? `-under-${Math.round(options.maxBytes / 1024)}kb` : '';
+    const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-sushiwoki-${exportResult.width}x${exportResult.height}${suffix}.${extension}`;
+    const outputUrl = URL.createObjectURL(exportResult.blob);
     downloadUrl(outputUrl, filename);
     setTimeout(() => URL.revokeObjectURL(outputUrl), 1000);
+    return { ...exportResult, sizeKb: Math.round(exportResult.blob.size / 1024) };
   } finally {
     wrapper.remove();
   }
@@ -228,11 +267,13 @@ export function SiteBannerSection({ project }) {
   }));
   const removeIcon = (iconId) => setSettings((current) => ({ ...current, icons: (current.icons ?? []).filter((icon) => icon.id !== iconId) }));
 
-  const handleDownload = async (mimeType, extension) => {
+  const handleDownload = async (mimeType, extension, options = {}) => {
+    const label = options.label || extension.toUpperCase();
     try {
-      setExportStatus(`Preparing ${extension.toUpperCase()}...`);
-      await downloadSiteBannerImage(mimeType, extension, selectedDish);
-      setExportStatus(`${extension.toUpperCase()} downloaded.`);
+      setExportStatus(`Preparing ${label}...`);
+      const result = await downloadSiteBannerImage(mimeType, extension, selectedDish, options);
+      const details = options.maxBytes ? ` ${result.width}x${result.height}, ${result.sizeKb}KB` : '';
+      setExportStatus(`${label} downloaded.${details}`);
     } catch (error) {
       console.error(error);
       setExportStatus(error?.message || 'Export failed. Check that the product image is loaded, then try again.');
@@ -260,6 +301,7 @@ export function SiteBannerSection({ project }) {
         <ControlGroup title="Export">
           <div className="app-segmented site-banner-export-row">
             <button type="button" onClick={() => handleDownload('image/png', 'png')}>PNG</button>
+            <button type="button" onClick={() => handleDownload('image/png', 'png', { maxBytes: PNG_MAX_BYTES, label: 'PNG <500KB' })}>PNG &lt;500KB</button>
             <button type="button" onClick={() => handleDownload('image/jpeg', 'jpg')}>JPG</button>
             <button type="button" onClick={() => handleDownload('image/webp', 'webp')}>WebP</button>
           </div>
