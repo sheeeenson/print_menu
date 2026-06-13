@@ -92,7 +92,6 @@ export function SiteBannerPreview({ dish, settings, index = 0 }) {
           <div className="site-banner-background" />
           {customBackgroundUrl ? <SiteBannerCustomBackground url={customBackgroundUrl} settings={settings} /> : null}
           {customBackgroundUrl ? <div className="site-banner-background-dimmer" aria-hidden="true" /> : null}
-          <div className="site-banner-vignette" />
 
           {settings.showSafeZones ? (
             <div className="site-banner-guides" aria-hidden="true">
