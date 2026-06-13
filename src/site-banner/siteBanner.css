@@ -51,7 +51,7 @@
 .promo-select-section,
 .image-menu-category-group,
 .site-banner-dish-picker > div,
-promo-dish-picker > div {
+.promo-dish-picker > div {
   background: var(--un-surface, #1c1f29) !important;
   color: var(--un-text, #f7f4ee) !important;
   border: 1px solid var(--un-border, rgba(255,255,255,0.11)) !important;
