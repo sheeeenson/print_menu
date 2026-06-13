@@ -1,5 +1,6 @@
 const fallbackBackgrounds = ['#eef0b4', '#f8d9a1', '#dfeacf', '#f2cfc1', '#d8e5ef', '#eadcf3'];
 const colorCache = new Map();
+const autofillColorCache = new Map();
 
 const toRgb = (data, index) => ({ r: data[index], g: data[index + 1], b: data[index + 2], a: data[index + 3] });
 const isUsefulPixel = ({ a }) => a > 180;
@@ -53,6 +54,56 @@ const getDominantColor = (pixels) => {
   };
 };
 
+const getClusterAverageColor = (pixels, bucketSize = 12) => {
+  const buckets = new Map();
+  pixels.forEach((pixel) => {
+    const key = [pixel.r, pixel.g, pixel.b].map((value) => Math.round(value / bucketSize) * bucketSize).join(',');
+    const bucket = buckets.get(key) || { count: 0, r: 0, g: 0, b: 0 };
+    bucket.count += 1;
+    bucket.r += pixel.r;
+    bucket.g += pixel.g;
+    bucket.b += pixel.b;
+    buckets.set(key, bucket);
+  });
+
+  let bestBucket = null;
+  buckets.forEach((bucket) => {
+    if (!bestBucket || bucket.count > bestBucket.count) bestBucket = bucket;
+  });
+
+  if (!bestBucket) throw new Error('No background color found');
+  return {
+    r: Math.round(bestBucket.r / bestBucket.count),
+    g: Math.round(bestBucket.g / bestBucket.count),
+    b: Math.round(bestBucket.b / bestBucket.count),
+  };
+};
+
+const readImagePixels = (imageUrl, size = 96) => new Promise((resolve, reject) => {
+  if (!imageUrl) {
+    reject(new Error('Missing image URL'));
+    return;
+  }
+
+  const image = new Image();
+  image.crossOrigin = 'anonymous';
+  image.referrerPolicy = 'no-referrer';
+  image.onload = () => {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      context.drawImage(image, 0, 0, size, size);
+      resolve({ data: context.getImageData(0, 0, size, size).data, size });
+    } catch (error) {
+      reject(error);
+    }
+  };
+  image.onerror = reject;
+  image.src = imageUrl;
+});
+
 export const sampleImageColor = (imageUrl) => new Promise((resolve, reject) => {
   if (!imageUrl) {
     reject(new Error('Missing image URL'));
@@ -64,19 +115,9 @@ export const sampleImageColor = (imageUrl) => new Promise((resolve, reject) => {
     return;
   }
 
-  const image = new Image();
-  image.crossOrigin = 'anonymous';
-  image.referrerPolicy = 'no-referrer';
-  image.onload = () => {
+  readImagePixels(imageUrl, 72).then(({ data, size }) => {
     try {
-      const size = 72;
       const edgeWidth = 14;
-      const canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
-      const context = canvas.getContext('2d', { willReadFrequently: true });
-      context.drawImage(image, 0, 0, size, size);
-      const { data } = context.getImageData(0, 0, size, size);
       const edgePixels = [];
       const allUsefulPixels = [];
 
@@ -100,7 +141,50 @@ export const sampleImageColor = (imageUrl) => new Promise((resolve, reject) => {
     } catch (error) {
       reject(error);
     }
-  };
-  image.onerror = reject;
-  image.src = imageUrl;
+  }).catch(reject);
+});
+
+export const sampleImageAutofillColor = (imageUrl) => new Promise((resolve, reject) => {
+  if (!imageUrl) {
+    reject(new Error('Missing image URL'));
+    return;
+  }
+
+  if (autofillColorCache.has(imageUrl)) {
+    resolve(autofillColorCache.get(imageUrl));
+    return;
+  }
+
+  readImagePixels(imageUrl, 96).then(({ data, size }) => {
+    try {
+      const outerEdgeWidth = 5;
+      const cornerSize = 18;
+      const cornerPixels = [];
+      const outerEdgePixels = [];
+      const allUsefulPixels = [];
+
+      for (let y = 0; y < size; y += 1) {
+        for (let x = 0; x < size; x += 1) {
+          const pixel = toRgb(data, (y * size + x) * 4);
+          if (!isUsefulPixel(pixel)) continue;
+          allUsefulPixels.push(pixel);
+
+          const isOuterEdge = x < outerEdgeWidth || x >= size - outerEdgeWidth || y < outerEdgeWidth || y >= size - outerEdgeWidth;
+          const isCorner = (x < cornerSize || x >= size - cornerSize) && (y < cornerSize || y >= size - cornerSize);
+
+          if (isOuterEdge) outerEdgePixels.push(pixel);
+          if (isCorner) cornerPixels.push(pixel);
+        }
+      }
+
+      const sourcePixels = cornerPixels.length >= 24 ? cornerPixels : outerEdgePixels.length ? outerEdgePixels : allUsefulPixels;
+      if (!sourcePixels.length) throw new Error('No useful pixels');
+
+      const hex = rgbToHex(getClusterAverageColor(sourcePixels, 10));
+      autofillColorCache.set(imageUrl, hex);
+      resolve(hex);
+    } catch (error) {
+      reject(error);
+    }
+  }).catch(reject);
 });
