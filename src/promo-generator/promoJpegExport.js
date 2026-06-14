@@ -23,6 +23,53 @@ const canvasToJpegBlob = (canvas) => new Promise((resolve, reject) => {
   }, 'image/jpeg', JPEG_QUALITY);
 });
 
+const blobToDataUrl = (blob) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = () => reject(reader.error || new Error('Could not read image blob.'));
+  reader.readAsDataURL(blob);
+});
+
+const imageToDataUrl = async (sourceImage) => {
+  const source = sourceImage.currentSrc || sourceImage.src || sourceImage.getAttribute('src') || '';
+  if (!source || source.startsWith('data:')) return source;
+
+  if (source.startsWith('blob:')) {
+    const canvas = document.createElement('canvas');
+    canvas.width = sourceImage.naturalWidth || sourceImage.width;
+    canvas.height = sourceImage.naturalHeight || sourceImage.height;
+    if (!canvas.width || !canvas.height) return '';
+    canvas.getContext('2d')?.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/png');
+  }
+
+  const response = await fetch(source, { mode: 'cors', cache: 'force-cache' });
+  if (!response.ok) return '';
+  return blobToDataUrl(await response.blob());
+};
+
+const embedImagesInClone = async (scene, clone) => {
+  const sourceImages = Array.from(scene.querySelectorAll('img'));
+  const clonedImages = Array.from(clone.querySelectorAll('img'));
+
+  await Promise.all(sourceImages.map(async (sourceImage, index) => {
+    const clonedImage = clonedImages[index];
+    if (!clonedImage) return;
+
+    clonedImage.removeAttribute('srcset');
+    clonedImage.removeAttribute('crossorigin');
+    clonedImage.removeAttribute('loading');
+    clonedImage.removeAttribute('decoding');
+
+    try {
+      const dataUrl = await imageToDataUrl(sourceImage);
+      if (dataUrl?.startsWith('data:')) clonedImage.setAttribute('src', dataUrl);
+    } catch (error) {
+      console.warn('Could not embed image in promo JPEG export:', error instanceof Error ? error.message : String(error));
+    }
+  }));
+};
+
 const waitForImages = async (root) => {
   const images = Array.from(root.querySelectorAll('img'));
   await Promise.all(images.map((image) => {
@@ -83,6 +130,7 @@ export const downloadPromoJpeg = async ({ filename, format, onStatus }) => {
   const { wrapper, clone } = createExportNode(scene, exportFormat);
 
   try {
+    await embedImagesInClone(scene, clone);
     await waitForImages(clone);
 
     const canvas = await html2canvas(clone, {
