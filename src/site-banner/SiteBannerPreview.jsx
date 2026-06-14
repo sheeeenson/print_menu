@@ -1,9 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getFallbackImageBackground, sampleImageAutofillColor } from '../utils/imageColor.js';
 import { normalizeGoogleDriveImageUrl } from '../utils/imageUrls.js';
-import { SITE_BANNER_FORMAT, SITE_BANNER_SAFE_ZONES } from './siteBannerStorage.js';
+import { getSiteBannerFormat, getSiteBannerSafeZones } from './siteBannerStorage.js';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, Number(value)));
+
+const BASE_POSITIONS_BY_FORMAT = Object.freeze({
+  sushiwokiWebsite2048x900: {
+    text: { x: 300, y: 136 },
+    product: { x: 1040, y: 138 },
+    cta: { x: 300, y: 680 },
+    priceWithCta: { x: 650, y: 640 },
+    priceNoCta: { x: 300, y: 680 },
+  },
+  sushiwokiWebsite1800x600: {
+    text: { x: 250, y: 88 },
+    product: { x: 900, y: 54 },
+    cta: { x: 250, y: 488 },
+    priceWithCta: { x: 560, y: 454 },
+    priceNoCta: { x: 250, y: 488 },
+  },
+});
 
 const hexToRgb = (hex) => {
   const value = String(hex || '').replace('#', '');
@@ -75,7 +92,7 @@ function SiteBannerIcon({ icon, previewScale, onDragIcon }) {
     if (!drag || drag.pointerId !== event.pointerId) return;
     const nextX = drag.startX + ((event.clientX - drag.startClientX) / previewScale);
     const nextY = drag.startY + ((event.clientY - drag.startClientY) / previewScale);
-    onDragIcon(icon.id, { x: Math.round(nextX), y: Math.round(nextY) });
+    onDragIcon?.(icon.id, { x: Math.round(nextX), y: Math.round(nextY) });
   };
 
   const handlePointerEnd = (event) => {
@@ -105,21 +122,24 @@ function SiteBannerIcon({ icon, previewScale, onDragIcon }) {
 }
 
 export function SiteBannerPreview({ dish, settings, index = 0, onDragIcon }) {
+  const format = getSiteBannerFormat(settings.formatId);
+  const safeZones = getSiteBannerSafeZones(settings.formatId);
+  const basePositions = BASE_POSITIONS_BY_FORMAT[format.id] ?? BASE_POSITIONS_BY_FORMAT.sushiwokiWebsite2048x900;
   const [sampledColor, setSampledColor] = useState('');
   const fallbackColor = getFallbackImageBackground(index);
   const edgeColor = sampledColor || fallbackColor;
   const tunedBackground = useMemo(() => colorWithTone(edgeColor, settings.backgroundTone), [edgeColor, settings.backgroundTone]);
-  const previewScale = SITE_BANNER_FORMAT.previewWidth / SITE_BANNER_FORMAT.width;
+  const previewScale = format.previewWidth / format.width;
   const offsets = settings.layoutOffsets ?? {};
   const headline = settings.headline || dish?.nameEn || 'Sushiwoki Banner';
   const offerText = settings.offerText || 'SUSHIWOKI';
   const salePrice = getPrice(getDishNewPrice(dish));
   const oldPrice = getPrice(getDishOldPrice(dish));
   const textShadow = getTextShadow(settings);
-  const textPosition = positionWithOffset({ x: 300, y: 136 }, offsets.textX, offsets.textY);
-  const productPosition = positionWithOffset({ x: 1040, y: 138 }, offsets.productX, offsets.productY);
-  const ctaPosition = positionWithOffset({ x: 300, y: 680 }, offsets.ctaX, offsets.ctaY);
-  const basePricePosition = settings.showCta ? { x: 650, y: 640 } : { x: 300, y: 680 };
+  const textPosition = positionWithOffset(basePositions.text, offsets.textX, offsets.textY);
+  const productPosition = positionWithOffset(basePositions.product, offsets.productX, offsets.productY);
+  const ctaPosition = positionWithOffset(basePositions.cta, offsets.ctaX, offsets.ctaY);
+  const basePricePosition = settings.showCta ? basePositions.priceWithCta : basePositions.priceNoCta;
   const pricePosition = positionWithOffset(basePricePosition, offsets.priceX, offsets.priceY);
   const customBackgroundUrl = settings.backgroundMode === 'custom' ? normalizeBackgroundImageUrl(settings.customBackgroundUrl) : '';
   const backgroundDim = getBackgroundDim(settings, Boolean(customBackgroundUrl));
@@ -147,8 +167,8 @@ export function SiteBannerPreview({ dish, settings, index = 0, onDragIcon }) {
 
   return (
     <section className="app-preview-shell" aria-label="Sushiwoki website banner preview">
-      <div className="app-canvas-wrap site-banner-canvas-wrap" style={{ width: `${SITE_BANNER_FORMAT.previewWidth}px`, aspectRatio: `${SITE_BANNER_FORMAT.width} / ${SITE_BANNER_FORMAT.height}` }}>
-        <article className={sceneClass} style={{ width: `${SITE_BANNER_FORMAT.width}px`, height: `${SITE_BANNER_FORMAT.height}px`, transform: `scale(${previewScale})`, '--site-banner-bg': tunedBackground, '--site-banner-accent': settings.accentColor, '--site-banner-background-dim': backgroundDim }}>
+      <div className="app-canvas-wrap site-banner-canvas-wrap" style={{ width: `${format.previewWidth}px`, aspectRatio: `${format.width} / ${format.height}` }}>
+        <article className={sceneClass} style={{ width: `${format.width}px`, height: `${format.height}px`, transform: `scale(${previewScale})`, '--site-banner-bg': tunedBackground, '--site-banner-accent': settings.accentColor, '--site-banner-background-dim': backgroundDim }}>
           <div className="site-banner-background" />
           {customBackgroundUrl ? <SiteBannerCustomBackground url={customBackgroundUrl} settings={settings} /> : null}
           {customBackgroundUrl ? <div className="site-banner-background-dimmer" aria-hidden="true" /> : null}
@@ -157,11 +177,11 @@ export function SiteBannerPreview({ dish, settings, index = 0, onDragIcon }) {
 
           {settings.showSafeZones ? (
             <div className="site-banner-guides" aria-hidden="true">
-              {settings.showGeneralSafeZone ? <div className="site-banner-guide site-banner-guide-general" style={{ left: SITE_BANNER_SAFE_ZONES.general.left, top: SITE_BANNER_SAFE_ZONES.general.top, right: SITE_BANNER_SAFE_ZONES.general.right, bottom: SITE_BANNER_SAFE_ZONES.general.bottom }}><span>general safe zone</span></div> : null}
+              {settings.showGeneralSafeZone ? <div className="site-banner-guide site-banner-guide-general" style={{ left: safeZones.general.left, top: safeZones.general.top, right: safeZones.general.right, bottom: safeZones.general.bottom }}><span>general safe zone</span></div> : null}
               {settings.showRecommendedZones ? (
                 <>
-                  <div className="site-banner-guide site-banner-guide-text" style={{ left: SITE_BANNER_SAFE_ZONES.text.x, top: SITE_BANNER_SAFE_ZONES.text.y, width: SITE_BANNER_SAFE_ZONES.text.width, height: SITE_BANNER_SAFE_ZONES.text.height }}><span>text 300-880</span></div>
-                  <div className="site-banner-guide site-banner-guide-product" style={{ left: SITE_BANNER_SAFE_ZONES.product.x, top: SITE_BANNER_SAFE_ZONES.product.y, width: SITE_BANNER_SAFE_ZONES.product.width, height: SITE_BANNER_SAFE_ZONES.product.height }}><span>product 920-1850</span></div>
+                  <div className="site-banner-guide site-banner-guide-text" style={{ left: safeZones.text.x, top: safeZones.text.y, width: safeZones.text.width, height: safeZones.text.height }}><span>{safeZones.text.label}</span></div>
+                  <div className="site-banner-guide site-banner-guide-product" style={{ left: safeZones.product.x, top: safeZones.product.y, width: safeZones.product.width, height: safeZones.product.height }}><span>{safeZones.product.label}</span></div>
                 </>
               ) : null}
             </div>
@@ -187,7 +207,7 @@ export function SiteBannerPreview({ dish, settings, index = 0, onDragIcon }) {
           ) : null}
         </article>
       </div>
-      <small className="app-preview-size">Output canvas: {SITE_BANNER_FORMAT.width} × {SITE_BANNER_FORMAT.height}px</small>
+      <small className="app-preview-size">Output canvas: {format.width} × {format.height}px</small>
     </section>
   );
 }
