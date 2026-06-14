@@ -42,7 +42,20 @@ const renderPromoCanvas = async (format, onStatus) => {
   onStatus?.('Preparing image...');
 
   const originalTransform = scene.style.transform;
+  const originalTransformOrigin = scene.style.transformOrigin;
+  const originalPosition = scene.style.position;
+  const originalLeft = scene.style.left;
+  const originalTop = scene.style.top;
+  const originalWidth = scene.style.width;
+  const originalHeight = scene.style.height;
+
   scene.style.transform = 'none';
+  scene.style.transformOrigin = 'top left';
+  scene.style.position = 'relative';
+  scene.style.left = '0';
+  scene.style.top = '0';
+  scene.style.width = `${exportFormat.width}px`;
+  scene.style.height = `${exportFormat.height}px`;
 
   try {
     return await html2canvas(scene, {
@@ -60,6 +73,12 @@ const renderPromoCanvas = async (format, onStatus) => {
     });
   } finally {
     scene.style.transform = originalTransform;
+    scene.style.transformOrigin = originalTransformOrigin;
+    scene.style.position = originalPosition;
+    scene.style.left = originalLeft;
+    scene.style.top = originalTop;
+    scene.style.width = originalWidth;
+    scene.style.height = originalHeight;
   }
 };
 
