@@ -2,7 +2,7 @@ import html2canvas from 'html2canvas';
 import { useEffect, useMemo, useState } from 'react';
 import { SiteBannerPreview } from './SiteBannerPreview.jsx';
 import { getQualityOptimizedPng, PNG_OPTIMIZED_TARGET_BYTES } from './pngOptimization.js';
-import { DEFAULT_SITE_BANNER_LAYOUT, SITE_BANNER_FONT_OPTIONS, SITE_BANNER_FORMAT, loadSiteBannerProject, saveSiteBannerProject } from './siteBannerStorage.js';
+import { DEFAULT_PRODUCT_SIZE_BY_FORMAT, DEFAULT_SITE_BANNER_LAYOUT, SITE_BANNER_FONT_OPTIONS, SITE_BANNER_FORMATS, getSiteBannerFormat, loadSiteBannerProject, saveSiteBannerProject } from './siteBannerStorage.js';
 import './siteBanner.css';
 
 const getDishTitle = (dish) => dish?.nameEn || dish?.nameGe || 'Untitled dish';
@@ -28,14 +28,14 @@ const canvasToBlob = (canvas, mimeType) => new Promise((resolve, reject) => {
   }, mimeType, 0.94);
 });
 
-const createFullSizeExportNode = (scene) => {
+const createFullSizeExportNode = (scene, format) => {
   const wrapper = document.createElement('div');
   wrapper.setAttribute('aria-hidden', 'true');
   wrapper.style.position = 'fixed';
   wrapper.style.left = '0';
   wrapper.style.top = '0';
-  wrapper.style.width = `${SITE_BANNER_FORMAT.width}px`;
-  wrapper.style.height = `${SITE_BANNER_FORMAT.height}px`;
+  wrapper.style.width = `${format.width}px`;
+  wrapper.style.height = `${format.height}px`;
   wrapper.style.overflow = 'hidden';
   wrapper.style.pointerEvents = 'none';
   wrapper.style.zIndex = '-9999';
@@ -47,8 +47,8 @@ const createFullSizeExportNode = (scene) => {
   clone.style.position = 'relative';
   clone.style.left = '0';
   clone.style.top = '0';
-  clone.style.width = `${SITE_BANNER_FORMAT.width}px`;
-  clone.style.height = `${SITE_BANNER_FORMAT.height}px`;
+  clone.style.width = `${format.width}px`;
+  clone.style.height = `${format.height}px`;
   clone.querySelectorAll('.site-banner-guides').forEach((node) => node.remove());
 
   wrapper.appendChild(clone);
@@ -56,21 +56,21 @@ const createFullSizeExportNode = (scene) => {
   return { wrapper, clone };
 };
 
-async function downloadSiteBannerImage(mimeType, extension, selectedDish, options = {}) {
+async function downloadSiteBannerImage(mimeType, extension, selectedDish, format, options = {}) {
   const scene = document.querySelector('.site-banner-scene');
   if (!scene) throw new Error('Banner preview is not ready yet.');
 
   if (document.fonts?.ready) await document.fonts.ready;
 
-  const { wrapper, clone } = createFullSizeExportNode(scene);
+  const { wrapper, clone } = createFullSizeExportNode(scene, format);
 
   try {
     const canvas = await html2canvas(clone, {
       backgroundColor: null,
-      height: SITE_BANNER_FORMAT.height,
-      width: SITE_BANNER_FORMAT.width,
-      windowHeight: SITE_BANNER_FORMAT.height,
-      windowWidth: SITE_BANNER_FORMAT.width,
+      height: format.height,
+      width: format.width,
+      windowHeight: format.height,
+      windowWidth: format.width,
       scrollX: 0,
       scrollY: 0,
       scale: 1,
@@ -80,7 +80,7 @@ async function downloadSiteBannerImage(mimeType, extension, selectedDish, option
       ignoreElements: (element) => element.classList?.contains('site-banner-guides'),
     });
 
-    if (canvas.width !== SITE_BANNER_FORMAT.width || canvas.height !== SITE_BANNER_FORMAT.height) {
+    if (canvas.width !== format.width || canvas.height !== format.height) {
       throw new Error(`Export size mismatch: ${canvas.width}x${canvas.height}.`);
     }
 
@@ -125,6 +125,19 @@ function FontControl({ label, value, onChange }) {
   );
 }
 
+function FormatControl({ value, onChange }) {
+  return (
+    <ControlGroup title="Format">
+      <label className="app-field">
+        <span>Banner size</span>
+        <select value={value} onChange={(event) => onChange(event.target.value)}>
+          {SITE_BANNER_FORMATS.map((format) => <option key={format.id} value={format.id}>{format.label}</option>)}
+        </select>
+      </label>
+    </ControlGroup>
+  );
+}
+
 function TextStyleControls({ title, prefix, settings, updateSettings, sizeMin = 12, sizeMax = 160 }) {
   return (
     <div className="app-card site-banner-style-block">
@@ -147,7 +160,7 @@ function TextShadowControls({ settings, updateSettings }) {
   );
 }
 
-function IconControls({ icons, addIcon, updateIcon, removeIcon }) {
+function IconControls({ icons, addIcon, updateIcon, removeIcon, format }) {
   return (
     <div className="site-banner-style-stack">
       <button type="button" className="secondary-button" onClick={addIcon}>Add PNG icon</button>
@@ -157,8 +170,8 @@ function IconControls({ icons, addIcon, updateIcon, removeIcon }) {
           <h4>Icon {index + 1}</h4>
           <ToggleField label="Visible" checked={Boolean(icon.visible)} onChange={(visible) => updateIcon(icon.id, { visible })} />
           <label className="app-field"><span>PNG URL</span><input value={icon.url} placeholder="https://.../icon.png" onChange={(event) => updateIcon(icon.id, { url: event.target.value })} /></label>
-          <RangeControl label="X" value={icon.x} min={-400} max={SITE_BANNER_FORMAT.width + 400} onChange={(x) => updateIcon(icon.id, { x })} suffix="px" />
-          <RangeControl label="Y" value={icon.y} min={-400} max={SITE_BANNER_FORMAT.height + 400} onChange={(y) => updateIcon(icon.id, { y })} suffix="px" />
+          <RangeControl label="X" value={icon.x} min={-400} max={format.width + 400} onChange={(x) => updateIcon(icon.id, { x })} suffix="px" />
+          <RangeControl label="Y" value={icon.y} min={-400} max={format.height + 400} onChange={(y) => updateIcon(icon.id, { y })} suffix="px" />
           <RangeControl label="Size" value={icon.size} min={10} max={700} onChange={(size) => updateIcon(icon.id, { size })} suffix="px" />
           <RangeControl label="Opacity" value={icon.opacity} min={0} max={1} step={0.01} onChange={(opacity) => updateIcon(icon.id, { opacity })} />
           <RangeControl label="Rotation" value={icon.rotation} min={-180} max={180} onChange={(rotation) => updateIcon(icon.id, { rotation })} suffix="°" />
@@ -199,6 +212,7 @@ export function SiteBannerSection({ project }) {
   const [openCategoryIds, setOpenCategoryIds] = useState(() => new Set(contentCategories.map((category) => category.id)));
   const [settings, setSettings] = useState(() => loadSiteBannerProject(dishesWithImages));
   const [exportStatus, setExportStatus] = useState('');
+  const selectedFormat = getSiteBannerFormat(settings.formatId);
 
   useEffect(() => {
     setSettings((current) => ({ ...loadSiteBannerProject(dishesWithImages.length ? dishesWithImages : contentDishes), ...current }));
@@ -228,16 +242,26 @@ export function SiteBannerSection({ project }) {
     ...current,
     icons: [
       ...(current.icons ?? []),
-      { id: createIconId(), url: '', x: 420, y: 420, size: 140, opacity: 1, rotation: 0, visible: true },
+      { id: createIconId(), url: '', x: Math.round(selectedFormat.width * 0.2), y: Math.round(selectedFormat.height * 0.45), size: 140, opacity: 1, rotation: 0, visible: true },
     ],
   }));
   const removeIcon = (iconId) => setSettings((current) => ({ ...current, icons: (current.icons ?? []).filter((icon) => icon.id !== iconId) }));
+
+  const handleFormatChange = (formatId) => {
+    const nextFormat = getSiteBannerFormat(formatId);
+    setSettings((current) => ({
+      ...current,
+      formatId: nextFormat.id,
+      productSize: DEFAULT_PRODUCT_SIZE_BY_FORMAT[nextFormat.id] ?? current.productSize,
+      layoutOffsets: { ...DEFAULT_SITE_BANNER_LAYOUT },
+    }));
+  };
 
   const handleDownload = async (mimeType, extension, options = {}) => {
     const label = options.label || extension.toUpperCase();
     try {
       setExportStatus(`Preparing ${label}...`);
-      const result = await downloadSiteBannerImage(mimeType, extension, selectedDish, options);
+      const result = await downloadSiteBannerImage(mimeType, extension, selectedDish, selectedFormat, options);
       const details = options.optimizePng ? ` ${result.width}x${result.height}, ${result.sizeKb}KB` : '';
       setExportStatus(`${label} downloaded.${details}`);
     } catch (error) {
@@ -261,8 +285,10 @@ export function SiteBannerSection({ project }) {
         <header className="app-panel-header">
           <p>Website Banner</p>
           <h2>Sushiwoki Banner</h2>
-          <span>{SITE_BANNER_FORMAT.width} x {SITE_BANNER_FORMAT.height}px canvas with safer center-focused zones.</span>
+          <span>{selectedFormat.width} x {selectedFormat.height}px canvas with safer center-focused zones.</span>
         </header>
+
+        <FormatControl value={selectedFormat.id} onChange={handleFormatChange} />
 
         <ControlGroup title="Export">
           <div className="app-segmented site-banner-export-row">
@@ -317,7 +343,7 @@ export function SiteBannerSection({ project }) {
         </ControlGroup>
 
         <ControlGroup title="PNG icons">
-          <IconControls icons={icons} addIcon={addIcon} updateIcon={updateIcon} removeIcon={removeIcon} />
+          <IconControls icons={icons} addIcon={addIcon} updateIcon={updateIcon} removeIcon={removeIcon} format={selectedFormat} />
         </ControlGroup>
 
         <ControlGroup title="Background">
@@ -329,7 +355,7 @@ export function SiteBannerSection({ project }) {
 
         <ControlGroup title="Safe zones">
           <ToggleField label="Show safe-zone overlay" checked={Boolean(settings.showSafeZones)} onChange={(showSafeZones) => updateSettings({ showSafeZones })} />
-          <ToggleField label="General 120/70px zone" checked={Boolean(settings.showGeneralSafeZone)} onChange={(showGeneralSafeZone) => updateSettings({ showGeneralSafeZone })} />
+          <ToggleField label="General safe zone" checked={Boolean(settings.showGeneralSafeZone)} onChange={(showGeneralSafeZone) => updateSettings({ showGeneralSafeZone })} />
           <ToggleField label="Recommended text/product zones" checked={Boolean(settings.showRecommendedZones)} onChange={(showRecommendedZones) => updateSettings({ showRecommendedZones })} />
         </ControlGroup>
 
@@ -345,7 +371,7 @@ export function SiteBannerSection({ project }) {
       </aside>
 
       <main className="app-preview-stage site-banner-preview-stage">
-        <div className="app-toolbar"><div><p>Preview</p><h2>{selectedDish ? getDishTitle(selectedDish) : 'Select product'}</h2></div><div className="app-pill">{SITE_BANNER_FORMAT.label}</div></div>
+        <div className="app-toolbar"><div><p>Preview</p><h2>{selectedDish ? getDishTitle(selectedDish) : 'Select product'}</h2></div><div className="app-pill">{selectedFormat.label}</div></div>
         <SiteBannerPreview dish={selectedDish} settings={settings} index={selectedIndex} onDragIcon={updateIcon} />
       </main>
     </section>
