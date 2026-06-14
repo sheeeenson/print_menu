@@ -70,28 +70,44 @@ const embedImagesInClone = async (scene, clone) => {
   }));
 };
 
-const applyGeneratedBackgroundToClone = (scene, clone) => {
+const getGeneratedBackgroundColor = (scene) => {
   const sceneStyle = window.getComputedStyle(scene);
+  const sourceBackground = scene.querySelector('.promo-background');
+  const sourceBackgroundStyle = sourceBackground ? window.getComputedStyle(sourceBackground) : null;
+
+  return sceneStyle.getPropertyValue('--promo-edge-color')?.trim()
+    || sourceBackgroundStyle?.backgroundColor
+    || sceneStyle.backgroundColor
+    || '#231f20';
+};
+
+const applyGeneratedBackgroundToClone = (scene, clone) => {
+  const edgeColor = getGeneratedBackgroundColor(scene);
   const sourceBackground = scene.querySelector('.promo-background');
   const clonedBackground = clone.querySelector('.promo-background');
   const sourceBackgroundStyle = sourceBackground ? window.getComputedStyle(sourceBackground) : null;
 
-  const edgeColor = sceneStyle.getPropertyValue('--promo-edge-color')?.trim()
-    || sceneStyle.backgroundColor
-    || sourceBackgroundStyle?.backgroundColor
-    || '#231f20';
-
   clone.style.setProperty('--promo-edge-color', edgeColor);
-  clone.style.background = edgeColor;
-  clone.style.backgroundColor = edgeColor;
+  clone.style.background = 'transparent';
+  clone.style.backgroundColor = 'transparent';
 
   if (clonedBackground) {
-    const generatedBackground = sourceBackgroundStyle?.backgroundImage && sourceBackgroundStyle.backgroundImage !== 'none'
-      ? sourceBackgroundStyle.background
-      : (sourceBackgroundStyle?.backgroundColor || edgeColor);
-    clonedBackground.style.background = generatedBackground;
-    clonedBackground.style.backgroundColor = sourceBackgroundStyle?.backgroundColor || edgeColor;
+    clonedBackground.style.background = 'transparent';
+    clonedBackground.style.backgroundColor = 'transparent';
   }
+
+  return sourceBackgroundStyle?.backgroundColor || edgeColor;
+};
+
+const mergeWithGeneratedBackground = (capturedCanvas, backgroundColor) => {
+  const outputCanvas = document.createElement('canvas');
+  outputCanvas.width = capturedCanvas.width;
+  outputCanvas.height = capturedCanvas.height;
+  const context = outputCanvas.getContext('2d');
+  context.fillStyle = backgroundColor || '#231f20';
+  context.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+  context.drawImage(capturedCanvas, 0, 0);
+  return outputCanvas;
 };
 
 const waitForImages = async (root) => {
@@ -137,11 +153,11 @@ const createExportNode = (scene, format) => {
   clone.style.height = `${format.height}px`;
   clone.style.margin = '0';
 
-  applyGeneratedBackgroundToClone(scene, clone);
+  const backgroundColor = applyGeneratedBackgroundToClone(scene, clone);
 
   wrapper.appendChild(clone);
   document.body.appendChild(wrapper);
-  return { wrapper, clone };
+  return { wrapper, clone, backgroundColor };
 };
 
 export const downloadPromoJpeg = async ({ filename, format, onStatus }) => {
@@ -153,14 +169,14 @@ export const downloadPromoJpeg = async ({ filename, format, onStatus }) => {
   if (document.fonts?.ready) await document.fonts.ready;
   onStatus?.('Preparing JPEG...');
 
-  const { wrapper, clone } = createExportNode(scene, exportFormat);
+  const { wrapper, clone, backgroundColor } = createExportNode(scene, exportFormat);
 
   try {
     await embedImagesInClone(scene, clone);
     await waitForImages(clone);
 
-    const canvas = await html2canvas(clone, {
-      backgroundColor: window.getComputedStyle(clone).backgroundColor || '#231f20',
+    const capturedCanvas = await html2canvas(clone, {
+      backgroundColor: null,
       width: exportFormat.width,
       height: exportFormat.height,
       windowWidth: exportFormat.width,
@@ -173,10 +189,11 @@ export const downloadPromoJpeg = async ({ filename, format, onStatus }) => {
       logging: false,
     });
 
-    const blob = await canvasToJpegBlob(canvas);
+    const outputCanvas = mergeWithGeneratedBackground(capturedCanvas, backgroundColor);
+    const blob = await canvasToJpegBlob(outputCanvas);
     downloadBlob(blob, filename);
 
-    return { width: canvas.width, height: canvas.height, sizeKb: Math.round(blob.size / 1024) };
+    return { width: outputCanvas.width, height: outputCanvas.height, sizeKb: Math.round(blob.size / 1024) };
   } finally {
     wrapper.remove();
   }
