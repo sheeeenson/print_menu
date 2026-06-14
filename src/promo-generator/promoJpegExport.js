@@ -70,6 +70,30 @@ const embedImagesInClone = async (scene, clone) => {
   }));
 };
 
+const applyGeneratedBackgroundToClone = (scene, clone) => {
+  const sceneStyle = window.getComputedStyle(scene);
+  const sourceBackground = scene.querySelector('.promo-background');
+  const clonedBackground = clone.querySelector('.promo-background');
+  const sourceBackgroundStyle = sourceBackground ? window.getComputedStyle(sourceBackground) : null;
+
+  const edgeColor = sceneStyle.getPropertyValue('--promo-edge-color')?.trim()
+    || sceneStyle.backgroundColor
+    || sourceBackgroundStyle?.backgroundColor
+    || '#231f20';
+
+  clone.style.setProperty('--promo-edge-color', edgeColor);
+  clone.style.background = edgeColor;
+  clone.style.backgroundColor = edgeColor;
+
+  if (clonedBackground) {
+    const generatedBackground = sourceBackgroundStyle?.backgroundImage && sourceBackgroundStyle.backgroundImage !== 'none'
+      ? sourceBackgroundStyle.background
+      : (sourceBackgroundStyle?.backgroundColor || edgeColor);
+    clonedBackground.style.background = generatedBackground;
+    clonedBackground.style.backgroundColor = sourceBackgroundStyle?.backgroundColor || edgeColor;
+  }
+};
+
 const waitForImages = async (root) => {
   const images = Array.from(root.querySelectorAll('img'));
   await Promise.all(images.map((image) => {
@@ -113,6 +137,8 @@ const createExportNode = (scene, format) => {
   clone.style.height = `${format.height}px`;
   clone.style.margin = '0';
 
+  applyGeneratedBackgroundToClone(scene, clone);
+
   wrapper.appendChild(clone);
   document.body.appendChild(wrapper);
   return { wrapper, clone };
@@ -134,7 +160,7 @@ export const downloadPromoJpeg = async ({ filename, format, onStatus }) => {
     await waitForImages(clone);
 
     const canvas = await html2canvas(clone, {
-      backgroundColor: '#231f20',
+      backgroundColor: window.getComputedStyle(clone).backgroundColor || '#231f20',
       width: exportFormat.width,
       height: exportFormat.height,
       windowWidth: exportFormat.width,
