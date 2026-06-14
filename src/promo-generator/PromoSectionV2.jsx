@@ -15,6 +15,7 @@ import {
   savePromoProject,
 } from './promoStorage.js';
 import { getSceneHtmlDocument } from './promoHtmlDownload.js';
+import { downloadPromoJpeg } from './promoJpegExport.js';
 import { downloadHtmlRender } from '../utils/htmlVideoExport.js';
 import { normalizeGoogleDriveMediaUrl, normalizeGoogleDriveVideoUrl } from '../utils/imageUrls.js';
 import './promoGenerator.css';
@@ -260,24 +261,13 @@ export function PromoSectionV2({ project }) {
     });
   };
 
-  const selectDish = (dish) => {
-    updateSettings({ selectedDishId: dish.id, backgroundMediaUrl: isTransparentProduct(dish) ? getDishBackgroundUrl(dish) : '', backgroundMediaType: 'auto' });
-  };
-
-  const setDuration = (duration) => {
-    const nextDuration = normalizeDuration(duration);
-    setSelectedDuration(nextDuration);
-    window.localStorage.setItem(EXPORT_DURATION_KEY, String(nextDuration));
-    updateSettings({ duration: nextDuration });
-  };
+  const selectDish = (dish) => { updateSettings({ selectedDishId: dish.id, backgroundMediaUrl: isTransparentProduct(dish) ? getDishBackgroundUrl(dish) : '', backgroundMediaType: 'auto' }); };
+  const setDuration = (duration) => { const nextDuration = normalizeDuration(duration); setSelectedDuration(nextDuration); window.localStorage.setItem(EXPORT_DURATION_KEY, String(nextDuration)); updateSettings({ duration: nextDuration }); };
 
   const switchFormat = (formatId) => {
     setSettings((current) => {
       const currentFormatId = current.formatId;
-      const formats = {
-        ...(current.formats || {}),
-        [currentFormatId]: { ...(current.formats?.[currentFormatId] || {}), ...pickFormatState(current), duration: selectedDuration },
-      };
+      const formats = { ...(current.formats || {}), [currentFormatId]: { ...(current.formats?.[currentFormatId] || {}), ...pickFormatState(current), duration: selectedDuration } };
       const nextFormatSettings = formats[formatId] || {};
       return { ...current, ...nextFormatSettings, duration: selectedDuration, formatId, formats };
     });
@@ -293,25 +283,29 @@ export function PromoSectionV2({ project }) {
     catch (error) { console.error(error); setExportStatus(error instanceof Error ? error.message : 'PNG export failed.'); }
   };
 
+  const handleDownloadJpeg = async () => {
+    if (!selectedDish) return setExportStatus('Select a dish with an image before exporting JPEG.');
+    try {
+      const filename = `${getSafeFilename(selectedDish?.nameEn || selectedDish?.nameGe)}-${activeFormat.label.replace(':', 'x')}.jpg`;
+      const result = await downloadPromoJpeg({ filename, onStatus: setExportStatus });
+      setExportStatus(`JPEG downloaded. ${result.width}x${result.height}, ${result.sizeKb}KB.`);
+    } catch (error) { console.error(error); setExportStatus(error instanceof Error ? error.message : 'JPEG export failed.'); }
+  };
+
   const handleDownloadMp4 = async () => {
     if (!selectedDish) return setExportStatus('Select a dish with an image before exporting MP4.');
     try { setExportStatus(`Rendering ${selectedDuration}s MP4 with embedded media...`); await downloadPromoExport(activeFormat, selectedDish, { ...settings, duration: selectedDuration }, 'mp4', selectedDuration, setExportStatus); setExportStatus(`${selectedDuration}s MP4 video downloaded.`); }
     catch (error) { console.error(error); setExportStatus(error instanceof Error ? error.message : 'MP4 export failed.'); }
   };
 
-  const toggleCategoryOpen = (categoryId) => setOpenCategoryIds((current) => {
-    const next = new Set(current);
-    if (next.has(categoryId)) next.delete(categoryId);
-    else next.add(categoryId);
-    return next;
-  });
+  const toggleCategoryOpen = (categoryId) => setOpenCategoryIds((current) => { const next = new Set(current); if (next.has(categoryId)) next.delete(categoryId); else next.add(categoryId); return next; });
 
   return (
     <section className="promo-generator-section">
       <aside className="promo-generator-panel">
         <header className="promo-panel-header"><p>TV Promo</p><h2>Promo Generator</h2><span>{activeFormat.label} scene</span></header>
 
-        <PromoControlGroup title="Download"><div className="promo-duration-buttons"><button type="button" onClick={handleDownloadPng}>PNG</button><button type="button" onClick={handleDownloadMp4}>MP4</button></div>{exportStatus ? <small className="promo-preview-size">{exportStatus}</small> : null}</PromoControlGroup>
+        <PromoControlGroup title="Download"><div className="promo-duration-buttons"><button type="button" onClick={handleDownloadPng}>PNG</button><button type="button" onClick={handleDownloadJpeg}>JPEG</button><button type="button" onClick={handleDownloadMp4}>MP4</button></div>{exportStatus ? <small className="promo-preview-size">{exportStatus}</small> : null}</PromoControlGroup>
 
         <PromoControlGroup title="Format"><div className="promo-format-buttons promo-format-buttons-clean">{PROMO_FORMATS.map((format) => <button key={format.id} className={settings.formatId === format.id ? 'active' : ''} type="button" onClick={() => switchFormat(format.id)}><strong>{format.label}</strong></button>)}</div></PromoControlGroup>
 
@@ -319,34 +313,21 @@ export function PromoSectionV2({ project }) {
           <div className="image-menu-section-heading"><div><h2>Select dish</h2><small>{contentCategories.length} content categories</small></div><small>{selectedDish ? '1/1 selected' : '0/1 selected'}</small></div>
           <div className="image-menu-category-picker promo-category-picker">
             {categoryGroups.length === 0 ? <p className="muted-text">No categories in Content yet.</p> : null}
-            {categoryGroups.map(({ category, dishes: categoryDishes }) => {
-              const isOpen = openCategoryIds.has(category.id);
-              const selectedCount = categoryDishes.some((dish) => dish.id === selectedDish?.id) ? 1 : 0;
-              return <section key={category.id} className="image-menu-category-group"><button className="image-menu-category-toggle" type="button" onClick={() => toggleCategoryOpen(category.id)} aria-expanded={isOpen}><span>{isOpen ? '▾' : '▸'}</span><strong>{category.nameEn || category.nameGe || 'Untitled category'}</strong><small>{selectedCount}/{categoryDishes.length}</small></button>{isOpen ? <div className="image-menu-category-body"><div className="image-menu-dish-picker promo-dish-picker">{categoryDishes.length === 0 ? <p className="muted-text">No dishes with images in this category.</p> : null}{categoryDishes.map((dish) => { const selected = dish.id === selectedDish?.id; return <div key={dish.id} className={selected ? 'selected' : ''}><label><input type="radio" name="tv-promo-dish" checked={selected} onChange={() => selectDish(dish)} />{dish.imageUrl ? <img src={dish.imageUrl} alt="" /> : <span className="image-menu-mini-placeholder" />}<span><strong>{dish.nameEn}</strong><small>{isTransparentProduct(dish) ? 'Without background' : dish.nameGe}</small></span></label></div>; })}</div></div> : null}</section>;
-            })}
+            {categoryGroups.map(({ category, dishes: categoryDishes }) => { const isOpen = openCategoryIds.has(category.id); const selectedCount = categoryDishes.some((dish) => dish.id === selectedDish?.id) ? 1 : 0; return <section key={category.id} className="image-menu-category-group"><button className="image-menu-category-toggle" type="button" onClick={() => toggleCategoryOpen(category.id)} aria-expanded={isOpen}><span>{isOpen ? '▾' : '▸'}</span><strong>{category.nameEn || category.nameGe || 'Untitled category'}</strong><small>{selectedCount}/{categoryDishes.length}</small></button>{isOpen ? <div className="image-menu-category-body"><div className="image-menu-dish-picker promo-dish-picker">{categoryDishes.length === 0 ? <p className="muted-text">No dishes with images in this category.</p> : null}{categoryDishes.map((dish) => { const selected = dish.id === selectedDish?.id; return <div key={dish.id} className={selected ? 'selected' : ''}><label><input type="radio" name="tv-promo-dish" checked={selected} onChange={() => selectDish(dish)} />{dish.imageUrl ? <img src={dish.imageUrl} alt="" /> : <span className="image-menu-mini-placeholder" />}<span><strong>{dish.nameEn}</strong><small>{isTransparentProduct(dish) ? 'Without background' : dish.nameGe}</small></span></label></div>; })}</div></div> : null}</section>; })}
           </div>
         </div>
 
         <PromoControlGroup title="Duration"><div className="promo-duration-buttons">{PROMO_DURATIONS.map((duration) => <button key={duration} className={selectedDuration === duration ? 'active' : ''} type="button" onClick={() => setDuration(duration)}>{duration}s</button>)}</div></PromoControlGroup>
-
         {selectedDishIsTransparent ? <PromoControlGroup title="Background Media"><BackgroundMediaControls selectedDish={selectedDish} settings={settings} updateSettings={updateSettings} /></PromoControlGroup> : null}
-
         <PromoControlGroup title="Offer"><ToggleField label="Show offer text" checked={Boolean(settings.showOffer)} onChange={(showOffer) => updateSettings({ showOffer })} /><label className="image-menu-control"><span>Headline</span><input value={settings.headline} placeholder={selectedDish ? getDishTitle(selectedDish) : 'Promo headline'} onChange={(event) => updateSettings({ headline: event.target.value })} /></label><label className="image-menu-control"><span>Offer text</span><input value={settings.offerText} placeholder="New, Today only, -20%" onChange={(event) => updateSettings({ offerText: event.target.value })} /></label><ToggleField label="Show CTA" checked={Boolean(settings.showCta)} onChange={(showCta) => updateSettings({ showCta })} /><label className="image-menu-control"><span>CTA</span><input value={settings.ctaText} placeholder="ORDER NOW" onChange={(event) => updateSettings({ ctaText: event.target.value })} /></label></PromoControlGroup>
-
         <PromoControlGroup title="Appearance"><RangeControl label="Background tone" value={settings.backgroundTone} min={-40} max={40} onChange={(backgroundTone) => updateSettings({ backgroundTone })} /><RangeControl label="Dish size" value={settings.dishSize} min={100} max={2400} onChange={(dishSize) => updateSettings({ dishSize })} suffix="px" /><ToggleField label="Show description" checked={Boolean(settings.showDescription)} onChange={(showDescription) => updateSettings({ showDescription })} /><RangeControl label="Description vertical offset" value={settings.descriptionOffsetY} min={-180} max={180} onChange={(descriptionOffsetY) => updateSettings({ descriptionOffsetY })} suffix="px" /></PromoControlGroup>
-
         <PromoControlGroup title="Text shadow"><TextShadowControls settings={settings} updateSettings={updateSettings} /></PromoControlGroup>
         <PromoControlGroup title="Layout"><LayoutOffsetControls settings={settings} updateLayoutOffset={updateLayoutOffset} resetLayoutOffsets={resetLayoutOffsets} /></PromoControlGroup>
-
         <PromoControlGroup title="Text styles"><TextStyleControls title="Offer label" prefix="offer" settings={settings} updateSettings={updateSettings} sizeMin={16} sizeMax={76} /><TextStyleControls title="Headline" prefix="headline" settings={settings} updateSettings={updateSettings} sizeMin={42} sizeMax={170} /><TextStyleControls title="Georgian title" prefix="geTitle" settings={settings} updateSettings={updateSettings} sizeMin={24} sizeMax={96} /><TextStyleControls title="Description" prefix="description" settings={settings} updateSettings={updateSettings} sizeMin={14} sizeMax={60} /><TextStyleControls title="CTA" prefix="cta" settings={settings} updateSettings={updateSettings} sizeMin={18} sizeMax={72} /></PromoControlGroup>
-
         <PromoControlGroup title="Prices"><TextStyleControls title="Old price" prefix="oldPrice" settings={settings} updateSettings={updateSettings} sizeMin={18} sizeMax={88} /><TextStyleControls title="Sale price" prefix="salePrice" settings={settings} updateSettings={updateSettings} sizeMin={42} sizeMax={190} /></PromoControlGroup>
-
         {EFFECT_GROUPS.map((group) => <PromoControlGroup key={group.title} title={group.title}><div className="promo-toggle-list">{group.items.map(([key, label]) => <ToggleField key={key} label={label} checked={Boolean(settings.effects?.[key])} onChange={(value) => updateEffect(key, value)} />)}</div></PromoControlGroup>)}
-
         {settings.effects?.gifOverlay ? <PromoControlGroup title="GIF Overlay"><GifLibraryControls settings={settings} updateSettings={updateSettings} /><label className="image-menu-control"><span>Position</span><select value={settings.gifPosition} onChange={(event) => updateSettings({ gifPosition: event.target.value })}><option value="textLeft">Headline left</option><option value="topLeft">Headline left / top</option><option value="topRight">Price right / top</option><option value="bottomLeft">CTA left / bottom</option><option value="bottomRight">Bottom right</option></select></label><label className="image-menu-control"><span>Shape</span><select value={settings.gifShape || 'rectangle'} onChange={(event) => updateSettings({ gifShape: event.target.value })}>{PROMO_GIF_SHAPES.map((shape) => <option key={shape.id} value={shape.id}>{shape.label}</option>)}</select></label><RangeControl label="Size" value={settings.gifSize} min={6} max={42} onChange={(gifSize) => updateSettings({ gifSize })} suffix="%" /><RangeControl label="Corner radius" value={settings.gifBorderRadius ?? 0} min={0} max={500} onChange={(gifBorderRadius) => updateSettings({ gifBorderRadius })} suffix="px" /><ToggleField label="Enable GIF shadow" checked={Boolean(settings.gifShadow)} onChange={(gifShadow) => updateSettings({ gifShadow })} /><ColorControl label="GIF shadow color" value={settings.gifShadowColor || '#000000'} onChange={(gifShadowColor) => updateSettings({ gifShadowColor })} /></PromoControlGroup> : null}
       </aside>
-
       <main className="promo-generator-preview-stage"><div className="promo-generator-toolbar"><div><p>Preview</p><h2>{selectedDish ? getDishTitle(selectedDish) : 'Select dish'}</h2></div><div className="promo-output-pill">{activeFormat.label}</div></div><PromoPreview dish={selectedDish} settings={{ ...settings, duration: selectedDuration }} index={selectedIndex} /></main>
     </section>
   );
