@@ -1,19 +1,43 @@
 const STORAGE_KEY = 'restaurant-menu-studio:site-banner-generator:v1';
 
-export const SITE_BANNER_FORMAT = Object.freeze({
-  id: 'sushiwokiWebsite',
-  label: 'Sushiwoki 2048x900',
-  name: 'Website Banner',
-  width: 2048,
-  height: 900,
-  previewWidth: 1180,
+export const SITE_BANNER_FORMATS = Object.freeze([
+  {
+    id: 'sushiwokiWebsite2048x900',
+    label: 'Sushiwoki 2048x900',
+    name: 'Website Banner',
+    width: 2048,
+    height: 900,
+    previewWidth: 1180,
+  },
+  {
+    id: 'sushiwokiWebsite1800x600',
+    label: 'Sushiwoki 1800x600',
+    name: 'Website Banner Wide',
+    width: 1800,
+    height: 600,
+    previewWidth: 1180,
+  },
+]);
+
+export const SITE_BANNER_FORMAT = SITE_BANNER_FORMATS[0];
+export const DEFAULT_SITE_BANNER_FORMAT_ID = SITE_BANNER_FORMAT.id;
+export const getSiteBannerFormat = (formatId) => SITE_BANNER_FORMATS.find((format) => format.id === formatId) ?? SITE_BANNER_FORMAT;
+
+export const SITE_BANNER_SAFE_ZONES_BY_FORMAT = Object.freeze({
+  sushiwokiWebsite2048x900: {
+    general: { left: 120, top: 70, right: 120, bottom: 70 },
+    text: { x: 300, y: 120, width: 580, height: 620, label: 'text 300-880' },
+    product: { x: 920, y: 100, width: 930, height: 720, label: 'product 920-1850' },
+  },
+  sushiwokiWebsite1800x600: {
+    general: { left: 110, top: 55, right: 110, bottom: 55 },
+    text: { x: 250, y: 80, width: 540, height: 420, label: 'text 250-790' },
+    product: { x: 840, y: 45, width: 790, height: 510, label: 'product 840-1630' },
+  },
 });
 
-export const SITE_BANNER_SAFE_ZONES = Object.freeze({
-  general: { left: 120, top: 70, right: 120, bottom: 70 },
-  text: { x: 300, y: 120, width: 580, height: 620 },
-  product: { x: 920, y: 100, width: 930, height: 720 },
-});
+export const SITE_BANNER_SAFE_ZONES = SITE_BANNER_SAFE_ZONES_BY_FORMAT[DEFAULT_SITE_BANNER_FORMAT_ID];
+export const getSiteBannerSafeZones = (formatId) => SITE_BANNER_SAFE_ZONES_BY_FORMAT[getSiteBannerFormat(formatId).id] ?? SITE_BANNER_SAFE_ZONES;
 
 export const SITE_BANNER_FONT_OPTIONS = Object.freeze([
   'Inter, Arial, sans-serif',
@@ -34,7 +58,13 @@ export const DEFAULT_SITE_BANNER_LAYOUT = Object.freeze({
   priceY: 0,
 });
 
+export const DEFAULT_PRODUCT_SIZE_BY_FORMAT = Object.freeze({
+  sushiwokiWebsite2048x900: 680,
+  sushiwokiWebsite1800x600: 500,
+});
+
 export const DEFAULT_SITE_BANNER_SETTINGS = Object.freeze({
+  formatId: DEFAULT_SITE_BANNER_FORMAT_ID,
   selectedDishId: '',
   offerText: 'SUSHIWOKI',
   headline: '',
@@ -50,7 +80,7 @@ export const DEFAULT_SITE_BANNER_SETTINGS = Object.freeze({
   showPrice: true,
   showGeneralSafeZone: true,
   showRecommendedZones: true,
-  productSize: 680,
+  productSize: DEFAULT_PRODUCT_SIZE_BY_FORMAT[DEFAULT_SITE_BANNER_FORMAT_ID],
   offerColor: '#231f20',
   offerFont: SITE_BANNER_FONT_OPTIONS[0],
   offerSize: 34,
@@ -76,6 +106,7 @@ export const DEFAULT_SITE_BANNER_SETTINGS = Object.freeze({
 
 const normalizeColor = (value, fallback) => /^#[0-9a-f]{6}$/i.test(String(value || '')) ? value : fallback;
 const normalizeFont = (value, fallback) => SITE_BANNER_FONT_OPTIONS.includes(value) ? value : fallback;
+const normalizeFormatId = (value) => getSiteBannerFormat(value).id;
 const normalizeBackgroundMode = (value) => ['auto', 'custom'].includes(value) ? value : DEFAULT_SITE_BANNER_SETTINGS.backgroundMode;
 const normalizeNumber = (value, fallback, min, max) => {
   const number = Number(value ?? fallback);
@@ -101,12 +132,14 @@ const normalizeIcons = (icons = []) => Array.isArray(icons) ? icons
   })) : [];
 
 export const normalizeSiteBannerProject = (project = {}, dishes = []) => {
+  const formatId = normalizeFormatId(project.formatId);
   const availableDishIds = new Set(dishes.filter((dish) => dish.visible !== false && dish.imageUrl).map((dish) => dish.id));
   const firstDishId = [...availableDishIds][0] ?? '';
   const selectedDishId = availableDishIds.has(project.selectedDishId) ? project.selectedDishId : firstDishId;
 
   return {
     ...DEFAULT_SITE_BANNER_SETTINGS,
+    formatId,
     selectedDishId,
     offerText: project.offerText || DEFAULT_SITE_BANNER_SETTINGS.offerText,
     headline: project.headline || '',
@@ -122,7 +155,7 @@ export const normalizeSiteBannerProject = (project = {}, dishes = []) => {
     showPrice: project.showPrice === undefined ? DEFAULT_SITE_BANNER_SETTINGS.showPrice : Boolean(project.showPrice),
     showGeneralSafeZone: project.showGeneralSafeZone === undefined ? DEFAULT_SITE_BANNER_SETTINGS.showGeneralSafeZone : Boolean(project.showGeneralSafeZone),
     showRecommendedZones: project.showRecommendedZones === undefined ? DEFAULT_SITE_BANNER_SETTINGS.showRecommendedZones : Boolean(project.showRecommendedZones),
-    productSize: normalizeNumber(project.productSize, DEFAULT_SITE_BANNER_SETTINGS.productSize, 260, 980),
+    productSize: normalizeNumber(project.productSize, DEFAULT_PRODUCT_SIZE_BY_FORMAT[formatId] ?? DEFAULT_SITE_BANNER_SETTINGS.productSize, 260, 980),
     offerColor: normalizeColor(project.offerColor, DEFAULT_SITE_BANNER_SETTINGS.offerColor),
     offerFont: normalizeFont(project.offerFont, DEFAULT_SITE_BANNER_SETTINGS.offerFont),
     offerSize: normalizeNumber(project.offerSize, DEFAULT_SITE_BANNER_SETTINGS.offerSize, 18, 60),
