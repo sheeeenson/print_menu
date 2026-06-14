@@ -2,6 +2,15 @@ import html2canvas from 'html2canvas';
 
 const JPEG_QUALITY = 0.94;
 
+const getPromoSceneSize = (scene) => {
+  const scale = Number(scene.style.transform?.match(/scale\(([^)]+)\)/)?.[1] || 1) || 1;
+  const rect = scene.getBoundingClientRect();
+  return {
+    width: Math.round(rect.width / scale) || scene.offsetWidth || 1920,
+    height: Math.round(rect.height / scale) || scene.offsetHeight || 1080,
+  };
+};
+
 const canvasToJpegBlob = (canvas) => new Promise((resolve, reject) => {
   canvas.toBlob((blob) => {
     if (!blob) reject(new Error('Could not create JPEG file.'));
@@ -13,6 +22,8 @@ export const downloadPromoJpeg = async ({ format, onStatus }) => {
   const scene = document.querySelector('.promo-scene');
   if (!scene) throw new Error('Could not find the promo scene.');
 
+  const exportFormat = format?.width && format?.height ? format : getPromoSceneSize(scene);
+
   if (document.fonts?.ready) await document.fonts.ready;
   onStatus?.('Preparing JPEG...');
 
@@ -22,10 +33,10 @@ export const downloadPromoJpeg = async ({ format, onStatus }) => {
   try {
     const canvas = await html2canvas(scene, {
       backgroundColor: '#231f20',
-      width: format.width,
-      height: format.height,
-      windowWidth: format.width,
-      windowHeight: format.height,
+      width: exportFormat.width,
+      height: exportFormat.height,
+      windowWidth: exportFormat.width,
+      windowHeight: exportFormat.height,
       scrollX: 0,
       scrollY: 0,
       scale: 1,
