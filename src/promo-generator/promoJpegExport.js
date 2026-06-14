@@ -27,7 +27,7 @@ const saveBlob = async (blob, filename, mimeType, extension) => {
 
 const canvasToBlob = (canvas, mimeType, quality) => new Promise((resolve, reject) => {
   canvas.toBlob((blob) => {
-    if (!blob) reject(new Error(`Could not create ${extension} file.`));
+    if (!blob) reject(new Error(`Could not create ${mimeType} file.`));
     else resolve(blob);
   }, mimeType, quality);
 });
