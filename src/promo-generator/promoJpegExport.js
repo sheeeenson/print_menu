@@ -1,4 +1,4 @@
-import html2canvas from 'html2canvas';
+import { getSceneHtmlDocument } from './promoHtmlDownload.js';
 
 const JPEG_QUALITY = 0.94;
 
@@ -6,123 +6,16 @@ const downloadBlob = (blob, filename) => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = filename || 'tv-promo.jpg';
+  link.download = filename;
   document.body.appendChild(link);
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
-const canvasToJpegBlob = (canvas) => new Promise((resolve, reject) => {
-  canvas.toBlob((blob) => {
-    if (!blob) {
-      reject(new Error('Could not create JPEG file.'));
-      return;
-    }
-    resolve(blob);
-  }, 'image/jpeg', JPEG_QUALITY);
-});
-
-const blobToDataUrl = (blob) => new Promise((resolve, reject) => {
-  const reader = new FileReader();
-  reader.onload = () => resolve(reader.result);
-  reader.onerror = () => reject(reader.error || new Error('Could not read image blob.'));
-  reader.readAsDataURL(blob);
-});
-
-const imageToDataUrl = async (sourceImage) => {
-  const source = sourceImage.currentSrc || sourceImage.src || sourceImage.getAttribute('src') || '';
-  if (!source || source.startsWith('data:')) return source;
-
-  if (source.startsWith('blob:')) {
-    const canvas = document.createElement('canvas');
-    canvas.width = sourceImage.naturalWidth || sourceImage.width;
-    canvas.height = sourceImage.naturalHeight || sourceImage.height;
-    if (!canvas.width || !canvas.height) return '';
-    canvas.getContext('2d')?.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL('image/png');
-  }
-
-  const response = await fetch(source, { mode: 'cors', cache: 'force-cache' });
-  if (!response.ok) return '';
-  return blobToDataUrl(await response.blob());
-};
-
-const embedImagesInClone = async (scene, clone) => {
-  const sourceImages = Array.from(scene.querySelectorAll('img'));
-  const clonedImages = Array.from(clone.querySelectorAll('img'));
-
-  await Promise.all(sourceImages.map(async (sourceImage, index) => {
-    const clonedImage = clonedImages[index];
-    if (!clonedImage) return;
-
-    clonedImage.removeAttribute('srcset');
-    clonedImage.removeAttribute('crossorigin');
-    clonedImage.removeAttribute('loading');
-    clonedImage.removeAttribute('decoding');
-
-    try {
-      const dataUrl = await imageToDataUrl(sourceImage);
-      if (dataUrl?.startsWith('data:')) clonedImage.setAttribute('src', dataUrl);
-    } catch (error) {
-      console.warn('Could not embed image in promo JPEG export:', error instanceof Error ? error.message : String(error));
-    }
-  }));
-};
-
-const getGeneratedBackgroundColor = (scene) => {
-  const sceneStyle = window.getComputedStyle(scene);
-  const sourceBackground = scene.querySelector('.promo-background');
-  const sourceBackgroundStyle = sourceBackground ? window.getComputedStyle(sourceBackground) : null;
-
-  return sceneStyle.getPropertyValue('--promo-edge-color')?.trim()
-    || sourceBackgroundStyle?.backgroundColor
-    || sceneStyle.backgroundColor
-    || '#231f20';
-};
-
-const applyGeneratedBackgroundToClone = (scene, clone) => {
-  const edgeColor = getGeneratedBackgroundColor(scene);
-  const sourceBackground = scene.querySelector('.promo-background');
-  const clonedBackground = clone.querySelector('.promo-background');
-  const sourceBackgroundStyle = sourceBackground ? window.getComputedStyle(sourceBackground) : null;
-
-  clone.style.setProperty('--promo-edge-color', edgeColor);
-  clone.style.background = 'transparent';
-  clone.style.backgroundColor = 'transparent';
-
-  if (clonedBackground) {
-    clonedBackground.style.background = 'transparent';
-    clonedBackground.style.backgroundColor = 'transparent';
-  }
-
-  return sourceBackgroundStyle?.backgroundColor || edgeColor;
-};
-
-const mergeWithGeneratedBackground = (capturedCanvas, backgroundColor) => {
-  const outputCanvas = document.createElement('canvas');
-  outputCanvas.width = capturedCanvas.width;
-  outputCanvas.height = capturedCanvas.height;
-  const context = outputCanvas.getContext('2d');
-  context.fillStyle = backgroundColor || '#231f20';
-  context.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
-  context.drawImage(capturedCanvas, 0, 0);
-  return outputCanvas;
-};
-
-const waitForImages = async (root) => {
-  const images = Array.from(root.querySelectorAll('img'));
-  await Promise.all(images.map((image) => {
-    if (image.complete && image.naturalWidth > 0) return Promise.resolve();
-    if (typeof image.decode === 'function') return image.decode().catch(() => undefined);
-    return new Promise((resolve) => {
-      image.addEventListener('load', resolve, { once: true });
-      image.addEventListener('error', resolve, { once: true });
-    });
-  }));
-};
-
-const getPromoSceneSize = (scene) => {
+const getPromoSceneSize = () => {
+  const scene = document.querySelector('.promo-scene');
+  if (!scene) return { width: 1920, height: 1080 };
   const scale = Number(scene.style.transform?.match(/scale\(([^)]+)\)/)?.[1] || 1) || 1;
   const rect = scene.getBoundingClientRect();
   return {
@@ -131,70 +24,81 @@ const getPromoSceneSize = (scene) => {
   };
 };
 
-const createExportNode = (scene, format) => {
-  const wrapper = document.createElement('div');
-  wrapper.setAttribute('aria-hidden', 'true');
-  wrapper.style.position = 'fixed';
-  wrapper.style.left = '-100000px';
-  wrapper.style.top = '0';
-  wrapper.style.width = `${format.width}px`;
-  wrapper.style.height = `${format.height}px`;
-  wrapper.style.overflow = 'hidden';
-  wrapper.style.pointerEvents = 'none';
-  wrapper.style.zIndex = '-1';
-
-  const clone = scene.cloneNode(true);
-  clone.style.transform = 'none';
-  clone.style.transformOrigin = 'top left';
-  clone.style.position = 'relative';
-  clone.style.left = '0';
-  clone.style.top = '0';
-  clone.style.width = `${format.width}px`;
-  clone.style.height = `${format.height}px`;
-  clone.style.margin = '0';
-
-  const backgroundColor = applyGeneratedBackgroundToClone(scene, clone);
-
-  wrapper.appendChild(clone);
-  document.body.appendChild(wrapper);
-  return { wrapper, clone, backgroundColor };
+const getRenderErrorMessage = async (response, fallbackMessage) => {
+  const responseText = await response.text();
+  if (!responseText) return fallbackMessage;
+  try {
+    const payload = JSON.parse(responseText);
+    return payload.detail || payload.error || responseText;
+  } catch (error) {
+    return responseText;
+  }
 };
 
-export const downloadPromoJpeg = async ({ filename, format, onStatus }) => {
-  const scene = document.querySelector('.promo-scene');
-  if (!scene) throw new Error('Could not find the promo scene.');
+const blobToImage = (blob) => new Promise((resolve, reject) => {
+  const url = URL.createObjectURL(blob);
+  const image = new Image();
+  image.onload = () => {
+    URL.revokeObjectURL(url);
+    resolve(image);
+  };
+  image.onerror = () => {
+    URL.revokeObjectURL(url);
+    reject(new Error('Could not read renderer PNG before JPEG conversion.'));
+  };
+  image.src = url;
+});
 
-  const exportFormat = format?.width && format?.height ? format : getPromoSceneSize(scene);
+const canvasToJpegBlob = (canvas, quality = JPEG_QUALITY) => new Promise((resolve, reject) => {
+  canvas.toBlob((blob) => {
+    if (!blob) {
+      reject(new Error('Browser could not create JPEG.'));
+      return;
+    }
+    resolve(blob);
+  }, 'image/jpeg', quality);
+});
 
-  if (document.fonts?.ready) await document.fonts.ready;
-  onStatus?.('Preparing JPEG...');
+const pngBlobToJpegBlob = async (pngBlob) => {
+  const image = await blobToImage(pngBlob);
+  const canvas = document.createElement('canvas');
+  canvas.width = image.naturalWidth || image.width;
+  canvas.height = image.naturalHeight || image.height;
+  const context = canvas.getContext('2d');
+  context.fillStyle = '#231f20';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  const jpegBlob = await canvasToJpegBlob(canvas);
+  return { blob: jpegBlob, width: canvas.width, height: canvas.height };
+};
 
-  const { wrapper, clone, backgroundColor } = createExportNode(scene, exportFormat);
+export const downloadPromoJpeg = async ({ filename, onStatus }) => {
+  const html = await getSceneHtmlDocument();
+  if (!html) throw new Error('Could not find the promo scene.');
 
-  try {
-    await embedImagesInClone(scene, clone);
-    await waitForImages(clone);
+  const { width, height } = getPromoSceneSize();
+  const pngFilename = filename.replace(/\.jpe?g$/i, '.png');
 
-    const capturedCanvas = await html2canvas(clone, {
-      backgroundColor: null,
-      width: exportFormat.width,
-      height: exportFormat.height,
-      windowWidth: exportFormat.width,
-      windowHeight: exportFormat.height,
-      scrollX: 0,
-      scrollY: 0,
-      scale: 1,
-      useCORS: true,
-      allowTaint: false,
-      logging: false,
-    });
+  onStatus?.('Rendering JPEG source via PNG renderer...');
+  const response = await fetch('/api/promo-render', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      output: 'png',
+      filename: pngFilename,
+      format: { id: 'current', label: `${width}x${height}`, width, height },
+      duration: 1,
+      fps: 24,
+      html,
+    }),
+  });
 
-    const outputCanvas = mergeWithGeneratedBackground(capturedCanvas, backgroundColor);
-    const blob = await canvasToJpegBlob(outputCanvas);
-    downloadBlob(blob, filename);
+  if (!response.ok) throw new Error(await getRenderErrorMessage(response, 'JPEG source PNG export failed.'));
+  const pngBlob = await response.blob();
+  if (!pngBlob.size) throw new Error('Renderer returned an empty PNG for JPEG conversion.');
 
-    return { width: outputCanvas.width, height: outputCanvas.height, sizeKb: Math.round(blob.size / 1024) };
-  } finally {
-    wrapper.remove();
-  }
+  onStatus?.('Converting rendered PNG to JPEG...');
+  const jpeg = await pngBlobToJpegBlob(pngBlob);
+  downloadBlob(jpeg.blob, filename);
+  return { width: jpeg.width, height: jpeg.height, sizeKb: Math.round(jpeg.blob.size / 1024) };
 };
