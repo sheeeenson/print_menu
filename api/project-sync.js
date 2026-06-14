@@ -1,5 +1,7 @@
 import { kv } from '@vercel/kv';
 
+export const config = { runtime: 'edge' };
+
 const KEY_PREFIX = 'print-menu-project:';
 const MAX_BODY_BYTES = 1500000;
 
