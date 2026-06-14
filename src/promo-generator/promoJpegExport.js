@@ -11,6 +11,12 @@ const getPromoSceneSize = (scene) => {
   };
 };
 
+const openBlob = (blob) => {
+  const url = URL.createObjectURL(blob);
+  window.location.assign(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
 const canvasToJpegBlob = (canvas) => new Promise((resolve, reject) => {
   canvas.toBlob((blob) => {
     if (!blob) reject(new Error('Could not create JPEG file.'));
@@ -45,7 +51,8 @@ export const downloadPromoJpeg = async ({ format, onStatus }) => {
       logging: false,
     });
     const blob = await canvasToJpegBlob(canvas);
-    return { blob, width: canvas.width, height: canvas.height, sizeKb: Math.round(blob.size / 1024) };
+    openBlob(blob);
+    return { width: canvas.width, height: canvas.height, sizeKb: Math.round(blob.size / 1024) };
   } finally {
     scene.style.transform = originalTransform;
   }
