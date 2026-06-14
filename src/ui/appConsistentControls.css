@@ -1,0 +1,363 @@
+/* Final cross-app controls layer: spacing, buttons, action rows and mobile behavior. */
+:root {
+  --app-control-gap: 12px;
+  --app-control-gap-sm: 8px;
+  --app-control-height: 42px;
+  --app-control-padding-x: 14px;
+  --app-control-radius: 14px;
+  --app-control-radius-lg: 18px;
+  --app-control-primary-bg: linear-gradient(135deg, rgba(140, 61, 255, 0.98), rgba(111, 42, 235, 0.96));
+  --app-control-primary-border: rgba(190, 160, 255, 0.55);
+  --app-control-secondary-bg: rgba(255, 255, 255, 0.055);
+  --app-control-secondary-bg-hover: rgba(255, 255, 255, 0.095);
+  --app-control-danger-bg: rgba(255, 82, 82, 0.13);
+  --app-control-danger-border: rgba(255, 122, 122, 0.35);
+  --app-control-danger-text: #ffb8b8;
+}
+
+.app-side-panel,
+.category-panel,
+.layout-admin-panel,
+.advanced-admin-panel,
+.image-menu-panel,
+.promo-generator-panel,
+.site-banner-side-panel,
+.site-banner-generator-panel {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  padding: 24px !important;
+}
+
+.app-panel-header,
+.promo-panel-header,
+.site-banner-panel-header,
+.advanced-panel-header {
+  margin-bottom: 4px !important;
+}
+
+.app-control-group,
+.panel-section,
+.promo-panel-group,
+.site-banner-panel-group,
+.advanced-layout-section,
+.advanced-control-card,
+.settings-block,
+.inline-advanced-controls {
+  display: grid !important;
+  gap: var(--app-control-gap) !important;
+  margin-bottom: 0 !important;
+  padding: 16px !important;
+}
+
+.app-control-group h2,
+.app-control-group h3,
+.panel-section h2,
+.panel-section h3,
+.promo-panel-group h3,
+.site-banner-panel-group h3,
+.settings-block h3 {
+  margin: 0 !important;
+  font-size: 0.9rem !important;
+  line-height: 1.15 !important;
+  letter-spacing: -0.015em !important;
+}
+
+.app-card,
+.site-banner-style-block,
+.image-menu-category-group,
+.image-menu-dish-picker > div,
+.promo-dish-picker > div,
+.site-banner-dish-picker > div,
+.page-list-item,
+.category-card,
+.category-checkbox,
+.editor-card {
+  padding: 14px !important;
+}
+
+.app-field,
+.image-menu-control,
+.field-label,
+.slider-label,
+.color-label,
+.toggle-label {
+  display: grid !important;
+  gap: 7px !important;
+  margin: 0 !important;
+}
+
+.app-field > span,
+.image-menu-control > span,
+.field-label > span,
+.slider-label > span {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+}
+
+.app-field input,
+.app-field select,
+.app-field textarea,
+.image-menu-control input,
+.image-menu-control select,
+.image-menu-control textarea,
+.field-label input,
+.field-label select,
+.field-label textarea,
+.category-panel input,
+.category-panel select,
+.category-panel textarea,
+.layout-admin-panel input,
+.layout-admin-panel select,
+.layout-admin-panel textarea,
+.advanced-admin-panel input,
+.advanced-admin-panel select,
+.advanced-admin-panel textarea,
+.image-menu-panel input,
+.image-menu-panel select,
+.image-menu-panel textarea,
+.promo-generator-panel input,
+.promo-generator-panel select,
+.promo-generator-panel textarea,
+.site-banner-side-panel input,
+.site-banner-side-panel select,
+.site-banner-side-panel textarea,
+.site-banner-generator-panel input,
+.site-banner-generator-panel select,
+.site-banner-generator-panel textarea {
+  width: 100% !important;
+  min-height: var(--app-control-height) !important;
+  padding: 10px 12px !important;
+  border-radius: var(--app-control-radius) !important;
+  font-size: 0.88rem !important;
+  line-height: 1.2 !important;
+}
+
+button,
+.app-button,
+.primary-button,
+.secondary-button,
+.danger-button,
+.app-segmented button,
+.section-tabs button,
+.project-actions button,
+.print-top-actions button,
+.image-menu-format-buttons button,
+.promo-format-buttons button,
+.promo-duration-buttons button,
+.site-banner-export-buttons button,
+.site-banner-export-row button,
+.image-menu-grid-buttons button,
+.image-menu-category-toggle,
+.page-list-item,
+.category-card,
+.category-checkbox {
+  min-height: var(--app-control-height) !important;
+  padding: 10px var(--app-control-padding-x) !important;
+  border-radius: var(--app-control-radius) !important;
+  font-size: 0.86rem !important;
+  font-weight: 850 !important;
+  line-height: 1.15 !important;
+  letter-spacing: -0.01em !important;
+  border: 1px solid var(--app-ui-border) !important;
+  color: var(--app-ui-text) !important;
+  background: var(--app-control-secondary-bg) !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+  transition: background 140ms ease, border-color 140ms ease, transform 140ms ease, color 140ms ease !important;
+}
+
+button:hover,
+.app-button:hover,
+.secondary-button:hover,
+.app-segmented button:hover,
+.section-tabs button:hover,
+.project-actions button:hover,
+.print-top-actions button:hover,
+.image-menu-format-buttons button:hover,
+.promo-format-buttons button:hover,
+.promo-duration-buttons button:hover,
+.site-banner-export-buttons button:hover,
+.site-banner-export-row button:hover,
+.image-menu-grid-buttons button:hover {
+  background: var(--app-control-secondary-bg-hover) !important;
+  border-color: var(--app-ui-border-strong) !important;
+  color: #fff !important;
+}
+
+button:active,
+.app-button:active,
+.secondary-button:active,
+.danger-button:active,
+.app-segmented button:active {
+  transform: translateY(1px) !important;
+}
+
+button:disabled,
+.app-button:disabled,
+.secondary-button:disabled,
+.danger-button:disabled {
+  opacity: 0.48 !important;
+  cursor: not-allowed !important;
+}
+
+.primary-button,
+button.primary,
+.app-segmented button.active,
+.section-tabs button.active,
+.image-menu-format-buttons button.active,
+.promo-format-buttons button.active,
+.promo-duration-buttons button.active,
+.image-menu-grid-buttons button.active {
+  background: var(--app-control-primary-bg) !important;
+  border-color: var(--app-control-primary-border) !important;
+  color: #fff !important;
+}
+
+.danger-button,
+button.danger {
+  background: var(--app-control-danger-bg) !important;
+  border-color: var(--app-control-danger-border) !important;
+  color: var(--app-control-danger-text) !important;
+}
+
+.danger-button:hover,
+button.danger:hover {
+  background: rgba(255, 82, 82, 0.2) !important;
+  border-color: rgba(255, 150, 150, 0.5) !important;
+  color: #ffd6d6 !important;
+}
+
+.app-segmented,
+.section-tabs,
+.project-actions,
+.print-top-actions,
+.image-menu-format-buttons,
+.promo-format-buttons,
+.promo-duration-buttons,
+.site-banner-export-buttons,
+.site-banner-export-row,
+.image-menu-grid-buttons,
+.site-banner-icon-actions {
+  display: grid !important;
+  gap: var(--app-control-gap-sm) !important;
+  padding: 8px !important;
+  border-radius: var(--app-control-radius-lg) !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+  border: 1px solid var(--app-ui-border) !important;
+}
+
+.app-segmented,
+.section-tabs,
+.project-actions,
+.print-top-actions,
+.image-menu-format-buttons,
+.promo-format-buttons,
+.promo-duration-buttons,
+.site-banner-export-buttons,
+.site-banner-export-row {
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)) !important;
+}
+
+.site-banner-export-row {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+
+.site-banner-style-stack,
+.image-menu-section-heading,
+.image-menu-category-body,
+.image-menu-dish-picker,
+.promo-dish-picker,
+.site-banner-dish-picker {
+  display: grid !important;
+  gap: var(--app-control-gap) !important;
+}
+
+.app-toggle,
+.promo-toggle-field,
+.site-banner-toggle-field {
+  min-height: var(--app-control-height) !important;
+  margin: 0 !important;
+}
+
+.app-preview-size,
+.promo-preview-size,
+.site-banner-preview-size {
+  display: block !important;
+  margin-top: 0 !important;
+  padding: 8px 10px !important;
+  border-radius: var(--app-control-radius) !important;
+  background: rgba(255,255,255,0.035) !important;
+  border: 1px solid var(--app-ui-border-soft) !important;
+  line-height: 1.35 !important;
+}
+
+@media (max-width: 900px) {
+  .app-side-panel,
+  .category-panel,
+  .layout-admin-panel,
+  .advanced-admin-panel,
+  .image-menu-panel,
+  .promo-generator-panel,
+  .site-banner-side-panel,
+  .site-banner-generator-panel {
+    padding: 16px !important;
+    gap: 12px !important;
+  }
+
+  .app-preview-stage,
+  .dish-workspace,
+  .preview-stage,
+  .image-menu-preview-stage,
+  .promo-generator-preview-stage,
+  .site-banner-preview-stage,
+  .site-banner-generator-preview-stage {
+    padding: 16px !important;
+  }
+
+  .site-banner-export-row,
+  .app-segmented,
+  .section-tabs,
+  .project-actions,
+  .print-top-actions,
+  .image-menu-format-buttons,
+  .promo-format-buttons,
+  .promo-duration-buttons,
+  .site-banner-export-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 520px) {
+  button,
+  .app-button,
+  .primary-button,
+  .secondary-button,
+  .danger-button,
+  .app-segmented button,
+  .section-tabs button,
+  .project-actions button,
+  .print-top-actions button,
+  .image-menu-format-buttons button,
+  .promo-format-buttons button,
+  .promo-duration-buttons button,
+  .site-banner-export-buttons button,
+  .site-banner-export-row button {
+    min-height: 46px !important;
+    font-size: 0.84rem !important;
+  }
+
+  .site-banner-export-row,
+  .app-segmented,
+  .section-tabs,
+  .project-actions,
+  .print-top-actions,
+  .image-menu-format-buttons,
+  .promo-format-buttons,
+  .promo-duration-buttons,
+  .site-banner-export-buttons {
+    grid-template-columns: 1fr !important;
+  }
+}
