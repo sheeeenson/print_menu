@@ -11,10 +11,14 @@ const getPromoSceneSize = (scene) => {
   };
 };
 
-const openBlob = (blob) => {
-  const url = URL.createObjectURL(blob);
-  window.location.assign(url);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+const saveBlob = async (blob, filename) => {
+  if (!window.showSaveFilePicker) {
+    throw new Error('JPEG file save is not supported in this browser. Use Chrome or Edge.');
+  }
+  const handle = await window.showSaveFilePicker({ suggestedName: filename || 'tv-promo.jpg' });
+  const writable = await handle.createWritable();
+  await writable.write(blob);
+  await writable.close();
 };
 
 const canvasToJpegBlob = (canvas) => new Promise((resolve, reject) => {
@@ -24,7 +28,7 @@ const canvasToJpegBlob = (canvas) => new Promise((resolve, reject) => {
   }, 'image/jpeg', JPEG_QUALITY);
 });
 
-export const downloadPromoJpeg = async ({ format, onStatus }) => {
+export const downloadPromoJpeg = async ({ filename, format, onStatus }) => {
   const scene = document.querySelector('.promo-scene');
   if (!scene) throw new Error('Could not find the promo scene.');
 
@@ -51,7 +55,7 @@ export const downloadPromoJpeg = async ({ format, onStatus }) => {
       logging: false,
     });
     const blob = await canvasToJpegBlob(canvas);
-    openBlob(blob);
+    await saveBlob(blob, filename);
     return { width: canvas.width, height: canvas.height, sizeKb: Math.round(blob.size / 1024) };
   } finally {
     scene.style.transform = originalTransform;
