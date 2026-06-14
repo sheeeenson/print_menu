@@ -9,6 +9,7 @@
     "lint": "node scripts/check-syntax.js"
   },
   "dependencies": {
+    "@vercel/kv": "latest",
     "html2canvas": "latest",
     "vite": "latest",
     "react": "latest",
