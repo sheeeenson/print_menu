@@ -7,7 +7,7 @@ const canvasToPngBlob = (canvas) => new Promise((resolve, reject) => {
       return;
     }
     resolve(blob);
-  }, 'image/png');
+  }, 'image/png', 0.94);
 });
 
 export const getQualityOptimizedPng = async (sourceCanvas) => {
