@@ -59,7 +59,7 @@ export function normalizeGoogleDriveVideoUrl(value) {
       return `${LOCAL_RENDERER_BASE_URL}/drive-media/${encodeURIComponent(fileId)}`;
     }
 
-    return `https://drive.google.com/uc?export=view&id=${encodeURIComponent(fileId)}`;
+    return `/api/drive-media?id=${encodeURIComponent(fileId)}`;
   }
 
   return url;
@@ -68,6 +68,7 @@ export function normalizeGoogleDriveVideoUrl(value) {
 export function isVideoLikeUrl(value = '') {
   const url = String(value || '').trim().toLowerCase();
   if (!url) return false;
+  if (/\/api\/drive-media\?id=[a-z0-9_-]+/i.test(url)) return true;
   if (/\/drive-media\/[a-z0-9_-]+/i.test(url)) return true;
   if (url.includes('drive.usercontent.google.com/download')) return true;
   if (/\.(mp4|webm|mov|m4v)(?:\?|#|$)/i.test(url)) return true;
