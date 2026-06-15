@@ -47,6 +47,16 @@ const normalizeDuration = (value) => PROMO_DURATIONS.includes(Number(value)) ? N
 const isTransparentProduct = (dish) => dish?.imageMode === 'transparent' || dish?.transparentImage === true;
 const getDishBackgroundUrl = (dish) => normalizeGoogleDriveMediaUrl(dish?.promoBackgroundUrl || '');
 const normalizeBackgroundInputUrl = (value, mediaType = 'auto') => mediaType === 'video' ? normalizeGoogleDriveVideoUrl(value) : normalizeGoogleDriveMediaUrl(value);
+const migrateBackgroundMediaSettings = (settings = {}) => {
+  const backgroundMediaUrl = settings.backgroundMediaUrl || '';
+  if (!backgroundMediaUrl) return settings;
+  const backgroundMediaType = settings.backgroundMediaType || 'auto';
+  const shouldNormalizeAsVideo = backgroundMediaType === 'video' || backgroundMediaUrl.includes('/drive-media/');
+  if (!shouldNormalizeAsVideo) return settings;
+  const normalizedUrl = normalizeBackgroundInputUrl(backgroundMediaUrl, 'video');
+  if (!normalizedUrl || normalizedUrl === backgroundMediaUrl) return settings;
+  return { ...settings, backgroundMediaUrl: normalizedUrl, backgroundMediaType: 'video' };
+};
 
 const pickKeys = (source = {}, keys = []) => Object.fromEntries(keys.filter((key) => source[key] !== undefined).map((key) => [key, source[key]]));
 const pickFormatState = (settings = {}) => pickKeys(settings, FORMAT_KEYS);
@@ -216,14 +226,15 @@ export function PromoSectionV2({ project }) {
   const transparentDishes = useMemo(() => dishesWithImages.filter(isTransparentProduct), [dishesWithImages]);
   const categoryGroups = useMemo(() => contentCategories.map((category) => ({ category, dishes: dishesWithImages.filter((dish) => dish.categoryId === category.id) })), [contentCategories, dishesWithImages]);
   const [openCategoryIds, setOpenCategoryIds] = useState(() => new Set());
-  const [settings, setSettings] = useState(() => loadPromoProject(dishesWithImages));
+  const [settings, setSettings] = useState(() => migrateBackgroundMediaSettings(loadPromoProject(dishesWithImages)));
   const [exportStatus, setExportStatus] = useState('');
   const [selectedDuration, setSelectedDuration] = useState(() => normalizeDuration(window.localStorage.getItem(EXPORT_DURATION_KEY) || loadPromoProject(dishesWithImages).duration));
 
   useEffect(() => {
     setSettings((current) => {
       const restored = loadPromoProject(dishesWithImages.length ? dishesWithImages : contentDishes);
-      return { ...restored, ...current, duration: selectedDuration, formats: { ...(restored.formats || {}), ...(current.formats || {}) } };
+      const merged = migrateBackgroundMediaSettings({ ...restored, ...current });
+      return { ...merged, duration: selectedDuration, formats: { ...(restored.formats || {}), ...(current.formats || {}) } };
     });
   }, [contentDishes, dishesWithImages, selectedDuration]);
 
@@ -253,11 +264,13 @@ export function PromoSectionV2({ project }) {
   const updateSettings = (changes) => {
     setSettings((current) => {
       const formatId = current.formatId;
-      const formatChanges = Object.fromEntries(Object.entries(changes).filter(([key]) => !GLOBAL_PROMO_KEYS.has(key)));
+      const normalizedChanges = migrateBackgroundMediaSettings({ ...current, ...changes });
+      const safeChanges = Object.fromEntries(Object.keys(changes).map((key) => [key, normalizedChanges[key]]));
+      const formatChanges = Object.fromEntries(Object.entries(safeChanges).filter(([key]) => !GLOBAL_PROMO_KEYS.has(key)));
       const nextFormats = Object.keys(formatChanges).length
         ? { ...(current.formats || {}), [formatId]: { ...(current.formats?.[formatId] || {}), ...pickFormatState(current), ...formatChanges } }
         : { ...(current.formats || {}) };
-      return { ...current, ...changes, formats: nextFormats };
+      return { ...current, ...safeChanges, formats: nextFormats };
     });
   };
 
@@ -268,7 +281,7 @@ export function PromoSectionV2({ project }) {
     setSettings((current) => {
       const currentFormatId = current.formatId;
       const formats = { ...(current.formats || {}), [currentFormatId]: { ...(current.formats?.[currentFormatId] || {}), ...pickFormatState(current), duration: selectedDuration } };
-      const nextFormatSettings = formats[formatId] || {};
+      const nextFormatSettings = migrateBackgroundMediaSettings(formats[formatId] || {});
       return { ...current, ...nextFormatSettings, duration: selectedDuration, formatId, formats };
     });
   };
