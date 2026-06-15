@@ -1,18 +1,77 @@
 # Print Menu Local Renderer
 
-Local renderer for TV Promo MP4/WebM export.
+Local renderer for Print Menu TV Promo MP4/WebM export.
 
 It runs on your computer at:
 
-```txt
+```text
 http://localhost:3020
+http://localhost:3020/health
 ```
 
-The website can use it for video export while keeping PNG and HTML export in the browser.
+The existing command-line workflow is unchanged:
 
-## Download packages for users
+```bash
+npm install
+npm run setup
+npm start
+```
 
-Build release ZIP files from this folder:
+## macOS desktop app / DMG
+
+Build the macOS desktop app from a Mac:
+
+```bash
+cd local-renderer
+npm install
+npm run dist:mac
+```
+
+The build command does three things:
+
+1. Installs Chromium into `local-renderer/.playwright`.
+2. Bundles the Electron desktop shell.
+3. Creates DMG files in `local-renderer/dist`.
+
+Expected output names:
+
+```text
+Print-Menu-Renderer-0.1.0-arm64.dmg
+Print-Menu-Renderer-0.1.0-x64.dmg
+```
+
+Use `arm64` for Apple Silicon Macs. Use `x64` for Intel Macs.
+
+### Required ffmpeg file for macOS
+
+For macOS builds, put the ffmpeg binary here before building:
+
+```text
+local-renderer/bin/ffmpeg
+```
+
+Then make it executable:
+
+```bash
+chmod +x local-renderer/bin/ffmpeg
+```
+
+The Electron app sets `FFMPEG_PATH` to the bundled file automatically when it exists.
+
+### Running on MacBook
+
+After installing the DMG:
+
+1. Open **Print Menu Renderer.app**.
+2. Wait for `Renderer running`.
+3. Open Print Menu in the browser.
+4. Export MP4/WebM as usual.
+
+Keep the renderer app open while exporting.
+
+## ZIP packages for users
+
+The older ZIP package workflow is still available:
 
 ```bash
 npm install
@@ -21,29 +80,29 @@ npm run package
 
 The script creates:
 
-```txt
+```text
 local-renderer/dist/Print-Menu-Renderer-Mac.zip
 local-renderer/dist/Print-Menu-Renderer-Windows.zip
 ```
 
 Upload both files to the latest GitHub Release. The website download panel expects these asset names:
 
-```txt
+```text
 Print-Menu-Renderer-Mac.zip
 Print-Menu-Renderer-Windows.zip
 ```
 
-## Mac setup
+## Old Mac ZIP setup
 
 1. Download and unzip:
 
-```txt
+```text
 Print-Menu-Renderer-Mac.zip
 ```
 
 2. Put the FFmpeg executable here if it is not already included:
 
-```txt
+```text
 Print Menu Renderer Mac/bin/ffmpeg
 ```
 
@@ -56,7 +115,7 @@ xattr -d com.apple.quarantine "bin/ffmpeg" || true
 
 4. Start the renderer by double-clicking:
 
-```txt
+```text
 Start Print Menu Renderer.command
 ```
 
@@ -64,27 +123,29 @@ The launcher window should stay open and show that the renderer is running. Keep
 
 ## Windows setup
 
+The Windows npm/PowerShell workflow is not changed by the macOS app files.
+
 1. Download and unzip:
 
-```txt
+```text
 Print-Menu-Renderer-Windows.zip
 ```
 
 2. Put the FFmpeg executable here if it is not already included:
 
-```txt
+```text
 Print Menu Renderer Windows\bin\ffmpeg.exe
 ```
 
 3. Start the renderer by double-clicking:
 
-```txt
+```text
 Start Print Menu Renderer.bat
 ```
 
 Alternative PowerShell launcher:
 
-```txt
+```text
 Start Print Menu Renderer.ps1
 ```
 
@@ -98,17 +159,17 @@ powershell -ExecutionPolicy Bypass -File "Start Print Menu Renderer.ps1"
 
 When it is running, open:
 
-```txt
+```text
 http://localhost:3020/health
 ```
 
-You should see JSON with:
+The desktop app window also shows:
 
-```json
-{"ok":true,"renderer":"print-menu-local-renderer"}
-```
+- `stableCssTimeline`
+- `gifConversion`
+- `gifConversionPipe`
 
-## Requirements
+## Requirements for command-line/ZIP mode
 
 - Node.js 18+
 - Chromium installed by Playwright on first run
@@ -119,23 +180,12 @@ You should see JSON with:
 
 Defaults:
 
-```txt
+```text
 PORT=3020
 MAX_VIDEO_WIDTH=1920
 MAX_VIDEO_FPS=24
-MAX_VIDEO_DURATION=20
-MAX_BODY_SIZE=80mb
+MAX_VIDEO_DURATION=32
+MAX_BODY_SIZE=120mb
 ```
 
 You can lower these if your computer is slow.
-
-## Future installer track
-
-The current release format is ZIP packages with launchers.
-
-The next installer step can be a desktop wrapper that bundles the runtime and produces:
-
-- macOS `.dmg`
-- Windows `.exe`
-
-Recommended path: Electron + electron-builder, or a smaller native wrapper if we want to keep the renderer minimal.
