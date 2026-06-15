@@ -69,9 +69,46 @@ After installing the DMG:
 
 Keep the renderer app open while exporting.
 
+## Windows desktop installer / EXE
+
+The old GitHub Release ZIP/launcher can be considered deprecated. Build the new Windows installer from Windows:
+
+```powershell
+cd local-renderer
+npm install
+npm run dist:win
+```
+
+Expected output name:
+
+```text
+Print-Menu-Renderer-Setup-0.1.0-x64.exe
+```
+
+### Required ffmpeg file for Windows
+
+Before building, put FFmpeg here:
+
+```text
+local-renderer\bin\ffmpeg.exe
+```
+
+The Electron app sets `FFMPEG_PATH` to the bundled file automatically when it exists.
+
+### Running on Windows
+
+After installing the EXE:
+
+1. Open **Print Menu Renderer** from Start Menu or desktop shortcut.
+2. Wait for `Renderer running`.
+3. Open Print Menu in the browser.
+4. Export MP4/WebM as usual.
+
+Keep the renderer app open while exporting.
+
 ## ZIP packages for users
 
-The older ZIP package workflow is still available:
+The older ZIP package workflow is still available as fallback:
 
 ```bash
 npm install
@@ -85,12 +122,7 @@ local-renderer/dist/Print-Menu-Renderer-Mac.zip
 local-renderer/dist/Print-Menu-Renderer-Windows.zip
 ```
 
-Upload both files to the latest GitHub Release. The website download panel expects these asset names:
-
-```text
-Print-Menu-Renderer-Mac.zip
-Print-Menu-Renderer-Windows.zip
-```
+The website download panel may still reference these assets, but the recommended path is the Electron DMG/EXE installer track.
 
 ## Old Mac ZIP setup
 
@@ -121,38 +153,14 @@ Start Print Menu Renderer.command
 
 The launcher window should stay open and show that the renderer is running. Keep it open while exporting MP4/WebM from the website.
 
-## Windows setup
+## Old Windows ZIP setup
 
-The Windows npm/PowerShell workflow is not changed by the macOS app files.
+The previous GitHub Release Windows ZIP/launcher is deprecated because it was not reliable enough.
 
-1. Download and unzip:
-
-```text
-Print-Menu-Renderer-Windows.zip
-```
-
-2. Put the FFmpeg executable here if it is not already included:
-
-```text
-Print Menu Renderer Windows\bin\ffmpeg.exe
-```
-
-3. Start the renderer by double-clicking:
-
-```text
-Start Print Menu Renderer.bat
-```
-
-Alternative PowerShell launcher:
-
-```text
-Start Print Menu Renderer.ps1
-```
-
-If Windows blocks the PowerShell script, right-click it and choose **Run with PowerShell**, or run:
+Fallback manual command:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File "Start Print Menu Renderer.ps1"
+npm.cmd start
 ```
 
 ## Health check
