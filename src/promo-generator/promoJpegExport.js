@@ -24,6 +24,31 @@ const getPromoSceneSize = () => {
   };
 };
 
+const freezeJpegAnimationFrame = (html) => {
+  const staticCss = `
+    <style data-tv-promo-jpeg-static-frame>
+      .promo-scene,
+      .promo-scene * {
+        animation: none !important;
+        transition: none !important;
+      }
+      .promo-dish-image,
+      .promo-dish-stage,
+      .promo-copy-block,
+      .promo-price-card,
+      .promo-cta,
+      .promo-background,
+      .promo-background-media {
+        opacity: 1 !important;
+      }
+      .promo-dish-image {
+        transform: none !important;
+      }
+    </style>
+  `;
+  return String(html || '').replace('</head>', `${staticCss}</head>`);
+};
+
 const getRenderErrorMessage = async (response, fallbackMessage) => {
   const responseText = await response.text();
   if (!responseText) return fallbackMessage;
@@ -79,7 +104,7 @@ export const downloadPromoJpeg = async ({ filename, onStatus }) => {
   const { width, height } = getPromoSceneSize();
   const pngFilename = filename.replace(/\.jpe?g$/i, '.png');
 
-  onStatus?.('Rendering JPEG source via PNG renderer...');
+  onStatus?.('Rendering stable JPEG source via PNG renderer...');
   const response = await fetch('/api/promo-render', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -89,7 +114,7 @@ export const downloadPromoJpeg = async ({ filename, onStatus }) => {
       format: { id: 'current', label: `${width}x${height}`, width, height },
       duration: 1,
       fps: 24,
-      html,
+      html: freezeJpegAnimationFrame(html),
     }),
   });
 
