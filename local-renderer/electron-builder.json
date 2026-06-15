@@ -24,6 +24,7 @@
   ],
   "asarUnpack": [
     "bin/**",
+    "node_modules/ffmpeg-static/**",
     "node_modules/playwright/**",
     "node_modules/playwright-core/**"
   ],
