@@ -1,0 +1,46 @@
+{
+  "appId": "app.print-menu.renderer",
+  "productName": "Print Menu Renderer",
+  "directories": {
+    "output": "dist"
+  },
+  "files": [
+    "server.js",
+    "package.json",
+    "electron/**/*",
+    "node_modules/**/*"
+  ],
+  "extraResources": [
+    {
+      "from": "bin",
+      "to": "bin",
+      "filter": ["**/*"]
+    },
+    {
+      "from": ".playwright",
+      "to": ".playwright",
+      "filter": ["**/*"]
+    }
+  ],
+  "asarUnpack": [
+    "bin/**",
+    "node_modules/playwright/**",
+    "node_modules/playwright-core/**"
+  ],
+  "mac": {
+    "category": "public.app-category.utilities",
+    "target": [
+      {
+        "target": "dmg",
+        "arch": ["x64", "arm64"]
+      }
+    ]
+  },
+  "dmg": {
+    "artifactName": "Print-Menu-Renderer-${version}-${arch}.${ext}",
+    "contents": [
+      { "x": 130, "y": 220 },
+      { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+    ]
+  }
+}
