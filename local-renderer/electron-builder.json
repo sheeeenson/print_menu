@@ -36,6 +36,23 @@
       }
     ]
   },
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      }
+    ],
+    "artifactName": "Print-Menu-Renderer-Setup-${version}-${arch}.${ext}"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "Print Menu Renderer"
+  },
   "dmg": {
     "artifactName": "Print-Menu-Renderer-${version}-${arch}.${ext}",
     "contents": [
