@@ -9,6 +9,7 @@ export function MainNavigation({ snapshot, actions }) {
   const isLayout = project.selectedSection === APP_SECTIONS.LAYOUT_PRINT;
   const isImageMenu = project.selectedSection === APP_SECTIONS.IMAGE_MENU;
   const isTvPromo = project.selectedSection === APP_SECTIONS.TV_PROMO;
+  const isSiteBanner = project.selectedSection === APP_SECTIONS.SITE_BANNER;
   const canPrint = isLayout || isImageMenu;
 
   const handleImportClick = () => {
@@ -75,6 +76,13 @@ export function MainNavigation({ snapshot, actions }) {
           onClick={() => actions.setSection(APP_SECTIONS.TV_PROMO)}
         >
           TV Promo
+        </button>
+        <button
+          className={isSiteBanner ? 'active' : ''}
+          type="button"
+          onClick={() => actions.setSection(APP_SECTIONS.SITE_BANNER)}
+        >
+          Site Banner
         </button>
       </div>
       <div className="project-actions" aria-label="Project actions">

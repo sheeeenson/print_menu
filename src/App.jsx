@@ -6,6 +6,7 @@ import { ImageMenuSection } from './image-menu/ImageMenuSection.jsx';
 import { APP_SECTIONS } from './models/menu.js';
 import { installPromoHtmlDownloadButton } from './promo-generator/promoHtmlDownload.js';
 import { PromoSectionV2 } from './promo-generator/PromoSectionV2.jsx';
+import { SiteBannerSection } from './site-banner/SiteBannerSection.jsx';
 import { createProjectStore } from './state/projectStore.js';
 import { useProjectStore } from './state/useProjectStore.js';
 
@@ -30,6 +31,10 @@ export function App() {
 
     if (project.selectedSection === APP_SECTIONS.TV_PROMO) {
       return <PromoSectionV2 project={project} />;
+    }
+
+    if (project.selectedSection === APP_SECTIONS.SITE_BANNER) {
+      return <SiteBannerSection project={project} />;
     }
 
     return <LayoutPrintSection project={project} actions={store.actions} />;

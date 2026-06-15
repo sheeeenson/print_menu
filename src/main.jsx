@@ -32,6 +32,7 @@ import './promoRenderProgressBar.js';
 import './promoRenderProgressBridge.js';
 import './promoRenderProgressInlineOverride.js';
 import './promoVideoOverlaySupport.js';
+import './ui/appUnifiedPrimitives.css';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>
