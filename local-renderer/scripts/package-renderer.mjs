@@ -7,7 +7,6 @@ import { execFile } from 'node:child_process';
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const distDir = path.join(rootDir, 'dist');
 const macPackageName = 'Print Menu Renderer Mac';
-const windowsPackageName = 'Print Menu Renderer Windows';
 const includeFfmpeg = process.env.INCLUDE_FFMPEG === '1';
 
 const run = (command, args, options = {}) => new Promise((resolve, reject) => {
@@ -38,19 +37,14 @@ const copyCommonFiles = async (targetDir) => {
   await writeFile(path.join(targetDir, '.gitignore'), 'node_modules/\ndist/\n.env\n.DS_Store\n');
 };
 
-const writePackageNotes = async (targetDir, platform) => {
-  const launcher = platform === 'mac'
-    ? 'Start Print Menu Renderer.command'
-    : 'Start Print Menu Renderer.bat';
-  const ffmpegName = platform === 'mac' ? 'ffmpeg' : 'ffmpeg.exe';
-
+const writePackageNotes = async (targetDir) => {
   await writeFile(path.join(targetDir, 'START_HERE.txt'), [
     'Print Menu Local Renderer',
     '=========================',
     '',
     `1. Open this folder: ${path.basename(targetDir)}`,
-    `2. Put ${ffmpegName} into the bin folder if it is not already there.`,
-    `3. Double-click: ${launcher}`,
+    '2. Put ffmpeg into the bin folder if it is not already there.',
+    '3. Double-click: Start Print Menu Renderer.command',
     '4. Keep the launcher window open while exporting MP4/WebM from the website.',
     '',
     'Health check:',
@@ -60,6 +54,9 @@ const writePackageNotes = async (targetDir, platform) => {
     '- Node.js 18+',
     '- FFmpeg in the bin folder, or FFmpeg available in PATH',
     '- Internet connection on first run to install npm dependencies and Playwright Chromium',
+    '',
+    'Windows note:',
+    'The old Windows ZIP package is deprecated. Build the Windows installer with npm run dist:win instead.',
     '',
   ].join('\n'));
 };
@@ -74,7 +71,7 @@ const packageMac = async () => {
   const targetDir = path.join(distDir, macPackageName);
   await rm(targetDir, { recursive: true, force: true });
   await copyCommonFiles(targetDir);
-  await writePackageNotes(targetDir, 'mac');
+  await writePackageNotes(targetDir);
   await copyFile(path.join(rootDir, 'Start Print Menu Renderer.command'), path.join(targetDir, 'Start Print Menu Renderer.command'));
   await mkdir(path.join(targetDir, 'bin'), { recursive: true });
 
@@ -93,26 +90,6 @@ const packageMac = async () => {
   }
 
   await zipFolder('Print-Menu-Renderer-Mac.zip', macPackageName);
-};
-
-const packageWindows = async () => {
-  const targetDir = path.join(distDir, windowsPackageName);
-  await rm(targetDir, { recursive: true, force: true });
-  await copyCommonFiles(targetDir);
-  await writePackageNotes(targetDir, 'windows');
-  await copyFile(path.join(rootDir, 'Start Print Menu Renderer.bat'), path.join(targetDir, 'Start Print Menu Renderer.bat'));
-  await copyFile(path.join(rootDir, 'Start Print Menu Renderer.ps1'), path.join(targetDir, 'Start Print Menu Renderer.ps1'));
-  await mkdir(path.join(targetDir, 'bin'), { recursive: true });
-
-  const hasFfmpeg = includeFfmpeg
-    ? await copyIfExists(path.join(rootDir, 'bin', 'ffmpeg.exe'), path.join(targetDir, 'bin', 'ffmpeg.exe'))
-    : false;
-
-  if (!hasFfmpeg) {
-    await writeFile(path.join(targetDir, 'bin', 'PUT_FFMPEG_EXE_HERE.txt'), 'Put the Windows ffmpeg.exe executable here and name it ffmpeg.exe.\n');
-  }
-
-  await zipFolder('Print-Menu-Renderer-Windows.zip', windowsPackageName);
 };
 
 const printDistSummary = async () => {
@@ -136,5 +113,4 @@ const printDistSummary = async () => {
 await rm(distDir, { recursive: true, force: true });
 await mkdir(distDir, { recursive: true });
 await packageMac();
-await packageWindows();
 await printDistSummary();
