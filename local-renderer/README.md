@@ -71,7 +71,7 @@ Keep the renderer app open while exporting.
 
 ## Windows desktop installer / EXE
 
-The old GitHub Release ZIP/launcher can be considered deprecated. Build the new Windows installer from Windows:
+The old GitHub Release Windows ZIP/launcher is deprecated. Build the new Windows installer from Windows:
 
 ```powershell
 cd local-renderer
@@ -106,23 +106,22 @@ After installing the EXE:
 
 Keep the renderer app open while exporting.
 
-## ZIP packages for users
+## Legacy Mac ZIP package
 
-The older ZIP package workflow is still available as fallback:
+The older Mac ZIP package workflow is still available as fallback:
 
 ```bash
 npm install
 npm run package
 ```
 
-The script creates:
+The script now creates only:
 
 ```text
 local-renderer/dist/Print-Menu-Renderer-Mac.zip
-local-renderer/dist/Print-Menu-Renderer-Windows.zip
 ```
 
-The website download panel may still reference these assets, but the recommended path is the Electron DMG/EXE installer track.
+The old Windows ZIP package has been removed from the build script. Use the Windows EXE installer instead.
 
 ## Old Mac ZIP setup
 
@@ -155,7 +154,7 @@ The launcher window should stay open and show that the renderer is running. Keep
 
 ## Old Windows ZIP setup
 
-The previous GitHub Release Windows ZIP/launcher is deprecated because it was not reliable enough.
+The previous GitHub Release Windows ZIP/launcher is deprecated and should be deleted from GitHub Releases.
 
 Fallback manual command:
 
