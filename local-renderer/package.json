@@ -8,8 +8,11 @@
     "start": "node -e \"process.env.RENDER_SCALE=process.env.RENDER_SCALE||'1'; import('./server.js')\"",
     "setup": "playwright install chromium",
     "setup:local-browsers": "node scripts/setup-playwright-local.mjs",
+    "dev:desktop": "electron .",
     "dev:mac": "electron .",
+    "dev:win": "electron .",
     "dist:mac": "npm run setup:local-browsers && electron-builder --mac dmg --config electron-builder.json",
+    "dist:win": "npm run setup:local-browsers && electron-builder --win nsis --config electron-builder.json",
     "package": "node scripts/package-renderer.mjs"
   },
   "dependencies": {
