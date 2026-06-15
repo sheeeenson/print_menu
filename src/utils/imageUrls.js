@@ -5,6 +5,14 @@ const GOOGLE_DRIVE_ID_PATTERNS = Object.freeze([
 
 const LOCAL_RENDERER_BASE_URL = 'http://localhost:3020';
 
+const isBrowser = () => typeof window !== 'undefined' && Boolean(window.location);
+
+const shouldUseLocalRendererMediaProxy = () => {
+  if (!isBrowser()) return false;
+  const { protocol, hostname } = window.location;
+  return protocol === 'http:' && (hostname === 'localhost' || hostname === '127.0.0.1');
+};
+
 export function extractGoogleDriveFileId(value = '') {
   const input = String(value || '').trim();
   if (!input) return '';
@@ -47,7 +55,11 @@ export function normalizeGoogleDriveVideoUrl(value) {
 
   const fileId = extractGoogleDriveFileId(url);
   if (fileId && (url.includes('drive.google.com') || url.includes('drive.usercontent.google.com'))) {
-    return `${LOCAL_RENDERER_BASE_URL}/drive-media/${encodeURIComponent(fileId)}`;
+    if (shouldUseLocalRendererMediaProxy()) {
+      return `${LOCAL_RENDERER_BASE_URL}/drive-media/${encodeURIComponent(fileId)}`;
+    }
+
+    return `/api/drive-media/${encodeURIComponent(fileId)}`;
   }
 
   return url;
@@ -56,6 +68,7 @@ export function normalizeGoogleDriveVideoUrl(value) {
 export function isVideoLikeUrl(value = '') {
   const url = String(value || '').trim().toLowerCase();
   if (!url) return false;
+  if (/\/api\/drive-media\/[a-z0-9_-]+/i.test(url)) return true;
   if (/\/drive-media\/[a-z0-9_-]+/i.test(url)) return true;
   if (url.includes('drive.usercontent.google.com/download')) return true;
   if (/\.(mp4|webm|mov|m4v)(?:\?|#|$)/i.test(url)) return true;
