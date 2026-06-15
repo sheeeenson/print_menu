@@ -11,6 +11,16 @@ let mainWindow;
 let serverStarted = false;
 let serverStartError = '';
 
+function resolveFfmpegStaticPath() {
+  try {
+    const ffmpegStaticPath = require('ffmpeg-static');
+    if (ffmpegStaticPath && existsSync(ffmpegStaticPath)) return ffmpegStaticPath;
+  } catch (error) {
+    console.warn('ffmpeg-static is not available:', error instanceof Error ? error.message : String(error));
+  }
+  return '';
+}
+
 function configureRuntimeEnvironment() {
   process.env.PORT = PORT;
   process.env.RENDER_SCALE = process.env.RENDER_SCALE || '1';
@@ -22,10 +32,12 @@ function configureRuntimeEnvironment() {
   const localFfmpeg = process.platform === 'win32'
     ? path.join(ROOT_DIR, 'bin', 'ffmpeg.exe')
     : path.join(ROOT_DIR, 'bin', 'ffmpeg');
+  const ffmpegStaticPath = resolveFfmpegStaticPath();
 
   if (!process.env.FFMPEG_PATH) {
     if (existsSync(packagedFfmpeg)) process.env.FFMPEG_PATH = packagedFfmpeg;
     else if (existsSync(localFfmpeg)) process.env.FFMPEG_PATH = localFfmpeg;
+    else if (ffmpegStaticPath) process.env.FFMPEG_PATH = ffmpegStaticPath;
   }
 
   const packagedBrowsers = path.join(packagedResources, '.playwright');
