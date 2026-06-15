@@ -3,13 +3,21 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "start": "node -e \"process.env.RENDER_SCALE=process.env.RENDER_SCALE||'1'; import('./server.js')\"",
     "setup": "playwright install chromium",
+    "setup:local-browsers": "node scripts/setup-playwright-local.mjs",
+    "dev:mac": "electron .",
+    "dist:mac": "npm run setup:local-browsers && electron-builder --mac dmg --config electron-builder.json",
     "package": "node scripts/package-renderer.mjs"
   },
   "dependencies": {
     "express": "latest",
     "playwright": "1.49.1"
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
   }
 }
