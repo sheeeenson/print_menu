@@ -388,7 +388,7 @@ button.danger:hover {
 .app-segmented,
 .print-top-actions,
 .image-menu-format-buttons,
-promo-format-buttons,
+.promo-format-buttons,
 .promo-duration-buttons,
 .site-banner-export-buttons,
 .site-banner-export-row,
@@ -464,8 +464,25 @@ promo-format-buttons,
     grid-template-columns: auto minmax(0, 1fr) auto !important;
   }
 
+  .brand-block,
+  .compact-brand-block {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+  }
+
+  .section-tabs {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+  }
+
+  .save-status {
+    grid-column: 3 !important;
+    grid-row: 1 !important;
+  }
+
   .project-actions {
     grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
     justify-content: flex-start !important;
     overflow-x: auto !important;
     overflow-y: hidden !important;
