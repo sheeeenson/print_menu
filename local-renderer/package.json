@@ -11,7 +11,9 @@
     "dev:desktop": "electron .",
     "dev:mac": "electron .",
     "dev:win": "electron .",
-    "dist:mac": "npm run setup:local-browsers && electron-builder --mac dmg --config electron-builder.json",
+    "dist:mac": "npm run setup:local-browsers && npm run dist:mac:arm64 && npm run dist:mac:x64",
+    "dist:mac:arm64": "electron-builder --mac dmg --arm64 --config electron-builder.json",
+    "dist:mac:x64": "electron-builder --mac dmg --x64 --config electron-builder.json",
     "dist:win": "npm run setup:local-browsers && electron-builder --win nsis --config electron-builder.json",
     "package": "node scripts/package-renderer.mjs"
   },
