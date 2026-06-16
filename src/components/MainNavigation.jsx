@@ -85,24 +85,27 @@ export function MainNavigation({ snapshot, actions }) {
           Site Banner
         </button>
       </div>
-      <div className="project-actions" aria-label="Project actions">
-        {canPrint ? <button className="primary-action compact" type="button" onClick={() => window.print()}>Print</button> : null}
-        {isLayout ? <button className="secondary-action compact" type="button" onClick={handleSaveAsPdf}>Save as PDF</button> : null}
-        <button type="button" onClick={handleImportClick}>Import project</button>
-        <button type="button" onClick={() => downloadProjectJson(project)}>Export project</button>
-        <button type="button" onClick={handleResetDemoData}>Reset demo data</button>
-        <input
-          ref={importInputRef}
-          type="file"
-          accept=".json,application/json"
-          className="visually-hidden-file"
-          onChange={handleImportChange}
-          tabIndex={-1}
-        />
-      </div>
       <div className={`save-status ${saveStatusClass}`} aria-live="polite">
         {saveStatus}
       </div>
+      <details className="project-menu">
+        <summary>Project</summary>
+        <div className="project-menu-panel" aria-label="Project actions">
+          {canPrint ? <button className="primary-action compact" type="button" onClick={() => window.print()}>Print</button> : null}
+          {isLayout ? <button className="secondary-action compact" type="button" onClick={handleSaveAsPdf}>Save as PDF</button> : null}
+          <button type="button" onClick={handleImportClick}>Import project</button>
+          <button type="button" onClick={() => downloadProjectJson(project)}>Export project</button>
+          <button type="button" onClick={handleResetDemoData}>Reset demo data</button>
+        </div>
+      </details>
+      <input
+        ref={importInputRef}
+        type="file"
+        accept=".json,application/json"
+        className="visually-hidden-file"
+        onChange={handleImportChange}
+        tabIndex={-1}
+      />
     </nav>
   );
 }
