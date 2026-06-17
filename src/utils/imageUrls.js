@@ -11,6 +11,8 @@ const getPreviewDriveMediaUrl = (fileId, type = '') => {
   return `${previewMediaPrefix}${encodeURIComponent(fileId)}${typeSuffix}`;
 };
 
+const getDriveThumbnailUrl = (fileId) => `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w4096`;
+
 const extractSavedPreviewMediaFileId = (value = '') => {
   const input = String(value || '').trim();
   if (!input) return '';
@@ -24,6 +26,7 @@ const extractSavedPreviewMediaFileId = (value = '') => {
   try {
     const url = new URL(input, 'https://print-menu.local');
     if (url.pathname === `/api/${mediaSegment}`) return url.searchParams.get('id') || '';
+    if (url.hostname === 'drive.google.com' && url.pathname === '/thumbnail') return url.searchParams.get('id') || '';
   } catch (error) {}
 
   return '';
@@ -55,7 +58,7 @@ export function normalizeGoogleDriveImageUrl(value) {
 
   const fileId = extractGoogleDriveFileId(url);
   if (fileId && isDriveLikeUrl(url)) {
-    return getPreviewDriveMediaUrl(fileId, 'image');
+    return getDriveThumbnailUrl(fileId);
   }
 
   return url;
@@ -97,6 +100,7 @@ export function isVideoLikeUrl(value = '') {
 export function guessMediaTypeFromUrl(value = '') {
   const url = String(value || '').trim().toLowerCase();
   if (!url) return 'auto';
+  if (url.includes('drive.google.com/thumbnail')) return 'image';
   if (url.includes('type=image')) return 'image';
   if (isVideoLikeUrl(url)) return 'video';
   if (url.includes(previewMediaPrefix) || url.includes(`/${mediaSegment}/`)) return 'image';
