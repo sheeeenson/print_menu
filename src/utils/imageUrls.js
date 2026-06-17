@@ -6,7 +6,10 @@ const GOOGLE_DRIVE_ID_PATTERNS = Object.freeze([
 const mediaSegment = ['drive', 'media'].join('-');
 const previewMediaPrefix = `/api/${mediaSegment}?id=`;
 
-const getPreviewDriveMediaUrl = (fileId) => `${previewMediaPrefix}${encodeURIComponent(fileId)}`;
+const getPreviewDriveMediaUrl = (fileId, type = '') => {
+  const typeSuffix = type ? `&type=${encodeURIComponent(type)}` : '';
+  return `${previewMediaPrefix}${encodeURIComponent(fileId)}${typeSuffix}`;
+};
 
 const extractSavedPreviewMediaFileId = (value = '') => {
   const input = String(value || '').trim();
@@ -14,9 +17,16 @@ const extractSavedPreviewMediaFileId = (value = '') => {
 
   const marker = `/${mediaSegment}/`;
   const markerIndex = input.indexOf(marker);
-  if (markerIndex < 0) return '';
+  if (markerIndex >= 0) {
+    return input.slice(markerIndex + marker.length).split(/[?#/]/)[0] || '';
+  }
 
-  return input.slice(markerIndex + marker.length).split(/[?#/]/)[0] || '';
+  try {
+    const url = new URL(input, 'https://print-menu.local');
+    if (url.pathname === `/api/${mediaSegment}`) return url.searchParams.get('id') || '';
+  } catch (error) {}
+
+  return '';
 };
 
 export function extractGoogleDriveFileId(value = '') {
@@ -36,7 +46,7 @@ export function extractGoogleDriveFileId(value = '') {
 
 const isDriveLikeUrl = (value = '') => {
   const url = String(value || '').trim();
-  return url.includes('drive.google.com') || url.includes('drive.usercontent.google.com') || url.includes(`/${mediaSegment}/`);
+  return url.includes('drive.google.com') || url.includes('drive.usercontent.google.com') || url.includes(`/${mediaSegment}/`) || url.includes(`/api/${mediaSegment}`);
 };
 
 export function normalizeGoogleDriveImageUrl(value) {
@@ -45,7 +55,7 @@ export function normalizeGoogleDriveImageUrl(value) {
 
   const fileId = extractGoogleDriveFileId(url);
   if (fileId && isDriveLikeUrl(url)) {
-    return getPreviewDriveMediaUrl(fileId);
+    return getPreviewDriveMediaUrl(fileId, 'image');
   }
 
   return url;
@@ -69,7 +79,7 @@ export function normalizeGoogleDriveVideoUrl(value) {
 
   const fileId = extractGoogleDriveFileId(url);
   if (fileId && isDriveLikeUrl(url)) {
-    return getPreviewDriveMediaUrl(fileId);
+    return getPreviewDriveMediaUrl(fileId, 'video');
   }
 
   return url;
@@ -78,6 +88,7 @@ export function normalizeGoogleDriveVideoUrl(value) {
 export function isVideoLikeUrl(value = '') {
   const url = String(value || '').trim().toLowerCase();
   if (!url) return false;
+  if (url.includes('type=video')) return true;
   if (url.includes('drive.usercontent.google.com/download')) return true;
   if (/\.(mp4|webm|mov|m4v)(?:\?|#|$)/i.test(url)) return true;
   return false;
@@ -86,6 +97,7 @@ export function isVideoLikeUrl(value = '') {
 export function guessMediaTypeFromUrl(value = '') {
   const url = String(value || '').trim().toLowerCase();
   if (!url) return 'auto';
+  if (url.includes('type=image')) return 'image';
   if (isVideoLikeUrl(url)) return 'video';
   if (url.includes(previewMediaPrefix) || url.includes(`/${mediaSegment}/`)) return 'image';
   if (/\.(png|jpg|jpeg|webp|gif|avif)(?:\?|#|$)/i.test(url)) return 'image';
