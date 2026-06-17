@@ -93,6 +93,22 @@ button.primary-action,
   text-shadow: var(--promo-text-shadow, 0 18px 38px rgba(0,0,0,0.28));
 }
 
+.promo-cta-with-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 22px 34px !important;
+  border-radius: 999px !important;
+  box-shadow: 0 18px 40px rgba(0,0,0,0.22) !important;
+}
+
+.promo-cta-no-badge {
+  display: inline-block !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
 .promo-gif-library {
   display: grid;
   gap: 12px;
@@ -256,125 +272,4 @@ button.primary-action,
 
 .promo-effect-confetti .promo-confetti {
   animation: promoConfetti var(--promo-duration) ease-in-out infinite;
-}
-
-.promo-effect-gif-spin .promo-gif-overlay {
-  animation: promoGifSpin var(--promo-duration) ease-in-out infinite;
-}
-
-.promo-effect-gif-bounce .promo-gif-overlay {
-  animation: promoGifBounce var(--promo-duration) ease-in-out infinite;
-}
-
-@keyframes promoTextRise {
-  0%, 15%, 100% { opacity: 1; transform: translateY(0); }
-  3% { opacity: 0; transform: translateY(34px); }
-  12% { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes promoHeadlineSplit {
-  0%, 100% { transform: translateX(0); letter-spacing: -0.06em; }
-  6% { transform: translateX(-42px); letter-spacing: 0.04em; opacity: 0.25; }
-  15% { transform: translateX(0); letter-spacing: -0.06em; opacity: 1; }
-}
-
-@keyframes promoTextWave {
-  0%, 100% { transform: skewX(0deg) translateY(0); }
-  45% { transform: skewX(-4deg) translateY(-8px); }
-  58% { transform: skewX(4deg) translateY(4px); }
-}
-
-@keyframes promoTextGlitch {
-  0%, 86%, 100% { transform: translate(0, 0); filter: none; }
-  88% { transform: translate(-8px, 3px); filter: hue-rotate(45deg); }
-  90% { transform: translate(7px, -2px); filter: hue-rotate(-35deg); }
-  92% { transform: translate(-3px, 1px); filter: contrast(1.35); }
-}
-
-@keyframes promoDishSlide {
-  0%, 100% { transform: translateX(0); }
-  4% { transform: translateX(130px); opacity: 0; }
-  15% { transform: translateX(0); opacity: 1; }
-}
-
-@keyframes promoDishPulse {
-  0%, 55%, 100% { filter: saturate(1) contrast(1); }
-  64% { filter: saturate(1.18) contrast(1.08); }
-  72% { filter: saturate(1.04) contrast(1.02); }
-}
-
-@keyframes promoDishRotate {
-  0%, 100% { transform: rotate(0deg) scale(1); }
-  52% { transform: rotate(-3deg) scale(1.035); }
-  66% { transform: rotate(2deg) scale(1.01); }
-}
-
-@keyframes promoPriceShake {
-  0%, 58%, 100% { transform: translateX(0) rotate(0deg); }
-  62% { transform: translateX(-9px) rotate(-1.3deg); }
-  66% { transform: translateX(8px) rotate(1.1deg); }
-  70% { transform: translateX(-5px) rotate(-0.7deg); }
-  76% { transform: translateX(0) rotate(0deg); }
-}
-
-@keyframes promoPriceFlip {
-  0%, 54%, 100% { transform: rotateX(0deg) scale(1); }
-  66% { transform: rotateX(180deg) scale(1.08); }
-  78% { transform: rotateX(360deg) scale(1); }
-}
-
-@keyframes promoPriceGlow {
-  0%, 45%, 100% { text-shadow: var(--promo-text-shadow, 0 18px 38px rgba(0,0,0,0.28)); }
-  62% { text-shadow: 0 0 28px rgba(255,255,255,0.9), 0 0 58px rgba(255,209,102,0.72); }
-}
-
-@keyframes promoBackgroundOrbit {
-  0% { transform: rotate(0deg) scale(1); opacity: 0.55; }
-  50% { transform: rotate(180deg) scale(1.08); opacity: 0.9; }
-  100% { transform: rotate(360deg) scale(1); opacity: 0.55; }
-}
-
-@keyframes promoBackgroundPulse {
-  0%, 100% { filter: brightness(1) saturate(1); }
-  50% { filter: brightness(1.18) saturate(1.2); }
-}
-
-@keyframes promoSpotlightPulse {
-  0%, 30%, 100% { opacity: 0; transform: scale(1); }
-  48% { opacity: 0.9; transform: scale(1.05); }
-  66% { opacity: 0.2; transform: scale(1.02); }
-}
-
-@keyframes promoConfetti {
-  0%, 28%, 100% { opacity: 0; transform: translateY(-80px); }
-  42% { opacity: 0.8; transform: translateY(0); }
-  70% { opacity: 0.18; transform: translateY(80px); }
-}
-
-@keyframes promoGifSpin {
-  0%, 100% { transform: rotate(0deg) scale(1); }
-  52% { transform: rotate(8deg) scale(1.05); }
-  70% { transform: rotate(-5deg) scale(1); }
-}
-
-@keyframes promoGifBounce {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-22px) scale(1.06); }
-  66% { transform: translateY(4px) scale(0.98); }
-}
-
-@media (max-width: 920px) {
-  .promo-format-buttons {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  }
-}
-
-@media (max-width: 520px) {
-  .promo-format-buttons {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  }
-
-  .promo-gif-library-list > div {
-    grid-template-columns: 1fr;
-  }
 }
