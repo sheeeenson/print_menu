@@ -78,8 +78,6 @@ export function normalizeGoogleDriveVideoUrl(value) {
 export function isVideoLikeUrl(value = '') {
   const url = String(value || '').trim().toLowerCase();
   if (!url) return false;
-  if (url.includes(previewMediaPrefix)) return true;
-  if (url.includes(`/${mediaSegment}/`)) return true;
   if (url.includes('drive.usercontent.google.com/download')) return true;
   if (/\.(mp4|webm|mov|m4v)(?:\?|#|$)/i.test(url)) return true;
   return false;
@@ -89,6 +87,7 @@ export function guessMediaTypeFromUrl(value = '') {
   const url = String(value || '').trim().toLowerCase();
   if (!url) return 'auto';
   if (isVideoLikeUrl(url)) return 'video';
+  if (url.includes(previewMediaPrefix) || url.includes(`/${mediaSegment}/`)) return 'image';
   if (/\.(png|jpg|jpeg|webp|gif|avif)(?:\?|#|$)/i.test(url)) return 'image';
   return 'auto';
 }
