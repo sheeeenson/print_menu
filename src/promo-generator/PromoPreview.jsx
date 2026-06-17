@@ -171,6 +171,7 @@ export function PromoPreview({ dish, settings, index = 0 }) {
   const gifLayout = offsetPosition(getGifLayout(layout, settings.gifPosition, settings.showCta), offsets.gifX, offsets.gifY);
   const textShadow = textShadowCss(settings);
   const gifFilter = gifShadowCss(settings);
+  const ctaBadgeEnabled = settings.showCtaBadge !== false;
 
   useEffect(() => {
     let cancelled = false;
@@ -266,7 +267,21 @@ export function PromoPreview({ dish, settings, index = 0 }) {
             </div>
           ) : null}
 
-          {settings.showCta ? <div className="promo-cta" style={{ ...layoutStyle(ctaLayout), color: settings.ctaColor, fontFamily: settings.ctaFont, fontSize: `${settings.ctaSize}px`, textShadow }}>{settings.ctaText || 'ORDER NOW'}</div> : null}
+          {settings.showCta ? (
+            <div
+              className={ctaBadgeEnabled ? 'promo-cta promo-cta-with-badge' : 'promo-cta promo-cta-no-badge'}
+              style={{
+                ...layoutStyle(ctaLayout),
+                color: settings.ctaColor,
+                fontFamily: settings.ctaFont,
+                fontSize: `${settings.ctaSize}px`,
+                textShadow,
+                background: ctaBadgeEnabled ? settings.ctaBadgeColor : 'transparent',
+              }}
+            >
+              {settings.ctaText || 'ORDER NOW'}
+            </div>
+          ) : null}
           {effects.gifOverlay && settings.gifUrl ? <img className="promo-gif-overlay" src={settings.gifUrl} alt="" aria-hidden="true" style={{ ...layoutStyle(gifLayout), width: `${settings.gifSize || 18}%`, filter: gifFilter, ...getGifShapeStyle(settings) }} /> : null}
         </article>
       </div>
