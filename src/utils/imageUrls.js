@@ -34,13 +34,18 @@ export function extractGoogleDriveFileId(value = '') {
   return '';
 }
 
+const isDriveLikeUrl = (value = '') => {
+  const url = String(value || '').trim();
+  return url.includes('drive.google.com') || url.includes('drive.usercontent.google.com') || url.includes(`/${mediaSegment}/`);
+};
+
 export function normalizeGoogleDriveImageUrl(value) {
   const url = String(value || '').trim();
   if (!url) return '';
 
   const fileId = extractGoogleDriveFileId(url);
-  if (fileId && url.includes('drive.google.com')) {
-    return `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}`;
+  if (fileId && isDriveLikeUrl(url)) {
+    return getPreviewDriveMediaUrl(fileId);
   }
 
   return url;
@@ -51,8 +56,8 @@ export function normalizeGoogleDriveMediaUrl(value) {
   if (!url) return '';
 
   const fileId = extractGoogleDriveFileId(url);
-  if (fileId && url.includes('drive.google.com')) {
-    return `https://drive.google.com/uc?export=view&id=${encodeURIComponent(fileId)}`;
+  if (fileId && isDriveLikeUrl(url)) {
+    return getPreviewDriveMediaUrl(fileId);
   }
 
   return url;
@@ -63,7 +68,7 @@ export function normalizeGoogleDriveVideoUrl(value) {
   if (!url) return '';
 
   const fileId = extractGoogleDriveFileId(url);
-  if (fileId && (url.includes('drive.google.com') || url.includes('drive.usercontent.google.com') || url.includes(`/${mediaSegment}/`))) {
+  if (fileId && isDriveLikeUrl(url)) {
     return getPreviewDriveMediaUrl(fileId);
   }
 
