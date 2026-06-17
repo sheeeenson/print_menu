@@ -249,4 +249,49 @@ export function PromoPreview({ dish, settings, index = 0 }) {
             <h2 style={{ color: settings.headlineColor, fontFamily: settings.headlineFont, fontSize: `${settings.headlineSize}px` }}>{headline}</h2>
             {dish?.nameGe ? <h3 style={{ color: settings.geTitleColor, fontFamily: settings.geTitleFont, fontSize: `${settings.geTitleSize}px` }}>{dish.nameGe}</h3> : null}
             {settings.showDescription && descriptionLines.length ? (
-              <div className="promo-description-stack" style={{ transform: `translateY(${settings.descriptionOffsetY || 0}px)` }}
+              <div className="promo-description-stack" style={{ transform: `translateY(${settings.descriptionOffsetY || 0}px)` }}>
+                {descriptionLines.map((line, lineIndex) => <p key={`${line}-${lineIndex}`} className="promo-description" style={{ color: settings.descriptionColor, fontFamily: settings.descriptionFont, fontSize: `${settings.descriptionSize}px` }}>{line}</p>)}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="promo-dish-stage" style={layoutPositionStyle(dishLayout)}>
+            {dish?.imageUrl ? (
+              <img
+                className="promo-dish-image"
+                src={dish.imageUrl}
+                alt={dish.nameEn || dish.nameGe || 'Dish'}
+                style={{ width: `${dishImageSize}px`, maxWidth: 'none', maxHeight: 'none' }}
+              />
+            ) : <div className="promo-dish-placeholder">Select dish with image</div>}
+          </div>
+
+          {hasPrice ? (
+            <div className="promo-price-card" style={{ ...layoutStyle(priceLayout), textShadow }}>
+              {oldPrice ? <span className="promo-old-price" style={{ color: settings.oldPriceColor, fontFamily: settings.oldPriceFont, fontSize: `${settings.oldPriceSize}px` }}>{oldPrice}</span> : null}
+              {salePrice ? <strong style={{ color: settings.salePriceColor, fontFamily: settings.salePriceFont, fontSize: `${settings.salePriceSize}px` }}>{salePrice}</strong> : null}
+            </div>
+          ) : null}
+
+          {settings.showCta ? (
+            <div
+              className={ctaBadgeEnabled ? 'promo-cta promo-cta-with-badge' : 'promo-cta promo-cta-no-badge'}
+              style={{
+                ...layoutStyle(ctaLayout),
+                color: settings.ctaColor,
+                fontFamily: settings.ctaFont,
+                fontSize: `${settings.ctaSize}px`,
+                textShadow,
+                background: ctaBadgeEnabled ? settings.ctaBadgeColor : 'transparent',
+              }}
+            >
+              {settings.ctaText || 'ORDER NOW'}
+            </div>
+          ) : null}
+          {effects.gifOverlay && settings.gifUrl ? <img className="promo-gif-overlay" src={settings.gifUrl} alt="" aria-hidden="true" style={{ ...layoutStyle(gifLayout), width: `${settings.gifSize || 18}%`, filter: gifFilter, ...getGifShapeStyle(settings) }} /> : null}
+        </article>
+      </div>
+      <small className="promo-preview-size">Output format: {format.label}</small>
+    </section>
+  );
+}
