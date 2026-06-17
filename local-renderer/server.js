@@ -90,13 +90,25 @@ const dataUrlToBuffer = (value = '') => {
 };
 const bufferToDataUrl = (buffer, mimeType = 'application/octet-stream') => `data:${mimeType};base64,${buffer.toString('base64')}`;
 const getGoogleDriveDownloadUrl = (fileId) => `https://drive.usercontent.google.com/download?id=${encodeURIComponent(fileId)}&export=download&confirm=t`;
+const getGoogleDriveThumbnailUrl = (fileId) => `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w4096`;
 
-const fetchDriveMedia = async (fileId, range = '') => {
-  const headers = { 'User-Agent': 'Mozilla/5.0 Print Menu Local Renderer', Accept: 'video/mp4,video/webm,video/*,image/*,*/*;q=0.8' };
+const fetchDriveMedia = async (fileId, range = '', mediaType = 'auto') => {
+  const accept = mediaType === 'video' ? 'video/mp4,video/webm,video/*,image/*,*/*;q=0.8' : 'image/avif,image/webp,image/apng,image/svg+xml,image/*,video/*,*/*;q=0.8';
+  const headers = { 'User-Agent': 'Mozilla/5.0 Print Menu Local Renderer', Accept: accept };
   if (range) headers.Range = range;
+
+  if (mediaType === 'image') {
+    const thumbnail = await fetch(getGoogleDriveThumbnailUrl(fileId), { redirect: 'follow', headers });
+    const thumbnailContentType = thumbnail.headers.get('content-type') || '';
+    if ((thumbnail.ok || thumbnail.status === 206) && !/text\/html/i.test(thumbnailContentType)) {
+      const buffer = Buffer.from(await thumbnail.arrayBuffer());
+      if (buffer.length) return { buffer, contentType: thumbnailContentType || 'image/jpeg', status: thumbnail.status, headers: thumbnail.headers };
+    }
+  }
+
   const upstream = await fetch(getGoogleDriveDownloadUrl(fileId), { redirect: 'follow', headers });
   if (!upstream.ok && upstream.status !== 206) throw new Error(`HTTP ${upstream.status}`);
-  const contentTypeHeader = upstream.headers.get('content-type') || 'application/octet-stream';
+  const contentTypeHeader = upstream.headers.get('content-type') || (mediaType === 'video' ? 'video/mp4' : 'application/octet-stream');
   const buffer = Buffer.from(await upstream.arrayBuffer());
   if (!buffer.length) throw new Error('Google Drive returned an empty file.');
   if (/text\/html/i.test(contentTypeHeader) || buffer.subarray(0, 80).toString('utf8').includes('<html')) throw new Error('Google Drive returned HTML instead of media. Check file sharing or use a direct media file.');
@@ -115,26 +127,50 @@ const transcodeVideoBufferToWebm = async (videoBuffer, label = 'drive-video') =>
   }
 };
 
+const getDriveMediaReferences = (html) => {
+  const references = [];
+  const seen = new Set();
+  const add = (url, fileId, mediaType = 'auto') => {
+    const key = `${url}|${fileId}|${mediaType}`;
+    if (!fileId || seen.has(key)) return;
+    seen.add(key);
+    references.push({ url, fileId, mediaType });
+  };
+
+  for (const url of String(html).match(/http:\/\/localhost:3020\/drive-media\/[a-zA-Z0-9_-]+/g) || []) {
+    add(url, url.split('/').pop(), 'auto');
+  }
+
+  const queryPattern = /(?:http:\/\/localhost:3020)?\/api\/drive-media\?[^"'\s<>]+/g;
+  for (const url of String(html).match(queryPattern) || []) {
+    try {
+      const parsed = new URL(url, 'http://localhost:3020');
+      add(url, parsed.searchParams.get('id') || parsed.searchParams.get('fileId') || '', parsed.searchParams.get('type') || 'auto');
+    } catch (error) {}
+  }
+
+  return references;
+};
+
 const embedDriveMediaUrls = async (html) => {
-  const urls = Array.from(new Set(String(html).match(/http:\/\/localhost:3020\/drive-media\/[a-zA-Z0-9_-]+/g) || []));
+  const refs = getDriveMediaReferences(html);
   let nextHtml = html;
-  for (const url of urls) {
-    const fileId = url.split('/').pop();
+  for (const ref of refs) {
     let transcode;
     try {
-      const media = await fetchDriveMedia(fileId);
+      const media = await fetchDriveMedia(ref.fileId, '', ref.mediaType);
       let dataUrl;
       if (/^video\//i.test(media.contentType)) {
-        transcode = await transcodeVideoBufferToWebm(media.buffer, `drive-${fileId}`);
+        transcode = await transcodeVideoBufferToWebm(media.buffer, `drive-${ref.fileId}`);
         dataUrl = bufferToDataUrl(transcode.buffer, 'video/webm');
-        log(`Transcoded Drive media ${fileId}: ${media.contentType} ${media.buffer.length} bytes -> video/webm ${transcode.buffer.length} bytes`);
+        log(`Transcoded Drive media ${ref.fileId}: ${media.contentType} ${media.buffer.length} bytes -> video/webm ${transcode.buffer.length} bytes`);
       } else {
         dataUrl = bufferToDataUrl(media.buffer, media.contentType);
-        log(`Embedded Drive media ${fileId}: ${media.contentType}, ${media.buffer.length} bytes`);
+        log(`Embedded Drive media ${ref.fileId}: ${media.contentType}, ${media.buffer.length} bytes`);
       }
-      nextHtml = nextHtml.split(url).join(dataUrl);
+      nextHtml = nextHtml.split(ref.url).join(dataUrl);
     } catch (error) {
-      log(`Could not embed/transcode Drive media ${fileId}: ${error instanceof Error ? error.message : String(error)}`);
+      log(`Could not embed/transcode Drive media ${ref.fileId}: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       if (transcode?.workdir) await rm(transcode.workdir, { recursive: true, force: true }).catch(() => {});
     }
@@ -200,21 +236,14 @@ const waitForImages = async (page) => Promise.race([page.evaluate(async () => Pr
 const waitForVideos = async (page) => {
   await Promise.race([
     page.evaluate(async () => Promise.all(Array.from(document.querySelectorAll('video')).map((video) => new Promise((resolve) => {
-      const finish = () => { video.removeEventListener('loadedmetadata', finish); video.removeEventListener('loadeddata', finish); video.removeEventListener('canplay', finish); video.removeEventListener('error', finish); resolve(); };
-      try {
-        video.muted = true; video.loop = true; video.autoplay = true; video.playsInline = true;
-        video.setAttribute('muted', 'true'); video.setAttribute('loop', 'true'); video.setAttribute('autoplay', 'true'); video.setAttribute('playsinline', 'true'); video.setAttribute('preload', 'auto');
-        video.load?.();
-        const playPromise = video.play?.();
-        if (playPromise?.catch) playPromise.catch(() => undefined);
-      } catch (error) {}
-      if (video.readyState >= 2) return finish();
-      video.addEventListener('loadedmetadata', finish, { once: true }); video.addEventListener('loadeddata', finish, { once: true }); video.addEventListener('canplay', finish, { once: true }); video.addEventListener('error', finish, { once: true });
+      if (video.readyState >= 2) return resolve();
+      const finish = () => resolve();
+      video.addEventListener('loadeddata', finish, { once: true });
+      video.addEventListener('error', finish, { once: true });
+      window.setTimeout(finish, 15000);
     })))).catch(() => undefined),
     wait(VIDEO_WAIT_MS),
   ]);
-  const diagnostics = await page.evaluate(() => Array.from(document.querySelectorAll('video')).map((video, index) => ({ index, className: video.className || '', readyState: video.readyState, currentTime: Number(video.currentTime || 0), duration: Number.isFinite(video.duration) ? video.duration : null, src: (video.currentSrc || video.src || '').slice(0, 140), error: video.error ? { code: video.error.code, message: video.error.message || '' } : null }))).catch(() => []);
-  if (diagnostics.length) log(`Video diagnostics: ${JSON.stringify(diagnostics)}`);
 };
 
 const applyTextRenderingHints = async (page) => {
@@ -317,12 +346,12 @@ const renderToFile = async (payload, onProgress) => {
     return { ...render, filePath: outputPath, workdir, contentType: contentType(render.output) };
   } finally { if (browser) await browser.close().catch(() => {}); }
 };
-
 const serializeJob = (job) => ({ id: job.id, status: job.status, output: job.output, filename: job.filename, error: job.error, progress: job.progress || createProgress(job.status || 'queued', 0, 0), downloadUrl: job.status === 'done' ? `/jobs/${job.id}/file` : null });
 const cleanupJob = async (id) => { const job = jobs.get(id); if (job?.workdir) await rm(job.workdir, { recursive: true, force: true }).catch(() => {}); jobs.delete(id); };
 const runJob = async (id, payload) => { const job = jobs.get(id); if (!job) return; job.status = 'rendering'; job.progress = createProgress('starting', 0, 0); log(`Job ${id} started`); try { Object.assign(job, await renderToFile(payload, (progress) => { job.progress = progress; }), { status: 'done', progress: createProgress('done', 1, 1) }); log(`Job ${id} done: ${job.filename}`); } catch (error) { job.status = 'failed'; job.error = error instanceof Error ? error.message : String(error); job.progress = createProgress('failed', 0, 1); log(`Job ${id} failed: ${job.error}`); } };
 
-app.get('/drive-media/:fileId', async (request, response) => { try { const fileId = String(request.params.fileId || '').trim(); if (!/^[a-zA-Z0-9_-]+$/.test(fileId)) return response.status(400).json({ error: 'Invalid Google Drive file id.' }); const media = await fetchDriveMedia(fileId, request.headers.range || ''); response.status(media.status === 206 ? 206 : 200); response.setHeader('Content-Type', media.contentType); response.setHeader('Accept-Ranges', media.headers.get('accept-ranges') || 'bytes'); const contentRange = media.headers.get('content-range'); if (contentRange) response.setHeader('Content-Range', contentRange); response.setHeader('Content-Length', String(media.buffer.length)); response.setHeader('Cache-Control', 'public, max-age=3600'); return response.end(media.buffer); } catch (error) { return response.status(500).json({ error: 'Google Drive media proxy failed.', detail: error instanceof Error ? error.message : String(error) }); } });
+app.get('/drive-media/:fileId', async (request, response) => { try { const fileId = String(request.params.fileId || '').trim(); if (!/^[a-zA-Z0-9_-]+$/.test(fileId)) return response.status(400).json({ error: 'Invalid Google Drive file id.' }); const media = await fetchDriveMedia(fileId, request.headers.range || '', request.query.type || 'auto'); response.status(media.status === 206 ? 206 : 200); response.setHeader('Content-Type', media.contentType); response.setHeader('Accept-Ranges', media.headers.get('accept-ranges') || 'bytes'); const contentRange = media.headers.get('content-range'); if (contentRange) response.setHeader('Content-Range', contentRange); response.setHeader('Content-Length', String(media.buffer.length)); response.setHeader('Cache-Control', 'public, max-age=3600'); return response.end(media.buffer); } catch (error) { return response.status(500).json({ error: 'Google Drive media proxy failed.', detail: error instanceof Error ? error.message : String(error) }); } });
+app.get('/api/drive-media', async (request, response) => { try { const fileId = String(request.query.id || request.query.fileId || '').trim(); if (!/^[a-zA-Z0-9_-]+$/.test(fileId)) return response.status(400).json({ error: 'Invalid Google Drive file id.' }); const media = await fetchDriveMedia(fileId, request.headers.range || '', request.query.type || 'auto'); response.status(media.status === 206 ? 206 : 200); response.setHeader('Content-Type', media.contentType); response.setHeader('Accept-Ranges', media.headers.get('accept-ranges') || 'bytes'); const contentRange = media.headers.get('content-range'); if (contentRange) response.setHeader('Content-Range', contentRange); response.setHeader('Content-Length', String(media.buffer.length)); response.setHeader('Cache-Control', 'public, max-age=3600'); return response.end(media.buffer); } catch (error) { return response.status(500).json({ error: 'Google Drive media proxy failed.', detail: error instanceof Error ? error.message : String(error) }); } });
 app.get('/health', (request, response) => response.json({ ok: true, renderer: 'print-menu-local-renderer', port: PORT, ffmpegPath: FFMPEG_PATH, maxVideoWidth: MAX_VIDEO_WIDTH, maxVideoFps: MAX_VIDEO_FPS, maxVideoDuration: MAX_VIDEO_DURATION, renderScale: RENDER_SCALE, stableCssTimeline: true, gifConversion: true, gifConversionPipe: true, seekableVideoOverlayCapture: true, pngFramePipe: true, gifBackgroundConversion: true, driveMediaProxy: true, apiPromoRenderBlob: true, videoWait: true, renderReadyWait: true, embeddedDriveMedia: true, gifVideoFix: true, driveVideoTranscode: true, supersampledRender: true, highQualityText: true, pngStillCapture: true }));
 app.post('/api/promo-render', async (request, response) => { let result; try { result = await renderToFile(request.body || {}, () => {}); const buffer = await readFile(result.filePath); response.setHeader('Content-Type', result.contentType); response.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`); response.setHeader('Content-Length', String(buffer.length)); return response.end(buffer); } catch (error) { return response.status(500).json({ error: 'Render failed.', detail: error instanceof Error ? error.message : String(error) }); } finally { if (result?.workdir) await rm(result.workdir, { recursive: true, force: true }).catch(() => {}); } });
 app.post('/convert-gif', async (request, response) => { let result; try { result = await convertGifBufferToWebm(await downloadGifBuffer(request.body?.dataUrl || request.body?.url), 'gif-overlay'); response.setHeader('Content-Type', 'video/webm'); response.setHeader('Content-Disposition', 'attachment; filename="gif-overlay.webm"'); response.end(result.buffer); } catch (error) { response.status(400).json({ error: 'GIF conversion failed.', detail: error instanceof Error ? error.message : String(error) }); } finally { if (result?.workdir) await rm(result.workdir, { recursive: true, force: true }).catch(() => {}); } });
