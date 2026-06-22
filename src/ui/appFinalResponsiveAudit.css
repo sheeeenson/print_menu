@@ -252,76 +252,144 @@
   max-width: 100% !important;
 }
 
+/* TV Promo product selector: prevent the latest deploy from clipping the dish picker. */
+.promo-generator-section {
+  min-height: calc(100dvh - 76px) !important;
+  height: calc(100dvh - 76px) !important;
+  overflow: hidden !important;
+}
+
+.promo-generator-panel {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: calc(100dvh - 76px) !important;
+  max-height: calc(100dvh - 76px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain !important;
+  scrollbar-gutter: stable !important;
+}
+
+.promo-select-section,
+.promo-generator-panel .promo-select-section,
+.promo-generator-panel .panel-section.promo-select-section {
+  display: grid !important;
+  gap: 12px !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: auto !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.promo-category-picker,
+.promo-select-section .image-menu-category-picker,
+.promo-generator-panel .image-menu-category-picker {
+  display: grid !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.promo-select-section .image-menu-category-group,
+.promo-select-section .image-menu-category-body,
+.promo-select-section .promo-dish-picker,
+.promo-select-section .image-menu-dish-picker {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.promo-select-section .image-menu-category-toggle {
+  width: 100% !important;
+  min-height: 46px !important;
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto !important;
+  align-items: center !important;
+}
+
+.promo-dish-picker label,
+.promo-select-section .image-menu-dish-picker label {
+  width: 100% !important;
+  min-height: 64px !important;
+  display: grid !important;
+  grid-template-columns: auto 52px minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 10px !important;
+  overflow: visible !important;
+  cursor: pointer !important;
+}
+
+.promo-dish-picker img,
+.promo-select-section .image-menu-dish-picker img,
+.promo-select-section .image-menu-mini-placeholder {
+  width: 52px !important;
+  height: 52px !important;
+  min-width: 52px !important;
+  object-fit: cover !important;
+  border-radius: 12px !important;
+}
+
+.promo-dish-picker label > span,
+.promo-select-section .image-menu-dish-picker label > span {
+  min-width: 0 !important;
+  display: grid !important;
+  gap: 2px !important;
+}
+
+.promo-dish-picker input[type='radio'] {
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+}
+
 @media (max-width: 1280px) {
   .main-navigation,
   .main-navigation.top-nav {
     grid-template-columns: auto minmax(0, 1fr) auto auto !important;
   }
 
-  .save-status {
-    min-width: 96px !important;
+  .promo-generator-section {
+    grid-template-columns: minmax(300px, 360px) minmax(0, 1fr) !important;
   }
 }
 
-@media (max-width: 920px) {
+@media (max-width: 900px) {
   .main-navigation,
   .main-navigation.top-nav {
-    grid-template-columns: auto minmax(0, 1fr) auto !important;
+    grid-template-columns: auto 1fr auto !important;
+    gap: 10px !important;
   }
 
-  .section-tabs {
+  .main-navigation .main-tabs,
+  .main-navigation.top-nav .main-tabs {
     grid-column: 1 / -1 !important;
-    grid-row: 2 !important;
-  }
-
-  .save-status {
-    grid-column: 2 !important;
-    grid-row: 1 !important;
-  }
-
-  .project-menu {
-    grid-column: 3 !important;
-    grid-row: 1 !important;
+    width: 100% !important;
+    overflow-x: auto !important;
   }
 
   .project-menu-panel {
     right: 0 !important;
   }
 
-  .image-menu-section-heading,
-  .app-toolbar,
-  .workspace-toolbar,
-  .preview-toolbar,
-  .promo-generator-toolbar,
-  .panel-title-row,
-  .editor-card-title,
-  .subsection-title,
-  .advanced-panel-header,
-  .advanced-card-title {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) !important;
-    gap: 10px !important;
+  .promo-generator-section {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    grid-template-columns: 1fr !important;
   }
 
-  .app-pill,
-  .save-status,
-  .image-menu-section-heading small,
-  .promo-output-pill,
-  .site-banner-output-pill {
-    justify-self: start !important;
-  }
-}
-
-@media (max-width: 520px) {
-  .project-menu summary {
-    padding-inline: 12px !important;
-  }
-
-  .project-menu-panel {
-    position: fixed !important;
-    left: 8px !important;
-    right: 8px !important;
-    top: 138px !important;
-    width: auto !important;
+  .promo-generator-panel {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 }
