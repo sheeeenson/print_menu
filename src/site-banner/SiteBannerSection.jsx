@@ -8,6 +8,10 @@ import './siteBanner.css';
 const getDishTitle = (dish) => dish?.nameEn || dish?.nameGe || 'Untitled dish';
 const getSafeFilename = (value) => String(value || 'sushiwoki-banner').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'sushiwoki-banner';
 const createIconId = () => `icon-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+const GOOGLE_DRIVE_ID_PATTERNS = Object.freeze([
+  /\/file\/d\/([a-zA-Z0-9_-]+)/,
+  /[?&]id=([a-zA-Z0-9_-]+)/,
+]);
 
 const downloadUrl = (url, filename) => {
   const link = document.createElement('a');
@@ -27,6 +31,79 @@ const canvasToBlob = (canvas, mimeType) => new Promise((resolve, reject) => {
     resolve(blob);
   }, mimeType, 0.94);
 });
+
+const blobToDataUrl = (blob) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(String(reader.result || ''));
+  reader.onerror = () => reject(reader.error || new Error('Could not read image data.'));
+  reader.readAsDataURL(blob);
+});
+
+const extractGoogleDriveFileId = (value = '') => {
+  const input = String(value || '').trim();
+  if (!input) return '';
+  for (const pattern of GOOGLE_DRIVE_ID_PATTERNS) {
+    const match = input.match(pattern);
+    if (match?.[1]) return match[1];
+  }
+  return '';
+};
+
+const getCanvasSafeImageUrl = (value = '') => {
+  const url = String(value || '').trim();
+  if (!url || url.startsWith('data:') || url.startsWith('blob:')) return url;
+  const driveFileId = extractGoogleDriveFileId(url);
+  if (driveFileId) return `/api/drive-media?id=${encodeURIComponent(driveFileId)}&type=image`;
+  return url;
+};
+
+const fetchImageAsDataUrl = async (url) => {
+  const safeUrl = getCanvasSafeImageUrl(url);
+  if (!safeUrl || safeUrl.startsWith('data:')) return safeUrl;
+  const response = await fetch(safeUrl, {
+    credentials: 'omit',
+    cache: 'reload',
+    headers: { Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8' },
+  });
+  if (!response.ok) throw new Error(`Could not load export image: HTTP ${response.status}`);
+  const blob = await response.blob();
+  if (!blob.size) throw new Error('Export image is empty.');
+  return blobToDataUrl(blob);
+};
+
+const waitForImageDecode = async (image) => {
+  if (!image) return;
+  if (typeof image.decode === 'function') {
+    await image.decode().catch(() => undefined);
+    return;
+  }
+  await new Promise((resolve) => {
+    if (image.complete) return resolve();
+    image.addEventListener('load', resolve, { once: true });
+    image.addEventListener('error', resolve, { once: true });
+  });
+};
+
+const embedExportImages = async (clone) => {
+  const imageElements = Array.from(clone.querySelectorAll('.site-banner-product-image, .site-banner-icon'));
+  await Promise.all(imageElements.map(async (image) => {
+    const sourceUrl = image.getAttribute('src') || image.currentSrc || '';
+    if (!sourceUrl) return;
+    image.removeAttribute('crossorigin');
+    image.src = await fetchImageAsDataUrl(sourceUrl);
+    await waitForImageDecode(image);
+  }));
+
+  const backgroundElements = Array.from(clone.querySelectorAll('.site-banner-custom-background'));
+  await Promise.all(backgroundElements.map(async (element) => {
+    const backgroundImage = element.style.backgroundImage || '';
+    const match = backgroundImage.match(/url\(["']?(.*?)["']?\)/);
+    const sourceUrl = match?.[1] || '';
+    if (!sourceUrl) return;
+    const dataUrl = await fetchImageAsDataUrl(sourceUrl);
+    if (dataUrl) element.style.backgroundImage = `url("${dataUrl}")`;
+  }));
+};
 
 const createFullSizeExportNode = (scene, format) => {
   const wrapper = document.createElement('div');
@@ -65,6 +142,8 @@ async function downloadSiteBannerImage(mimeType, extension, selectedDish, format
   const { wrapper, clone } = createFullSizeExportNode(scene, format);
 
   try {
+    await embedExportImages(clone);
+
     const canvas = await html2canvas(clone, {
       backgroundColor: null,
       height: format.height,
@@ -74,7 +153,7 @@ async function downloadSiteBannerImage(mimeType, extension, selectedDish, format
       scrollX: 0,
       scrollY: 0,
       scale: 1,
-      useCORS: true,
+      useCORS: false,
       allowTaint: false,
       logging: false,
       ignoreElements: (element) => element.classList?.contains('site-banner-guides'),
