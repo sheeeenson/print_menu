@@ -61,7 +61,7 @@ const fetchImageAsDataUrl = async (url) => {
   const safeUrl = getCanvasSafeImageUrl(url);
   if (!safeUrl || safeUrl.startsWith('data:')) return safeUrl;
   const response = await fetch(safeUrl, {
-    credentials: 'omit',
+    credentials: 'same-origin',
     cache: 'reload',
     headers: { Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8' },
   });
@@ -427,7 +427,7 @@ export function SiteBannerSection({ project }) {
 
         <ControlGroup title="Background">
           <label className="app-field"><span>Mode</span><select value={settings.backgroundMode} onChange={(event) => updateSettings({ backgroundMode: event.target.value })}><option value="auto">Auto fill from product image</option><option value="custom">Custom background URL</option></select></label>
-          <label className="app-field"><span>Custom background URL</span><input value={settings.customBackgroundUrl} placeholder="Paste background image URL" onChange={(event) => updateSettings({ customBackgroundUrl: event.target.value })} /></label>
+          <label className="app-field"><span>Custom background URL</span><input value={settings.customBackgroundUrl} placeholder="Paste background image URL" onChange={(event) => updateSettings({ customBackgroundUrl })} /></label>
           <RangeControl label="Background tone" value={settings.backgroundTone} min={-50} max={50} onChange={(backgroundTone) => updateSettings({ backgroundTone })} />
           <ColorControl label="Accent color" value={settings.accentColor} onChange={(accentColor) => updateSettings({ accentColor })} />
         </ControlGroup>
