@@ -206,7 +206,6 @@ export function SiteBannerPreview({ dish, settings, index = 0, onDragIcon }) {
                 className="site-banner-product-image"
                 src={productImageUrl}
                 alt={dish?.nameEn || dish?.nameGe || 'Dish'}
-                crossOrigin="anonymous"
                 onError={() => setProductImageFailed(true)}
               />
             ) : <div className="site-banner-product-placeholder">Select dish with image</div>}
