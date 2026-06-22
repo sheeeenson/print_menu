@@ -55,6 +55,7 @@ const getTextShadow = (settings) => settings.textShadowEnabled ? `0 18px ${setti
 
 const positionWithOffset = ({ x, y }, offsetX = 0, offsetY = 0) => ({ left: x + offsetX, top: y + offsetY });
 const normalizeBackgroundImageUrl = (url) => normalizeGoogleDriveImageUrl(String(url || '').trim());
+const getProductImageUrl = (dish) => normalizeGoogleDriveImageUrl(String(dish?.imageUrl || '').trim());
 const getBackgroundFit = (settings) => settings.backgroundFit === 'contain' || settings.backgroundFit === 'fill' ? settings.backgroundFit : 'cover';
 const getBackgroundDim = (settings, hasCustomBackground) => clamp(settings.backgroundDim ?? (hasCustomBackground ? 0 : 0), 0, 70) / 100;
 const getBackgroundSize = (settings) => {
@@ -126,6 +127,7 @@ export function SiteBannerPreview({ dish, settings, index = 0, onDragIcon }) {
   const safeZones = getSiteBannerSafeZones(settings.formatId);
   const basePositions = BASE_POSITIONS_BY_FORMAT[format.id] ?? BASE_POSITIONS_BY_FORMAT.sushiwokiWebsite2048x900;
   const [sampledColor, setSampledColor] = useState('');
+  const [productImageFailed, setProductImageFailed] = useState(false);
   const fallbackColor = getFallbackImageBackground(index);
   const edgeColor = sampledColor || fallbackColor;
   const tunedBackground = useMemo(() => colorWithTone(edgeColor, settings.backgroundTone), [edgeColor, settings.backgroundTone]);
@@ -141,14 +143,19 @@ export function SiteBannerPreview({ dish, settings, index = 0, onDragIcon }) {
   const ctaPosition = positionWithOffset(basePositions.cta, offsets.ctaX, offsets.ctaY);
   const basePricePosition = settings.showCta ? basePositions.priceWithCta : basePositions.priceNoCta;
   const pricePosition = positionWithOffset(basePricePosition, offsets.priceX, offsets.priceY);
+  const productImageUrl = getProductImageUrl(dish);
   const customBackgroundUrl = settings.backgroundMode === 'custom' ? normalizeBackgroundImageUrl(settings.customBackgroundUrl) : '';
   const backgroundDim = getBackgroundDim(settings, Boolean(customBackgroundUrl));
 
   useEffect(() => {
+    setProductImageFailed(false);
+  }, [productImageUrl]);
+
+  useEffect(() => {
     let cancelled = false;
     setSampledColor('');
-    if (!dish?.imageUrl) return undefined;
-    sampleImageAutofillColor(dish.imageUrl)
+    if (!productImageUrl) return undefined;
+    sampleImageAutofillColor(productImageUrl)
       .then((color) => {
         if (!cancelled) setSampledColor(color);
       })
@@ -158,7 +165,7 @@ export function SiteBannerPreview({ dish, settings, index = 0, onDragIcon }) {
     return () => {
       cancelled = true;
     };
-  }, [dish?.imageUrl]);
+  }, [productImageUrl]);
 
   const sceneClass = [
     'site-banner-scene',
@@ -194,7 +201,15 @@ export function SiteBannerPreview({ dish, settings, index = 0, onDragIcon }) {
           </div>
 
           <div className="site-banner-product-stage" style={{ ...productPosition, width: `${settings.productSize}px`, height: `${settings.productSize}px` }}>
-            {dish?.imageUrl ? <img className="site-banner-product-image" src={dish.imageUrl} alt={dish.nameEn || dish.nameGe || 'Dish'} crossOrigin="anonymous" /> : <div className="site-banner-product-placeholder">Select dish with image</div>}
+            {productImageUrl && !productImageFailed ? (
+              <img
+                className="site-banner-product-image"
+                src={productImageUrl}
+                alt={dish?.nameEn || dish?.nameGe || 'Dish'}
+                crossOrigin="anonymous"
+                onError={() => setProductImageFailed(true)}
+              />
+            ) : <div className="site-banner-product-placeholder">Select dish with image</div>}
           </div>
 
           {settings.showCta ? <div className="site-banner-cta" style={{ ...ctaPosition, color: settings.ctaColor, fontFamily: settings.ctaFont, fontSize: `${settings.ctaSize}px`, textShadow }}>{settings.ctaText || 'ORDER NOW'}</div> : null}
