@@ -105,7 +105,6 @@ function SiteBannerIcon({ icon, previewScale, onDragIcon }) {
       className="site-banner-icon"
       src={normalizedUrl}
       alt=""
-      crossOrigin="anonymous"
       draggable="false"
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
