@@ -143,7 +143,7 @@ export function SiteBannerPreview({ dish, settings, index = 0, onDragIcon }) {
   const basePricePosition = settings.showCta ? basePositions.priceWithCta : basePositions.priceNoCta;
   const pricePosition = positionWithOffset(basePricePosition, offsets.priceX, offsets.priceY);
   const productImageUrl = getProductImageUrl(dish);
-  const customBackgroundUrl = settings.backgroundMode === 'custom' ? normalizeBackgroundImageUrl(settings.customBackgroundUrl) : '';
+  const customBackgroundUrl = normalizeBackgroundImageUrl(settings.customBackgroundUrl);
   const backgroundDim = getBackgroundDim(settings, Boolean(customBackgroundUrl));
 
   useEffect(() => {
