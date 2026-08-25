@@ -45,7 +45,7 @@ export function A3PosterPreview({ poster, dishes }) {
   const selectedDishes = useMemo(() => poster.selectedDishIds.map((id) => dishes.find((dish) => dish.id === id)).filter(Boolean), [poster.selectedDishIds, dishes]);
   const previewScale = format.previewWidth / format.width;
   const template = poster.template || 'single';
-  const headline = poster.headline || selectedDishes[0]?.nameEn || 'A3 Poster';
+  const headline = String(poster.headline || '').trim();
   const [sampledBackground, setSampledBackground] = useState('');
   const autoBackground = poster.autoBackground ?? true;
   const imageUrls = useMemo(() => selectedDishes.map((dish) => normalizeGoogleDriveImageUrl(dish.imageUrl)).filter(Boolean), [selectedDishes]);
@@ -73,12 +73,14 @@ export function A3PosterPreview({ poster, dishes }) {
     <section className="app-preview-shell" aria-label="A3 poster preview">
       <div className="app-canvas-wrap a3-poster-canvas-wrap" style={{ width: `${format.previewWidth}px`, aspectRatio: `${format.width} / ${format.height}` }}>
         <article className={`a3-poster-scene a3-template-${template}`} style={{ width: `${format.width}px`, height: `${format.height}px`, transform: `scale(${previewScale})`, background, color: poster.textColor, '--a3-accent': poster.accentColor }}>
-          <div className="a3-headline-row">
-            <h2 className="a3-headline" style={{ fontSize: `${poster.headlineSize}px`, transform: move(poster.headlineXOffset, poster.headlineYOffset) }}>{headline}</h2>
-            {poster.showOffer && poster.offerText ? (
-              <div className="a3-offer-badge" style={{ transform: move(poster.offerXOffset, poster.offerYOffset), background: poster.accentColor, color: poster.offerTextColor, fontSize: `${poster.offerSize}px` }}>{poster.offerText}</div>
-            ) : null}
-          </div>
+          {(headline || (poster.showOffer && poster.offerText)) ? (
+            <div className="a3-headline-row">
+              {headline ? <h2 className="a3-headline" style={{ fontSize: `${poster.headlineSize}px`, transform: move(poster.headlineXOffset, poster.headlineYOffset) }}>{headline}</h2> : <span className="a3-headline-spacer" />}
+              {poster.showOffer && poster.offerText ? (
+                <div className="a3-offer-badge" style={{ transform: move(poster.offerXOffset, poster.offerYOffset), background: poster.accentColor, color: poster.offerTextColor, fontSize: `${poster.offerSize}px` }}>{poster.offerText}</div>
+              ) : null}
+            </div>
+          ) : null}
 
           {poster.subheadline ? <p className="a3-subheadline" style={{ fontSize: `${poster.subheadlineSize}px`, transform: move(poster.subheadlineXOffset, poster.subheadlineYOffset) }}>{poster.subheadline}</p> : null}
 
@@ -92,7 +94,8 @@ export function A3PosterPreview({ poster, dishes }) {
                     {imageUrl ? <img className="a3-product-image" src={imageUrl} alt="" style={{ transform: `${move(poster.imageXOffset, poster.imageYOffset)} scale(${poster.imageScale})` }} /> : null}
                   </div>
 
-                  <strong className="a3-product-name" style={{ fontSize: `${poster.productNameSize}px`, transform: move(poster.productNameXOffset, poster.productNameYOffset) }}>{dish.nameEn || dish.nameGe || 'Untitled'}</strong>
+                  {poster.showProductNameEn !== false && dish.nameEn ? <strong className="a3-product-name a3-product-name-en" style={{ fontSize: `${poster.productNameSize}px`, transform: move(poster.productNameXOffset, poster.productNameYOffset) }}>{dish.nameEn}</strong> : null}
+                  {poster.showProductNameGe !== false && dish.nameGe ? <strong className="a3-product-name a3-product-name-ge" style={{ fontSize: `${poster.productNameGeSize ?? 62}px`, transform: move(poster.productNameGeXOffset, poster.productNameGeYOffset) }}>{dish.nameGe}</strong> : null}
 
                   {poster.showDescriptionEn && dish.descriptionEn ? <p className="a3-product-description a3-description-en" style={{ fontSize: `${poster.descriptionSize}px`, transform: move(poster.descriptionEnXOffset, poster.descriptionEnYOffset) }}>{dish.descriptionEn}</p> : null}
                   {poster.showDescriptionGe && dish.descriptionGe ? <p className="a3-product-description a3-description-ge" style={{ fontSize: `${poster.descriptionSize}px`, transform: move(poster.descriptionGeXOffset, poster.descriptionGeYOffset) }}>{dish.descriptionGe}</p> : null}
