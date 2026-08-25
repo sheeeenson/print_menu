@@ -8,12 +8,14 @@
 .a3-poster-format-row button.active,.a3-template-row button.active{background:#111;color:#fff}
 .a3-poster-canvas-wrap{position:relative;overflow:hidden;background:#ddd;box-shadow:0 18px 54px rgba(0,0,0,.16)}
 .a3-poster-scene{position:absolute;left:0;top:0;transform-origin:top left;overflow:hidden;font-family:Inter,Arial,sans-serif}
-.a3-headline-row{position:absolute;left:7%;right:6%;top:5.5%;z-index:5;display:flex;align-items:flex-end;justify-content:space-between;gap:56px}
-.a3-headline{margin:0;max-width:72%;font-weight:900;line-height:.92;letter-spacing:-.045em;transform-origin:left bottom}
-.a3-headline-spacer{flex:1 1 auto}
+.a3-title-row{position:absolute;left:7%;right:6%;top:5.5%;z-index:5;display:flex;align-items:flex-end;justify-content:space-between;gap:56px}
+.a3-title-copy{display:grid;gap:18px;max-width:72%;align-items:start}
+.a3-title-name{display:block;margin:0;line-height:.94;letter-spacing:-.04em;transform-origin:left bottom}
+.a3-title-name-en{font-weight:900}
+.a3-title-name-ge{font-family:Inter,"Noto Sans Georgian",Arial,sans-serif;font-weight:700;line-height:1.05;letter-spacing:-.02em}
+.a3-title-spacer{flex:1 1 auto}
 .a3-offer-badge{max-width:38%;padding:.32em .58em;border-radius:.42em;font-weight:900;line-height:.95;letter-spacing:-.03em;white-space:pre-line;text-align:center;transform-origin:right bottom;flex:0 0 auto}
-.a3-subheadline{position:absolute;left:7%;top:18%;z-index:4;margin:0;max-width:72%;line-height:1.15;font-weight:500;transform-origin:left top}
-.a3-products{position:absolute;left:6%;right:6%;top:28%;bottom:6%;display:grid;gap:2.5%;align-items:stretch}
+.a3-products{position:absolute;left:6%;right:6%;top:23%;bottom:6%;display:grid;gap:2.5%;align-items:stretch}
 .a3-template-single .a3-products{grid-template-columns:1fr}
 .a3-template-two .a3-products{grid-template-columns:repeat(2,1fr)}
 .a3-template-four .a3-products{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr)}
