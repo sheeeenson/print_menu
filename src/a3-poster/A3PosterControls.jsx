@@ -2,6 +2,10 @@ function RangeControl({ label, value, min, max, step = 1, suffix = '', onChange 
   return <label className="app-field image-menu-control"><span>{label} <strong>{value}{suffix}</strong></span><input type="range" min={min} max={max} step={step} value={value} onChange={(event) => onChange(Number(event.target.value))} /></label>;
 }
 
+function PositionPair({ label, x, y, onX, onY }) {
+  return <div className="a3-position-pair"><strong>{label}</strong><RangeControl label="X" value={x ?? 0} min={-1200} max={1200} onChange={onX} suffix="px" /><RangeControl label="Y" value={y ?? 0} min={-1200} max={1200} onChange={onY} suffix="px" /></div>;
+}
+
 export function A3PosterControls({ poster, updatePoster }) {
   return <>
     <section className="app-control-group">
@@ -41,15 +45,16 @@ export function A3PosterControls({ poster, updatePoster }) {
 
     <section className="app-control-group">
       <h3>Object positions</h3>
-      <small>Move each group independently on the A3 canvas.</small>
-      <RangeControl label="Product X" value={poster.imageXOffset ?? 0} min={-1200} max={1200} onChange={(imageXOffset) => updatePoster({ imageXOffset })} suffix="px" />
-      <RangeControl label="Product Y" value={poster.imageYOffset ?? 0} min={-1200} max={1200} onChange={(imageYOffset) => updatePoster({ imageYOffset })} suffix="px" />
-      <RangeControl label="Headline X" value={poster.contentXOffset ?? 0} min={-1200} max={1200} onChange={(contentXOffset) => updatePoster({ contentXOffset })} suffix="px" />
-      <RangeControl label="Headline Y" value={poster.contentYOffset ?? 0} min={-1200} max={1200} onChange={(contentYOffset) => updatePoster({ contentYOffset })} suffix="px" />
-      <RangeControl label="Name / description / price X" value={poster.metaXOffset ?? 0} min={-1200} max={1200} onChange={(metaXOffset) => updatePoster({ metaXOffset })} suffix="px" />
-      <RangeControl label="Name / description / price Y" value={poster.metaYOffset ?? 0} min={-1200} max={1200} onChange={(metaYOffset) => updatePoster({ metaYOffset })} suffix="px" />
-      <RangeControl label="Offer X" value={poster.offerXOffset ?? 0} min={-1200} max={1200} onChange={(offerXOffset) => updatePoster({ offerXOffset })} suffix="px" />
-      <RangeControl label="Offer Y" value={poster.offerYOffset ?? 0} min={-1200} max={1200} onChange={(offerYOffset) => updatePoster({ offerYOffset })} suffix="px" />
+      <small>Every element moves independently. Moving the product image no longer moves names, descriptions or prices.</small>
+      <PositionPair label="Product image" x={poster.imageXOffset} y={poster.imageYOffset} onX={(imageXOffset) => updatePoster({ imageXOffset })} onY={(imageYOffset) => updatePoster({ imageYOffset })} />
+      <PositionPair label="Headline" x={poster.headlineXOffset} y={poster.headlineYOffset} onX={(headlineXOffset) => updatePoster({ headlineXOffset })} onY={(headlineYOffset) => updatePoster({ headlineYOffset })} />
+      <PositionPair label="Subheadline" x={poster.subheadlineXOffset} y={poster.subheadlineYOffset} onX={(subheadlineXOffset) => updatePoster({ subheadlineXOffset })} onY={(subheadlineYOffset) => updatePoster({ subheadlineYOffset })} />
+      <PositionPair label="Product name" x={poster.productNameXOffset} y={poster.productNameYOffset} onX={(productNameXOffset) => updatePoster({ productNameXOffset })} onY={(productNameYOffset) => updatePoster({ productNameYOffset })} />
+      <PositionPair label="English description" x={poster.descriptionEnXOffset} y={poster.descriptionEnYOffset} onX={(descriptionEnXOffset) => updatePoster({ descriptionEnXOffset })} onY={(descriptionEnYOffset) => updatePoster({ descriptionEnYOffset })} />
+      <PositionPair label="Georgian description" x={poster.descriptionGeXOffset} y={poster.descriptionGeYOffset} onX={(descriptionGeXOffset) => updatePoster({ descriptionGeXOffset })} onY={(descriptionGeYOffset) => updatePoster({ descriptionGeYOffset })} />
+      <PositionPair label="Current price" x={poster.currentPriceXOffset} y={poster.currentPriceYOffset} onX={(currentPriceXOffset) => updatePoster({ currentPriceXOffset })} onY={(currentPriceYOffset) => updatePoster({ currentPriceYOffset })} />
+      <PositionPair label="Old price" x={poster.oldPriceXOffset} y={poster.oldPriceYOffset} onX={(oldPriceXOffset) => updatePoster({ oldPriceXOffset })} onY={(oldPriceYOffset) => updatePoster({ oldPriceYOffset })} />
+      <PositionPair label="Offer badge" x={poster.offerXOffset} y={poster.offerYOffset} onX={(offerXOffset) => updatePoster({ offerXOffset })} onY={(offerYOffset) => updatePoster({ offerYOffset })} />
     </section>
   </>;
 }
