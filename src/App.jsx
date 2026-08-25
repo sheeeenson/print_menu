@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { A3PosterSection } from './a3-poster/A3PosterSection.jsx';
 import { ContentSection } from './components/ContentSection.jsx';
 import { LayoutPrintSection } from './components/LayoutPrintSection.jsx';
 import { MainNavigation } from './components/MainNavigation.jsx';
@@ -90,6 +91,10 @@ export function App() {
 
     if (project.selectedSection === APP_SECTIONS.SITE_BANNER) {
       return <SiteBannerSection project={project} />;
+    }
+
+    if (project.selectedSection === APP_SECTIONS.A3_POSTER) {
+      return <A3PosterSection project={project} />;
     }
 
     return <LayoutPrintSection project={project} actions={store.actions} />;

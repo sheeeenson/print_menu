@@ -10,7 +10,8 @@ export function MainNavigation({ snapshot, actions }) {
   const isImageMenu = project.selectedSection === APP_SECTIONS.IMAGE_MENU;
   const isTvPromo = project.selectedSection === APP_SECTIONS.TV_PROMO;
   const isSiteBanner = project.selectedSection === APP_SECTIONS.SITE_BANNER;
-  const canPrint = isLayout || isImageMenu;
+  const isA3Poster = project.selectedSection === APP_SECTIONS.A3_POSTER;
+  const canPrint = isLayout || isImageMenu || isA3Poster;
 
   const handleImportClick = () => {
     importInputRef.current?.click();
@@ -49,45 +50,14 @@ export function MainNavigation({ snapshot, actions }) {
         <span className="brand-mark" aria-label="Restaurant Menu Studio">✏️</span>
       </div>
       <div className="section-tabs" role="tablist" aria-label="Application sections">
-        <button
-          className={project.selectedSection === APP_SECTIONS.CONTENT ? 'active' : ''}
-          type="button"
-          onClick={() => actions.setSection(APP_SECTIONS.CONTENT)}
-        >
-          Content
-        </button>
-        <button
-          className={isLayout ? 'active' : ''}
-          type="button"
-          onClick={() => actions.setSection(APP_SECTIONS.LAYOUT_PRINT)}
-        >
-          Layout
-        </button>
-        <button
-          className={isImageMenu ? 'active' : ''}
-          type="button"
-          onClick={() => actions.setSection(APP_SECTIONS.IMAGE_MENU)}
-        >
-          Image Menu
-        </button>
-        <button
-          className={isTvPromo ? 'active' : ''}
-          type="button"
-          onClick={() => actions.setSection(APP_SECTIONS.TV_PROMO)}
-        >
-          TV Promo
-        </button>
-        <button
-          className={isSiteBanner ? 'active' : ''}
-          type="button"
-          onClick={() => actions.setSection(APP_SECTIONS.SITE_BANNER)}
-        >
-          Site Banner
-        </button>
+        <button className={project.selectedSection === APP_SECTIONS.CONTENT ? 'active' : ''} type="button" onClick={() => actions.setSection(APP_SECTIONS.CONTENT)}>Content</button>
+        <button className={isLayout ? 'active' : ''} type="button" onClick={() => actions.setSection(APP_SECTIONS.LAYOUT_PRINT)}>Layout</button>
+        <button className={isImageMenu ? 'active' : ''} type="button" onClick={() => actions.setSection(APP_SECTIONS.IMAGE_MENU)}>Image Menu</button>
+        <button className={isTvPromo ? 'active' : ''} type="button" onClick={() => actions.setSection(APP_SECTIONS.TV_PROMO)}>TV Promo</button>
+        <button className={isSiteBanner ? 'active' : ''} type="button" onClick={() => actions.setSection(APP_SECTIONS.SITE_BANNER)}>Site Banner</button>
+        <button className={isA3Poster ? 'active' : ''} type="button" onClick={() => actions.setSection(APP_SECTIONS.A3_POSTER)}>A3 Poster</button>
       </div>
-      <div className={`save-status ${saveStatusClass}`} aria-live="polite">
-        {saveStatus}
-      </div>
+      <div className={`save-status ${saveStatusClass}`} aria-live="polite">{saveStatus}</div>
       <details className="project-menu">
         <summary>Project</summary>
         <div className="project-menu-panel" aria-label="Project actions">
@@ -98,14 +68,7 @@ export function MainNavigation({ snapshot, actions }) {
           <button type="button" onClick={handleResetDemoData}>Reset demo data</button>
         </div>
       </details>
-      <input
-        ref={importInputRef}
-        type="file"
-        accept=".json,application/json"
-        className="visually-hidden-file"
-        onChange={handleImportChange}
-        tabIndex={-1}
-      />
+      <input ref={importInputRef} type="file" accept=".json,application/json" className="visually-hidden-file" onChange={handleImportChange} tabIndex={-1} />
     </nav>
   );
 }
