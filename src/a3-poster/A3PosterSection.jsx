@@ -1,6 +1,7 @@
 import html2canvas from 'html2canvas';
 import { useEffect, useMemo, useState } from 'react';
 import { extractGoogleDriveFileId, normalizeGoogleDriveImageUrl } from '../utils/imageUrls.js';
+import { A3PosterControls } from './A3PosterControls.jsx';
 import { A3PosterPreview } from './A3PosterPreview.jsx';
 import { A3_FORMATS, createA3Poster, getA3Format, loadA3PosterProject, saveA3PosterProject } from './a3PosterStorage.js';
 import './a3Poster.css';
@@ -90,9 +91,7 @@ async function exportPoster(poster, mimeType, extension) {
       allowTaint: false,
       logging: false,
     });
-    if (canvas.width !== format.width || canvas.height !== format.height) {
-      throw new Error(`Export size mismatch: ${canvas.width}x${canvas.height}.`);
-    }
+    if (canvas.width !== format.width || canvas.height !== format.height) throw new Error(`Export size mismatch: ${canvas.width}x${canvas.height}.`);
     const blob = await new Promise((resolve, reject) => canvas.toBlob((value) => value ? resolve(value) : reject(new Error('Could not create image file.')), mimeType, 0.95));
     const url = URL.createObjectURL(blob);
     downloadUrl(url, `${safeName(poster.name)}-${format.id}.${extension}`);
@@ -100,10 +99,6 @@ async function exportPoster(poster, mimeType, extension) {
   } finally {
     wrapper.remove();
   }
-}
-
-function RangeControl({ label, value, min, max, step = 1, suffix = '', onChange }) {
-  return <label className="app-field image-menu-control"><span>{label} <strong>{value}{suffix}</strong></span><input type="range" min={min} max={max} step={step} value={value} onChange={(event) => onChange(Number(event.target.value))} /></label>;
 }
 
 export function A3PosterSection({ project }) {
@@ -117,32 +112,26 @@ export function A3PosterSection({ project }) {
 
   const updateProject = (updater) => setA3Project((current) => updater(current));
   const updatePoster = (changes) => updateProject((current) => ({ ...current, posters: current.posters.map((poster) => poster.id === current.selectedPosterId ? { ...poster, ...changes } : poster) }));
-
   const addPoster = () => {
     const poster = createA3Poster(dishes, `A3 Poster ${a3Project.posters.length + 1}`);
     updateProject((current) => ({ ...current, posters: [...current.posters, poster], selectedPosterId: poster.id }));
   };
-
   const duplicatePoster = () => {
     const poster = { ...selectedPoster, id: `a3_${Math.random().toString(36).slice(2, 10)}`, name: `${selectedPoster.name} copy`, selectedDishIds: [...selectedPoster.selectedDishIds] };
     updateProject((current) => ({ ...current, posters: [...current.posters, poster], selectedPosterId: poster.id }));
   };
-
   const deletePoster = () => updateProject((current) => {
     if (current.posters.length <= 1) return current;
     const posters = current.posters.filter((poster) => poster.id !== current.selectedPosterId);
     return { ...current, posters, selectedPosterId: posters[0].id };
   });
-
   const handleTemplate = (template) => updatePoster({ template, selectedDishIds: selectedPoster.selectedDishIds.slice(0, maxItemsForTemplate(template)) });
-
   const toggleDish = (dishId) => {
     const selected = selectedPoster.selectedDishIds.includes(dishId);
     const max = maxItemsForTemplate(selectedPoster.template);
     const next = selected ? selectedPoster.selectedDishIds.filter((id) => id !== dishId) : [...selectedPoster.selectedDishIds, dishId].slice(-max);
     updatePoster({ selectedDishIds: next });
   };
-
   const handleExport = async (mimeType, extension) => {
     try {
       setExportStatus(`Preparing ${extension.toUpperCase()}...`);
@@ -156,83 +145,38 @@ export function A3PosterSection({ project }) {
 
   if (!selectedPoster) return null;
 
-  return (
-    <section className="app-page a3-poster-page">
-      <aside className="app-side-panel a3-poster-side-panel">
-        <header className="app-panel-header">
-          <p>Print image</p>
-          <h2>A3 Poster</h2>
-          <span>Create printable A3 images from the same product catalogue used across the app.</span>
-        </header>
+  return <section className="app-page a3-poster-page">
+    <aside className="app-side-panel a3-poster-side-panel">
+      <header className="app-panel-header"><p>Print image</p><h2>A3 Poster</h2><span>Create printable A3 images from the same product catalogue used across the app.</span></header>
 
-        <section className="app-control-group">
-          <div className="panel-title-row"><h3>Posters</h3><button type="button" className="primary-action compact" onClick={addPoster}>＋ Add</button></div>
-          <div className="a3-poster-list">
-            {a3Project.posters.map((poster) => <button key={poster.id} type="button" className={poster.id === selectedPoster.id ? 'selected' : ''} onClick={() => updateProject((current) => ({ ...current, selectedPosterId: poster.id }))}><strong>{poster.name}</strong><small>{getA3Format(poster.formatId).label}</small></button>)}
-          </div>
-          <div className="action-row"><button type="button" onClick={duplicatePoster}>Duplicate</button><button type="button" className="danger" onClick={deletePoster}>Delete</button></div>
-        </section>
+      <section className="app-control-group">
+        <div className="panel-title-row"><h3>Posters</h3><button type="button" className="primary-action compact" onClick={addPoster}>＋ Add</button></div>
+        <div className="a3-poster-list">{a3Project.posters.map((poster) => <button key={poster.id} type="button" className={poster.id === selectedPoster.id ? 'selected' : ''} onClick={() => updateProject((current) => ({ ...current, selectedPosterId: poster.id }))}><strong>{poster.name}</strong><small>{getA3Format(poster.formatId).label}</small></button>)}</div>
+        <div className="action-row"><button type="button" onClick={duplicatePoster}>Duplicate</button><button type="button" className="danger" onClick={deletePoster}>Delete</button></div>
+      </section>
 
-        <section className="app-control-group">
-          <h3>Format</h3>
-          <div className="a3-poster-format-row">{A3_FORMATS.map((format) => <button key={format.id} type="button" className={selectedPoster.formatId === format.id ? 'active' : ''} onClick={() => updatePoster({ formatId: format.id })}>{format.label}</button>)}</div>
-        </section>
+      <section className="app-control-group"><h3>Format</h3><div className="a3-poster-format-row">{A3_FORMATS.map((format) => <button key={format.id} type="button" className={selectedPoster.formatId === format.id ? 'active' : ''} onClick={() => updatePoster({ formatId: format.id })}>{format.label}</button>)}</div></section>
 
-        <section className="app-control-group">
-          <h3>Layout</h3>
-          <div className="a3-template-row">
-            <button type="button" className={selectedPoster.template === 'single' ? 'active' : ''} onClick={() => handleTemplate('single')}>1 product</button>
-            <button type="button" className={selectedPoster.template === 'two' ? 'active' : ''} onClick={() => handleTemplate('two')}>2 products</button>
-            <button type="button" className={selectedPoster.template === 'four' ? 'active' : ''} onClick={() => handleTemplate('four')}>4 products</button>
-          </div>
-        </section>
+      <section className="app-control-group"><h3>Layout</h3><div className="a3-template-row"><button type="button" className={selectedPoster.template === 'single' ? 'active' : ''} onClick={() => handleTemplate('single')}>1 product</button><button type="button" className={selectedPoster.template === 'two' ? 'active' : ''} onClick={() => handleTemplate('two')}>2 products</button><button type="button" className={selectedPoster.template === 'four' ? 'active' : ''} onClick={() => handleTemplate('four')}>4 products</button></div></section>
 
-        <section className="app-control-group">
-          <h3>Catalogue</h3>
-          <small>{selectedPoster.selectedDishIds.length}/{maxItemsForTemplate(selectedPoster.template)} selected</small>
-          <div className="a3-dish-picker">
-            {categories.map((category) => {
-              const categoryDishes = dishes.filter((dish) => dish.categoryId === category.id);
-              if (!categoryDishes.length) return null;
-              return <div key={category.id}><div className="a3-category-title">{category.nameEn || category.nameGe || 'Category'}</div>{categoryDishes.map((dish) => { const selected = selectedPoster.selectedDishIds.includes(dish.id); const imageUrl = normalizeGoogleDriveImageUrl(dish.imageUrl); return <label key={dish.id} className={selected ? 'selected' : ''}><input type="checkbox" checked={selected} onChange={() => toggleDish(dish.id)} /><img src={imageUrl} alt="" /><span><strong>{dish.nameEn || dish.nameGe}</strong><small>{dish.nameGe}</small></span></label>; })}</div>;
-            })}
-          </div>
-        </section>
+      <section className="app-control-group">
+        <h3>Catalogue</h3><small>{selectedPoster.selectedDishIds.length}/{maxItemsForTemplate(selectedPoster.template)} selected</small>
+        <div className="a3-dish-picker">{categories.map((category) => {
+          const categoryDishes = dishes.filter((dish) => dish.categoryId === category.id);
+          if (!categoryDishes.length) return null;
+          return <div key={category.id}><div className="a3-category-title">{category.nameEn || category.nameGe || 'Category'}</div>{categoryDishes.map((dish) => {
+            const selected = selectedPoster.selectedDishIds.includes(dish.id);
+            const imageUrl = normalizeGoogleDriveImageUrl(dish.imageUrl);
+            return <label key={dish.id} className={selected ? 'selected' : ''}><input type="checkbox" checked={selected} onChange={() => toggleDish(dish.id)} /><img src={imageUrl} alt="" /><span><strong>{dish.nameEn || dish.nameGe}</strong><small>{dish.nameGe}</small></span></label>;
+          })}</div>;
+        })}</div>
+      </section>
 
-        <section className="app-control-group">
-          <h3>Copy</h3>
-          <label className="app-field"><span>Poster name</span><input value={selectedPoster.name} onChange={(event) => updatePoster({ name: event.target.value })} /></label>
-          <label className="app-field"><span>Headline</span><input value={selectedPoster.headline} placeholder="Uses first product name when empty" onChange={(event) => updatePoster({ headline: event.target.value })} /></label>
-          <label className="app-field"><span>Subheadline</span><input value={selectedPoster.subheadline} placeholder="Optional" onChange={(event) => updatePoster({ subheadline: event.target.value })} /></label>
-          <label className="app-toggle"><input type="checkbox" checked={selectedPoster.showPrice} onChange={(event) => updatePoster({ showPrice: event.target.checked })} /><span>Show price</span></label>
-        </section>
+      <A3PosterControls poster={selectedPoster} updatePoster={updatePoster} />
 
-        <section className="app-control-group">
-          <h3>Appearance</h3>
-          <label className="app-toggle"><input type="checkbox" checked={selectedPoster.autoBackground ?? true} onChange={(event) => updatePoster({ autoBackground: event.target.checked })} /><span>Auto background from dish image</span></label>
-          <RangeControl label="Background tone" value={selectedPoster.backgroundTone ?? 0} min={-40} max={40} onChange={(backgroundTone) => updatePoster({ backgroundTone })} />
-          <label className="app-field"><span>Manual background</span><input type="color" value={selectedPoster.backgroundColor} disabled={selectedPoster.autoBackground ?? true} onChange={(event) => updatePoster({ backgroundColor: event.target.value })} /></label>
-          <label className="app-field"><span>Text</span><input type="color" value={selectedPoster.textColor} onChange={(event) => updatePoster({ textColor: event.target.value })} /></label>
-          <label className="app-field"><span>Accent</span><input type="color" value={selectedPoster.accentColor} onChange={(event) => updatePoster({ accentColor: event.target.value })} /></label>
-          <RangeControl label="Headline size" value={selectedPoster.headlineSize} min={100} max={360} onChange={(headlineSize) => updatePoster({ headlineSize })} suffix="px" />
-          <RangeControl label="Subheadline size" value={selectedPoster.subheadlineSize} min={40} max={180} onChange={(subheadlineSize) => updatePoster({ subheadlineSize })} suffix="px" />
-          <RangeControl label="Price size" value={selectedPoster.priceSize} min={70} max={260} onChange={(priceSize) => updatePoster({ priceSize })} suffix="px" />
-          <RangeControl label="Product size" value={selectedPoster.imageScale} min={0.6} max={1.5} step={0.05} onChange={(imageScale) => updatePoster({ imageScale })} />
-          <RangeControl label="Products Y" value={selectedPoster.imageYOffset} min={-500} max={500} onChange={(imageYOffset) => updatePoster({ imageYOffset })} suffix="px" />
-          <RangeControl label="Text Y" value={selectedPoster.contentYOffset} min={-300} max={400} onChange={(contentYOffset) => updatePoster({ contentYOffset })} suffix="px" />
-        </section>
+      <section className="app-control-group"><h3>Download</h3><div className="a3-export-row"><button type="button" onClick={() => handleExport('image/png', 'png')}>PNG</button><button type="button" onClick={() => handleExport('image/jpeg', 'jpg')}>JPG</button><button type="button" onClick={() => window.print()}>Print / PDF</button></div>{exportStatus ? <small className="app-preview-size">{exportStatus}</small> : null}</section>
+    </aside>
 
-        <section className="app-control-group">
-          <h3>Download</h3>
-          <div className="a3-export-row"><button type="button" onClick={() => handleExport('image/png', 'png')}>PNG</button><button type="button" onClick={() => handleExport('image/jpeg', 'jpg')}>JPG</button><button type="button" onClick={() => window.print()}>Print / PDF</button></div>
-          {exportStatus ? <small className="app-preview-size">{exportStatus}</small> : null}
-        </section>
-      </aside>
-
-      <main className="app-preview-stage a3-poster-preview-stage">
-        <div className="app-toolbar"><div><p>Preview</p><h2>{selectedPoster.name}</h2></div><div className="app-pill">{getA3Format(selectedPoster.formatId).label}</div></div>
-        <A3PosterPreview poster={selectedPoster} dishes={dishes} />
-      </main>
-    </section>
-  );
+    <main className="app-preview-stage a3-poster-preview-stage"><div className="app-toolbar"><div><p>Preview</p><h2>{selectedPoster.name}</h2></div><div className="app-pill">{getA3Format(selectedPoster.formatId).label}</div></div><A3PosterPreview poster={selectedPoster} dishes={dishes} /></main>
+  </section>;
 }
