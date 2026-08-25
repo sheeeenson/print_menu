@@ -11,8 +11,10 @@ export function A3PosterControls({ poster, updatePoster }) {
     <section className="app-control-group">
       <h3>Copy & product data</h3>
       <label className="app-field"><span>Poster name</span><input value={poster.name} onChange={(event) => updatePoster({ name: event.target.value })} /></label>
-      <label className="app-field"><span>Headline</span><input value={poster.headline} placeholder="Uses first product name when empty" onChange={(event) => updatePoster({ headline: event.target.value })} /></label>
+      <label className="app-field"><span>Headline</span><input value={poster.headline} placeholder="Optional — empty means no headline" onChange={(event) => updatePoster({ headline: event.target.value })} /></label>
       <label className="app-field"><span>Subheadline</span><input value={poster.subheadline} placeholder="Optional" onChange={(event) => updatePoster({ subheadline: event.target.value })} /></label>
+      <label className="app-toggle"><input type="checkbox" checked={poster.showProductNameEn ?? true} onChange={(event) => updatePoster({ showProductNameEn: event.target.checked })} /><span>Show English product name</span></label>
+      <label className="app-toggle"><input type="checkbox" checked={poster.showProductNameGe ?? true} onChange={(event) => updatePoster({ showProductNameGe: event.target.checked })} /><span>Show Georgian product name</span></label>
       <label className="app-toggle"><input type="checkbox" checked={poster.showPrice} onChange={(event) => updatePoster({ showPrice: event.target.checked })} /><span>Show current price</span></label>
       <label className="app-toggle"><input type="checkbox" checked={poster.showOldPrice ?? true} onChange={(event) => updatePoster({ showOldPrice: event.target.checked })} /><span>Show crossed old price when available</span></label>
       <label className="app-toggle"><input type="checkbox" checked={poster.showDescriptionEn ?? false} onChange={(event) => updatePoster({ showDescriptionEn: event.target.checked })} /><span>Show English description</span></label>
@@ -36,7 +38,8 @@ export function A3PosterControls({ poster, updatePoster }) {
       <label className="app-field"><span>Accent / offer badge</span><input type="color" value={poster.accentColor} onChange={(event) => updatePoster({ accentColor: event.target.value })} /></label>
       <RangeControl label="Headline size" value={poster.headlineSize} min={100} max={360} onChange={(headlineSize) => updatePoster({ headlineSize })} suffix="px" />
       <RangeControl label="Subheadline size" value={poster.subheadlineSize} min={40} max={180} onChange={(subheadlineSize) => updatePoster({ subheadlineSize })} suffix="px" />
-      <RangeControl label="Product name size" value={poster.productNameSize ?? 86} min={36} max={180} onChange={(productNameSize) => updatePoster({ productNameSize })} suffix="px" />
+      <RangeControl label="English product name size" value={poster.productNameSize ?? 86} min={36} max={180} onChange={(productNameSize) => updatePoster({ productNameSize })} suffix="px" />
+      <RangeControl label="Georgian product name size" value={poster.productNameGeSize ?? 62} min={28} max={160} onChange={(productNameGeSize) => updatePoster({ productNameGeSize })} suffix="px" />
       <RangeControl label="Description size" value={poster.descriptionSize ?? 48} min={24} max={110} onChange={(descriptionSize) => updatePoster({ descriptionSize })} suffix="px" />
       <RangeControl label="Price size" value={poster.priceSize} min={70} max={260} onChange={(priceSize) => updatePoster({ priceSize })} suffix="px" />
       <RangeControl label="Old price size" value={poster.oldPriceSize ?? 82} min={36} max={160} onChange={(oldPriceSize) => updatePoster({ oldPriceSize })} suffix="px" />
@@ -49,7 +52,8 @@ export function A3PosterControls({ poster, updatePoster }) {
       <PositionPair label="Product image" x={poster.imageXOffset} y={poster.imageYOffset} onX={(imageXOffset) => updatePoster({ imageXOffset })} onY={(imageYOffset) => updatePoster({ imageYOffset })} />
       <PositionPair label="Headline" x={poster.headlineXOffset} y={poster.headlineYOffset} onX={(headlineXOffset) => updatePoster({ headlineXOffset })} onY={(headlineYOffset) => updatePoster({ headlineYOffset })} />
       <PositionPair label="Subheadline" x={poster.subheadlineXOffset} y={poster.subheadlineYOffset} onX={(subheadlineXOffset) => updatePoster({ subheadlineXOffset })} onY={(subheadlineYOffset) => updatePoster({ subheadlineYOffset })} />
-      <PositionPair label="Product name" x={poster.productNameXOffset} y={poster.productNameYOffset} onX={(productNameXOffset) => updatePoster({ productNameXOffset })} onY={(productNameYOffset) => updatePoster({ productNameYOffset })} />
+      <PositionPair label="English product name" x={poster.productNameXOffset} y={poster.productNameYOffset} onX={(productNameXOffset) => updatePoster({ productNameXOffset })} onY={(productNameYOffset) => updatePoster({ productNameYOffset })} />
+      <PositionPair label="Georgian product name" x={poster.productNameGeXOffset} y={poster.productNameGeYOffset} onX={(productNameGeXOffset) => updatePoster({ productNameGeXOffset })} onY={(productNameGeYOffset) => updatePoster({ productNameGeYOffset })} />
       <PositionPair label="English description" x={poster.descriptionEnXOffset} y={poster.descriptionEnYOffset} onX={(descriptionEnXOffset) => updatePoster({ descriptionEnXOffset })} onY={(descriptionEnYOffset) => updatePoster({ descriptionEnYOffset })} />
       <PositionPair label="Georgian description" x={poster.descriptionGeXOffset} y={poster.descriptionGeYOffset} onX={(descriptionGeXOffset) => updatePoster({ descriptionGeXOffset })} onY={(descriptionGeYOffset) => updatePoster({ descriptionGeYOffset })} />
       <PositionPair label="Current price" x={poster.currentPriceXOffset} y={poster.currentPriceYOffset} onX={(currentPriceXOffset) => updatePoster({ currentPriceXOffset })} onY={(currentPriceYOffset) => updatePoster({ currentPriceYOffset })} />
