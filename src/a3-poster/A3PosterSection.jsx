@@ -1,5 +1,6 @@
 import html2canvas from 'html2canvas';
 import { useEffect, useMemo, useState } from 'react';
+import { extractGoogleDriveFileId, normalizeGoogleDriveImageUrl } from '../utils/imageUrls.js';
 import { A3PosterPreview } from './A3PosterPreview.jsx';
 import { A3_FORMATS, createA3Poster, getA3Format, loadA3PosterProject, saveA3PosterProject } from './a3PosterStorage.js';
 import './a3Poster.css';
@@ -23,19 +24,29 @@ const blobToDataUrl = (blob) => new Promise((resolve, reject) => {
   reader.readAsDataURL(blob);
 });
 
+const getCanvasSafeImageUrl = (value = '') => {
+  const source = String(value || '').trim();
+  if (!source || source.startsWith('data:') || source.startsWith('blob:')) return source;
+  const driveId = extractGoogleDriveFileId(source);
+  return driveId ? `/api/drive-media?id=${encodeURIComponent(driveId)}&type=image` : source;
+};
+
 const embedImages = async (clone) => {
   const images = Array.from(clone.querySelectorAll('img'));
   await Promise.all(images.map(async (image) => {
-    const source = image.getAttribute('src') || '';
+    const source = image.getAttribute('src') || image.currentSrc || '';
     if (!source || source.startsWith('data:')) return;
-    try {
-      const response = await fetch(source, { credentials: 'same-origin', cache: 'reload' });
-      if (!response.ok) return;
-      image.src = await blobToDataUrl(await response.blob());
-      if (typeof image.decode === 'function') await image.decode().catch(() => undefined);
-    } catch {
-      // html2canvas can still use images from CORS-enabled hosts.
-    }
+    const response = await fetch(getCanvasSafeImageUrl(source), {
+      credentials: 'same-origin',
+      cache: 'reload',
+      headers: { Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8' },
+    });
+    if (!response.ok) throw new Error(`Could not load poster image: HTTP ${response.status}`);
+    const blob = await response.blob();
+    if (!blob.size) throw new Error('Poster image is empty.');
+    image.removeAttribute('crossorigin');
+    image.src = await blobToDataUrl(blob);
+    if (typeof image.decode === 'function') await image.decode().catch(() => undefined);
   }));
 };
 
@@ -75,10 +86,13 @@ async function exportPoster(poster, mimeType, extension) {
       scrollX: 0,
       scrollY: 0,
       scale: 1,
-      useCORS: true,
+      useCORS: false,
       allowTaint: false,
       logging: false,
     });
+    if (canvas.width !== format.width || canvas.height !== format.height) {
+      throw new Error(`Export size mismatch: ${canvas.width}x${canvas.height}.`);
+    }
     const blob = await new Promise((resolve, reject) => canvas.toBlob((value) => value ? resolve(value) : reject(new Error('Could not create image file.')), mimeType, 0.95));
     const url = URL.createObjectURL(blob);
     downloadUrl(url, `${safeName(poster.name)}-${format.id}.${extension}`);
@@ -180,7 +194,7 @@ export function A3PosterSection({ project }) {
             {categories.map((category) => {
               const categoryDishes = dishes.filter((dish) => dish.categoryId === category.id);
               if (!categoryDishes.length) return null;
-              return <div key={category.id}><div className="a3-category-title">{category.nameEn || category.nameGe || 'Category'}</div>{categoryDishes.map((dish) => { const selected = selectedPoster.selectedDishIds.includes(dish.id); return <label key={dish.id} className={selected ? 'selected' : ''}><input type="checkbox" checked={selected} onChange={() => toggleDish(dish.id)} /><img src={dish.imageUrl} alt="" /><span><strong>{dish.nameEn || dish.nameGe}</strong><small>{dish.nameGe}</small></span></label>; })}</div>;
+              return <div key={category.id}><div className="a3-category-title">{category.nameEn || category.nameGe || 'Category'}</div>{categoryDishes.map((dish) => { const selected = selectedPoster.selectedDishIds.includes(dish.id); const imageUrl = normalizeGoogleDriveImageUrl(dish.imageUrl); return <label key={dish.id} className={selected ? 'selected' : ''}><input type="checkbox" checked={selected} onChange={() => toggleDish(dish.id)} /><img src={imageUrl} alt="" /><span><strong>{dish.nameEn || dish.nameGe}</strong><small>{dish.nameGe}</small></span></label>; })}</div>;
             })}
           </div>
         </section>
