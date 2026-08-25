@@ -78,7 +78,7 @@ async function exportPoster(poster, mimeType, extension) {
   try {
     await embedImages(clone);
     const canvas = await html2canvas(clone, {
-      backgroundColor: poster.backgroundColor,
+      backgroundColor: null,
       width: format.width,
       height: format.height,
       windowWidth: format.width,
@@ -209,7 +209,9 @@ export function A3PosterSection({ project }) {
 
         <section className="app-control-group">
           <h3>Appearance</h3>
-          <label className="app-field"><span>Background</span><input type="color" value={selectedPoster.backgroundColor} onChange={(event) => updatePoster({ backgroundColor: event.target.value })} /></label>
+          <label className="app-toggle"><input type="checkbox" checked={selectedPoster.autoBackground ?? true} onChange={(event) => updatePoster({ autoBackground: event.target.checked })} /><span>Auto background from dish image</span></label>
+          <RangeControl label="Background tone" value={selectedPoster.backgroundTone ?? 0} min={-40} max={40} onChange={(backgroundTone) => updatePoster({ backgroundTone })} />
+          <label className="app-field"><span>Manual background</span><input type="color" value={selectedPoster.backgroundColor} disabled={selectedPoster.autoBackground ?? true} onChange={(event) => updatePoster({ backgroundColor: event.target.value })} /></label>
           <label className="app-field"><span>Text</span><input type="color" value={selectedPoster.textColor} onChange={(event) => updatePoster({ textColor: event.target.value })} /></label>
           <label className="app-field"><span>Accent</span><input type="color" value={selectedPoster.accentColor} onChange={(event) => updatePoster({ accentColor: event.target.value })} /></label>
           <RangeControl label="Headline size" value={selectedPoster.headlineSize} min={100} max={360} onChange={(headlineSize) => updatePoster({ headlineSize })} suffix="px" />
