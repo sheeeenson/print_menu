@@ -1,3 +1,4 @@
+import { normalizeGoogleDriveImageUrl } from '../utils/imageUrls.js';
 import { getA3Format } from './a3PosterStorage.js';
 
 const getPrice = (dish) => {
@@ -34,17 +35,20 @@ export function A3PosterPreview({ poster, dishes }) {
           </div>
 
           <div className="a3-products" style={{ transform: `translateY(${poster.imageYOffset}px)` }}>
-            {selectedDishes.map((dish) => (
-              <div key={dish.id} className="a3-product-card">
-                <div className="a3-product-image-wrap">
-                  {dish.imageUrl ? <img className="a3-product-image" src={dish.imageUrl} alt="" style={{ transform: `scale(${poster.imageScale})` }} /> : null}
+            {selectedDishes.map((dish) => {
+              const imageUrl = normalizeGoogleDriveImageUrl(dish.imageUrl);
+              return (
+                <div key={dish.id} className="a3-product-card">
+                  <div className="a3-product-image-wrap">
+                    {imageUrl ? <img className="a3-product-image" src={imageUrl} alt="" style={{ transform: `scale(${poster.imageScale})` }} /> : null}
+                  </div>
+                  <div className="a3-product-meta">
+                    <strong>{dish.nameEn || dish.nameGe || 'Untitled'}</strong>
+                    {poster.showPrice && getPrice(dish) ? <span style={{ fontSize: `${poster.priceSize}px` }}>{getPrice(dish)}</span> : null}
+                  </div>
                 </div>
-                <div className="a3-product-meta">
-                  <strong>{dish.nameEn || dish.nameGe || 'Untitled'}</strong>
-                  {poster.showPrice && getPrice(dish) ? <span style={{ fontSize: `${poster.priceSize}px` }}>{getPrice(dish)}</span> : null}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </article>
       </div>
