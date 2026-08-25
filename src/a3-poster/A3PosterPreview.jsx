@@ -3,11 +3,19 @@ import { getFallbackImageBackground, sampleImageAutofillColor } from '../utils/i
 import { normalizeGoogleDriveImageUrl } from '../utils/imageUrls.js';
 import { getA3Format } from './a3PosterStorage.js';
 
-const getPrice = (dish) => {
-  const variant = (dish?.priceVariants ?? []).find((item) => Number(item?.newPrice ?? item?.price ?? item?.oldPrice) > 0);
-  const value = dish?.newPrice ?? variant?.newPrice ?? variant?.price ?? dish?.price;
+const formatPrice = (value) => {
   const number = Number(value);
   return Number.isFinite(number) && number > 0 ? `${number.toFixed(2)}₾` : '';
+};
+
+const getPriceData = (dish) => {
+  const variant = (dish?.priceVariants ?? []).find((item) => Number(item?.newPrice ?? item?.price ?? item?.oldPrice) > 0);
+  const newValue = dish?.newPrice ?? variant?.newPrice ?? variant?.price ?? dish?.price;
+  const oldValue = dish?.oldPrice ?? variant?.oldPrice;
+  return {
+    current: formatPrice(newValue),
+    old: formatPrice(oldValue),
+  };
 };
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, Number(value)));
@@ -92,22 +100,46 @@ export function A3PosterPreview({ poster, dishes }) {
             '--a3-accent': poster.accentColor,
           }}
         >
-          <div className="a3-copy" style={{ transform: `translateY(${poster.contentYOffset}px)` }}>
+          {poster.showOffer && poster.offerText ? (
+            <div
+              className="a3-offer-badge"
+              style={{
+                transform: `translate(${poster.offerXOffset ?? 0}px, ${poster.offerYOffset ?? 0}px)`,
+                background: poster.accentColor,
+                color: poster.offerTextColor,
+                fontSize: `${poster.offerSize}px`,
+              }}
+            >
+              {poster.offerText}
+            </div>
+          ) : null}
+
+          <div className="a3-copy" style={{ transform: `translate(${poster.contentXOffset ?? 0}px, ${poster.contentYOffset}px)` }}>
             <h2 style={{ fontSize: `${poster.headlineSize}px` }}>{headline}</h2>
             {poster.subheadline ? <p style={{ fontSize: `${poster.subheadlineSize}px` }}>{poster.subheadline}</p> : null}
           </div>
 
-          <div className="a3-products" style={{ transform: `translateY(${poster.imageYOffset}px)` }}>
+          <div className="a3-products" style={{ transform: `translate(${poster.imageXOffset ?? 0}px, ${poster.imageYOffset}px)` }}>
             {selectedDishes.map((dish) => {
               const imageUrl = normalizeGoogleDriveImageUrl(dish.imageUrl);
+              const price = getPriceData(dish);
               return (
                 <div key={dish.id} className="a3-product-card">
                   <div className="a3-product-image-wrap">
                     {imageUrl ? <img className="a3-product-image" src={imageUrl} alt="" style={{ transform: `scale(${poster.imageScale})` }} /> : null}
                   </div>
-                  <div className="a3-product-meta">
-                    <strong>{dish.nameEn || dish.nameGe || 'Untitled'}</strong>
-                    {poster.showPrice && getPrice(dish) ? <span style={{ fontSize: `${poster.priceSize}px` }}>{getPrice(dish)}</span> : null}
+                  <div className="a3-product-meta" style={{ transform: `translate(${poster.metaXOffset ?? 0}px, ${poster.metaYOffset ?? 0}px)` }}>
+                    <div className="a3-product-copy">
+                      <strong style={{ fontSize: `${poster.productNameSize}px` }}>{dish.nameEn || dish.nameGe || 'Untitled'}</strong>
+                      {poster.showDescriptionEn && dish.descriptionEn ? <p style={{ fontSize: `${poster.descriptionSize}px` }}>{dish.descriptionEn}</p> : null}
+                      {poster.showDescriptionGe && dish.descriptionGe ? <p className="a3-description-ge" style={{ fontSize: `${poster.descriptionSize}px` }}>{dish.descriptionGe}</p> : null}
+                    </div>
+                    {poster.showPrice && price.current ? (
+                      <div className="a3-price-block">
+                        {poster.showOldPrice && price.old ? <span className="a3-old-price" style={{ fontSize: `${poster.oldPriceSize}px` }}>{price.old}</span> : null}
+                        <span className="a3-current-price" style={{ fontSize: `${poster.priceSize}px` }}>{price.current}</span>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               );

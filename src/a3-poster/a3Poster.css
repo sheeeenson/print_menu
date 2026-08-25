@@ -8,9 +8,10 @@
 .a3-poster-format-row button.active,.a3-template-row button.active{background:#111;color:#fff}
 .a3-poster-canvas-wrap{position:relative;overflow:hidden;background:#ddd;box-shadow:0 18px 54px rgba(0,0,0,.16)}
 .a3-poster-scene{position:absolute;left:0;top:0;transform-origin:top left;overflow:hidden;font-family:Inter,Arial,sans-serif}
-.a3-copy{position:absolute;left:7%;right:7%;top:5.5%;z-index:2}
+.a3-copy{position:absolute;left:7%;right:7%;top:5.5%;z-index:3}
 .a3-copy h2{margin:0;font-weight:900;line-height:.92;letter-spacing:-.045em;max-width:88%}
 .a3-copy p{margin:.36em 0 0;max-width:72%;line-height:1.15;font-weight:500}
+.a3-offer-badge{position:absolute;right:6%;top:6%;z-index:5;max-width:42%;padding:.32em .58em;border-radius:.42em;font-weight:900;line-height:.95;letter-spacing:-.03em;white-space:pre-line;text-align:center}
 .a3-products{position:absolute;left:6%;right:6%;top:28%;bottom:6%;display:grid;gap:2.5%;align-items:stretch}
 .a3-template-single .a3-products{grid-template-columns:1fr}
 .a3-template-two .a3-products{grid-template-columns:repeat(2,1fr)}
@@ -18,9 +19,15 @@
 .a3-product-card{min-width:0;display:flex;flex-direction:column;position:relative}
 .a3-product-image-wrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:visible}
 .a3-product-image{width:88%;height:88%;object-fit:contain;display:block;transform-origin:center}
-.a3-product-meta{display:flex;align-items:flex-end;justify-content:space-between;gap:28px;padding:12px 3% 0}
-.a3-product-meta strong{font-size:86px;line-height:1;font-weight:800;max-width:70%}
-.a3-product-meta span{font-weight:900;line-height:1;color:var(--a3-accent)}
+.a3-product-meta{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:42px;padding:18px 3% 0;position:relative;z-index:2}
+.a3-product-copy{min-width:0}
+.a3-product-meta strong{display:block;line-height:1;font-weight:800;max-width:100%}
+.a3-product-copy p{margin:.32em 0 0;max-width:95%;line-height:1.18;font-weight:500}
+.a3-description-ge{font-family:Inter,Arial,sans-serif}
+.a3-price-block{display:flex;flex-direction:column;align-items:flex-end;gap:10px;white-space:nowrap}
+.a3-current-price{font-weight:900;line-height:.9;color:var(--a3-accent)}
+.a3-old-price{position:relative;display:inline-block;font-weight:700;line-height:1;color:inherit;opacity:.68}
+.a3-old-price::after{content:"";position:absolute;left:-4%;right:-4%;top:52%;height:7px;background:currentColor;transform:rotate(-8deg);transform-origin:center;border-radius:999px}
 .a3-dish-picker{display:grid;gap:6px;max-height:360px;overflow:auto}
 .a3-dish-picker label{display:grid;grid-template-columns:auto 52px 1fr;align-items:center;gap:10px;padding:8px;border-radius:9px}
 .a3-dish-picker label.selected{background:rgba(0,0,0,.06)}
