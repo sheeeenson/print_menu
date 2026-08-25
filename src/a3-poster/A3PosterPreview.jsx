@@ -45,7 +45,7 @@ export function A3PosterPreview({ poster, dishes }) {
   const selectedDishes = useMemo(() => poster.selectedDishIds.map((id) => dishes.find((dish) => dish.id === id)).filter(Boolean), [poster.selectedDishIds, dishes]);
   const previewScale = format.previewWidth / format.width;
   const template = poster.template || 'single';
-  const headline = String(poster.headline || '').trim();
+  const singleDish = template === 'single' ? selectedDishes[0] : null;
   const [sampledBackground, setSampledBackground] = useState('');
   const autoBackground = poster.autoBackground ?? true;
   const imageUrls = useMemo(() => selectedDishes.map((dish) => normalizeGoogleDriveImageUrl(dish.imageUrl)).filter(Boolean), [selectedDishes]);
@@ -68,34 +68,40 @@ export function A3PosterPreview({ poster, dishes }) {
   }, [autoBackground, imageKey, poster.backgroundTone]);
 
   const background = autoBackground ? sampledBackground || applyTone(poster.backgroundColor || '#f4efe8', poster.backgroundTone ?? 0) : poster.backgroundColor;
+  const showTopTitle = Boolean(singleDish && ((poster.showProductNameEn !== false && singleDish.nameEn) || (poster.showProductNameGe !== false && singleDish.nameGe)));
+  const showTopRow = showTopTitle || (poster.showOffer && poster.offerText);
 
   return (
     <section className="app-preview-shell" aria-label="A3 poster preview">
       <div className="app-canvas-wrap a3-poster-canvas-wrap" style={{ width: `${format.previewWidth}px`, aspectRatio: `${format.width} / ${format.height}` }}>
         <article className={`a3-poster-scene a3-template-${template}`} style={{ width: `${format.width}px`, height: `${format.height}px`, transform: `scale(${previewScale})`, background, color: poster.textColor, '--a3-accent': poster.accentColor }}>
-          {(headline || (poster.showOffer && poster.offerText)) ? (
-            <div className="a3-headline-row">
-              {headline ? <h2 className="a3-headline" style={{ fontSize: `${poster.headlineSize}px`, transform: move(poster.headlineXOffset, poster.headlineYOffset) }}>{headline}</h2> : <span className="a3-headline-spacer" />}
+          {showTopRow ? (
+            <div className="a3-title-row">
+              {showTopTitle ? (
+                <div className="a3-title-copy">
+                  {poster.showProductNameEn !== false && singleDish.nameEn ? <strong className="a3-title-name a3-title-name-en" style={{ fontSize: `${poster.productNameSize}px`, transform: move(poster.productNameXOffset, poster.productNameYOffset) }}>{singleDish.nameEn}</strong> : null}
+                  {poster.showProductNameGe !== false && singleDish.nameGe ? <strong className="a3-title-name a3-title-name-ge" style={{ fontSize: `${poster.productNameGeSize ?? 62}px`, transform: move(poster.productNameGeXOffset, poster.productNameGeYOffset) }}>{singleDish.nameGe}</strong> : null}
+                </div>
+              ) : <span className="a3-title-spacer" />}
               {poster.showOffer && poster.offerText ? (
                 <div className="a3-offer-badge" style={{ transform: move(poster.offerXOffset, poster.offerYOffset), background: poster.accentColor, color: poster.offerTextColor, fontSize: `${poster.offerSize}px` }}>{poster.offerText}</div>
               ) : null}
             </div>
           ) : null}
 
-          {poster.subheadline ? <p className="a3-subheadline" style={{ fontSize: `${poster.subheadlineSize}px`, transform: move(poster.subheadlineXOffset, poster.subheadlineYOffset) }}>{poster.subheadline}</p> : null}
-
           <div className="a3-products">
             {selectedDishes.map((dish) => {
               const imageUrl = normalizeGoogleDriveImageUrl(dish.imageUrl);
               const price = getPriceData(dish);
+              const showCardNames = template !== 'single';
               return (
                 <div key={dish.id} className="a3-product-card">
                   <div className="a3-product-image-wrap">
                     {imageUrl ? <img className="a3-product-image" src={imageUrl} alt="" style={{ transform: `${move(poster.imageXOffset, poster.imageYOffset)} scale(${poster.imageScale})` }} /> : null}
                   </div>
 
-                  {poster.showProductNameEn !== false && dish.nameEn ? <strong className="a3-product-name a3-product-name-en" style={{ fontSize: `${poster.productNameSize}px`, transform: move(poster.productNameXOffset, poster.productNameYOffset) }}>{dish.nameEn}</strong> : null}
-                  {poster.showProductNameGe !== false && dish.nameGe ? <strong className="a3-product-name a3-product-name-ge" style={{ fontSize: `${poster.productNameGeSize ?? 62}px`, transform: move(poster.productNameGeXOffset, poster.productNameGeYOffset) }}>{dish.nameGe}</strong> : null}
+                  {showCardNames && poster.showProductNameEn !== false && dish.nameEn ? <strong className="a3-product-name a3-product-name-en" style={{ fontSize: `${poster.productNameSize}px`, transform: move(poster.productNameXOffset, poster.productNameYOffset) }}>{dish.nameEn}</strong> : null}
+                  {showCardNames && poster.showProductNameGe !== false && dish.nameGe ? <strong className="a3-product-name a3-product-name-ge" style={{ fontSize: `${poster.productNameGeSize ?? 62}px`, transform: move(poster.productNameGeXOffset, poster.productNameGeYOffset) }}>{dish.nameGe}</strong> : null}
 
                   {poster.showDescriptionEn && dish.descriptionEn ? <p className="a3-product-description a3-description-en" style={{ fontSize: `${poster.descriptionSize}px`, transform: move(poster.descriptionEnXOffset, poster.descriptionEnYOffset) }}>{dish.descriptionEn}</p> : null}
                   {poster.showDescriptionGe && dish.descriptionGe ? <p className="a3-product-description a3-description-ge" style={{ fontSize: `${poster.descriptionSize}px`, transform: move(poster.descriptionGeXOffset, poster.descriptionGeYOffset) }}>{dish.descriptionGe}</p> : null}
