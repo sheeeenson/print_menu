@@ -21,6 +21,8 @@ export function createA3Poster(dishes = [], name = 'A3 Poster') {
     subheadline: '',
     showPrice: true,
     backgroundColor: '#f4efe8',
+    autoBackground: true,
+    backgroundTone: 0,
     textColor: '#161616',
     accentColor: '#d83b32',
     headlineSize: 220,
@@ -32,10 +34,21 @@ export function createA3Poster(dishes = [], name = 'A3 Poster') {
   };
 }
 
+const normalizePoster = (poster) => ({
+  autoBackground: true,
+  backgroundTone: 0,
+  ...poster,
+});
+
 export function loadA3PosterProject(dishes = []) {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-    if (parsed?.posters?.length) return parsed;
+    if (parsed?.posters?.length) {
+      return {
+        ...parsed,
+        posters: parsed.posters.map(normalizePoster),
+      };
+    }
   } catch {
     // Ignore malformed local data and use defaults.
   }
