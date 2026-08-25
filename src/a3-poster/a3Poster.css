@@ -10,6 +10,7 @@
 .a3-poster-scene{position:absolute;left:0;top:0;transform-origin:top left;overflow:hidden;font-family:Inter,Arial,sans-serif}
 .a3-headline-row{position:absolute;left:7%;right:6%;top:5.5%;z-index:5;display:flex;align-items:flex-end;justify-content:space-between;gap:56px}
 .a3-headline{margin:0;max-width:72%;font-weight:900;line-height:.92;letter-spacing:-.045em;transform-origin:left bottom}
+.a3-headline-spacer{flex:1 1 auto}
 .a3-offer-badge{max-width:38%;padding:.32em .58em;border-radius:.42em;font-weight:900;line-height:.95;letter-spacing:-.03em;white-space:pre-line;text-align:center;transform-origin:right bottom;flex:0 0 auto}
 .a3-subheadline{position:absolute;left:7%;top:18%;z-index:4;margin:0;max-width:72%;line-height:1.15;font-weight:500;transform-origin:left top}
 .a3-products{position:absolute;left:6%;right:6%;top:28%;bottom:6%;display:grid;gap:2.5%;align-items:stretch}
@@ -19,10 +20,12 @@
 .a3-product-card{min-width:0;position:relative;overflow:visible}
 .a3-product-image-wrap{position:absolute;left:0;right:0;top:0;bottom:18%;display:flex;align-items:center;justify-content:center;overflow:visible;pointer-events:none}
 .a3-product-image{width:88%;height:88%;object-fit:contain;display:block;transform-origin:center}
-.a3-product-name{position:absolute;left:3%;bottom:8.5%;display:block;max-width:62%;line-height:1;font-weight:800;transform-origin:left bottom;z-index:3}
+.a3-product-name{position:absolute;left:3%;display:block;max-width:62%;line-height:1;font-weight:800;transform-origin:left bottom;z-index:3}
+.a3-product-name-en{bottom:10.3%}
+.a3-product-name-ge{bottom:7.1%;font-family:Inter,"Noto Sans Georgian",Arial,sans-serif;font-weight:700;line-height:1.05}
 .a3-product-description{position:absolute;left:3%;margin:0;max-width:68%;line-height:1.18;font-weight:500;transform-origin:left top;z-index:3}
 .a3-description-en{bottom:3.8%}
-.a3-description-ge{bottom:.2%;font-family:Inter,Arial,sans-serif}
+.a3-description-ge{bottom:.2%;font-family:Inter,"Noto Sans Georgian",Arial,sans-serif}
 .a3-current-price{position:absolute;right:3%;bottom:3%;font-weight:900;line-height:.9;color:var(--a3-accent);white-space:nowrap;transform-origin:right bottom;z-index:4}
 .a3-old-price{position:absolute;right:3%;bottom:11%;display:inline-block;font-weight:700;line-height:1;color:inherit;opacity:.68;white-space:nowrap;transform-origin:right bottom;z-index:4}
 .a3-old-price::after{content:"";position:absolute;left:-4%;right:-4%;top:52%;height:7px;background:currentColor;transform:rotate(-8deg);transform-origin:center;border-radius:999px}
