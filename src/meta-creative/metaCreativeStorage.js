@@ -6,14 +6,21 @@ export const META_FORMATS = Object.freeze([
   { id: 'metaStory', label: '9:16', width: 1080, height: 1920, previewWidth: 360 },
 ]);
 
+export const META_ELEMENT_TYPES = Object.freeze([
+  'image', 'nameEn', 'nameGe', 'descriptionEn', 'descriptionGe', 'price', 'oldPrice',
+]);
+
 export const getMetaFormat = (id) => META_FORMATS.find((format) => format.id === id) ?? META_FORMATS[0];
 const createId = () => `meta_${Math.random().toString(36).slice(2, 10)}`;
+const elementKey = (dishId, type) => `${dishId}:${type}`;
 
 const DEFAULTS = {
   formatId: 'metaSquare',
   productCount: 1,
   productTransforms: {},
+  elementTransforms: {},
   selectedProductId: '',
+  selectedElementKey: '',
   showPrice: true,
   showOldPrice: true,
   showProductNameEn: true,
@@ -27,6 +34,16 @@ const DEFAULTS = {
   backgroundTone: 0,
   customBackgroundEnabled: false,
   customBackgroundUrl: '',
+  backgroundScale: 1,
+  backgroundX: .5,
+  backgroundY: .5,
+  textureEnabled: false,
+  textureUrl: '',
+  textureOpacity: .35,
+  textureScale: 1,
+  textureX: .5,
+  textureY: .5,
+  textureBlendMode: 'normal',
   productCutoutEnabled: false,
   productCutoutSensitivity: 38,
   productCutoutSoftness: 2,
@@ -35,13 +52,6 @@ const DEFAULTS = {
   productCutoutProtection: 45,
   productCutoutFillHoles: true,
   productCutoutShadow: false,
-  drawingEnabled: false,
-  drawingTool: 'pencil',
-  drawingColor: '#e53935',
-  drawingSize: 18,
-  drawingSmoothing: 72,
-  drawingMarkerOpacity: 34,
-  drawingStrokes: [],
   textColor: '#161616',
   accentColor: '#d83b32',
   productNameColor: '#161616',
@@ -58,20 +68,7 @@ const DEFAULTS = {
   oldPriceSize: 44,
   offerSize: 46,
   imageScale: 1,
-  productNameXOffset: 0,
-  productNameYOffset: 0,
-  productNameGeXOffset: 0,
-  productNameGeYOffset: 0,
-  descriptionEnXOffset: 0,
-  descriptionEnYOffset: 0,
-  descriptionGeXOffset: 0,
-  descriptionGeYOffset: 0,
-  currentPriceXOffset: 0,
-  currentPriceYOffset: 0,
-  oldPriceXOffset: 0,
-  oldPriceYOffset: 0,
-  offerXOffset: 0,
-  offerYOffset: 0,
+  offerTransform: { x: .2, y: .88, scale: 1, z: 30 },
 };
 
 export const getDefaultMetaProductTransform = (count, index) => {
@@ -87,6 +84,26 @@ export const getDefaultMetaProductTransform = (count, index) => {
   return { ...(layout[Math.min(index, layout.length - 1)] || layout[0]), z: index + 2 };
 };
 
+const getDefaultElementTransform = (type, base, index) => {
+  const z = 20 + index * 8;
+  switch (type) {
+    case 'image': return { x: base.x, y: base.y, scale: base.scale, z: base.z ?? z };
+    case 'nameEn': return { x: Math.max(.08, base.x - .16), y: Math.min(.92, base.y + .18), scale: 1, z: z + 1 };
+    case 'nameGe': return { x: Math.max(.08, base.x - .16), y: Math.min(.96, base.y + .24), scale: 1, z: z + 2 };
+    case 'descriptionEn': return { x: Math.max(.08, base.x - .16), y: Math.min(.97, base.y + .3), scale: 1, z: z + 3 };
+    case 'descriptionGe': return { x: Math.max(.08, base.x - .16), y: Math.min(.985, base.y + .34), scale: 1, z: z + 4 };
+    case 'price': return { x: Math.min(.92, base.x + .17), y: Math.min(.92, base.y + .2), scale: 1, z: z + 5 };
+    case 'oldPrice': return { x: Math.min(.92, base.x + .17), y: Math.min(.84, base.y + .12), scale: 1, z: z + 6 };
+    default: return { x: base.x, y: base.y, scale: 1, z };
+  }
+};
+
+export const buildDefaultMetaElementTransforms = (ids = []) => ids.reduce((result, id, index) => {
+  const base = getDefaultMetaProductTransform(ids.length || 1, index);
+  META_ELEMENT_TYPES.forEach((type) => { result[elementKey(id, type)] = getDefaultElementTransform(type, base, index); });
+  return result;
+}, {});
+
 export const buildDefaultMetaProductTransforms = (ids = []) => ids.reduce((result, id, index) => {
   result[id] = getDefaultMetaProductTransform(ids.length || 1, index);
   return result;
@@ -94,16 +111,37 @@ export const buildDefaultMetaProductTransforms = (ids = []) => ids.reduce((resul
 
 export function createMetaCreative(dishes = [], name = 'Meta Creative') {
   const firstDish = dishes.find((dish) => dish?.imageUrl);
+  const selectedDishIds = firstDish ? [firstDish.id] : [];
+  const elementTransforms = buildDefaultMetaElementTransforms(selectedDishIds);
   return {
     id: createId(),
     name,
     ...DEFAULTS,
-    selectedDishIds: firstDish ? [firstDish.id] : [],
+    selectedDishIds,
+    elementTransforms,
     selectedProductId: firstDish?.id || '',
+    selectedElementKey: firstDish ? elementKey(firstDish.id, 'image') : '',
   };
 }
 
-const normalizeCreative = (creative) => ({ ...DEFAULTS, ...creative, productTransforms: creative?.productTransforms || {} });
+const normalizeCreative = (creative) => {
+  const selectedDishIds = creative?.selectedDishIds || [];
+  const defaults = buildDefaultMetaElementTransforms(selectedDishIds);
+  const legacy = creative?.productTransforms || {};
+  selectedDishIds.forEach((id, index) => {
+    const legacyTransform = legacy[id];
+    if (legacyTransform && !creative?.elementTransforms?.[elementKey(id, 'image')]) {
+      defaults[elementKey(id, 'image')] = { ...getDefaultMetaProductTransform(selectedDishIds.length || 1, index), ...legacyTransform };
+    }
+  });
+  return {
+    ...DEFAULTS,
+    ...creative,
+    productTransforms: creative?.productTransforms || {},
+    elementTransforms: { ...defaults, ...(creative?.elementTransforms || {}) },
+    offerTransform: { ...DEFAULTS.offerTransform, ...(creative?.offerTransform || {}) },
+  };
+};
 
 export function loadMetaCreativeProject(dishes = []) {
   try {
