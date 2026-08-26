@@ -5,6 +5,7 @@ import { A3CatalogueAccordion } from '../a3-poster/A3CatalogueAccordion.jsx';
 import '../a3-poster/a3Poster.css';
 import { MetaCreativeControls } from './MetaCreativeControls.jsx';
 import { MetaCreativePreview } from './MetaCreativePreview.jsx';
+import { drawMetaCreativeTextLayers } from './metaCreativeCanvasText.js';
 import { buildDefaultMetaElementTransforms, createMetaCreative, getMetaFormat, loadMetaCreativeProject, META_FORMATS, saveMetaCreativeProject } from './metaCreativeStorage.js';
 import './metaCreative.css';
 
@@ -14,9 +15,10 @@ const blobToDataUrl = (blob) => new Promise((resolve, reject) => { const reader 
 const getCanvasSafeImageUrl = (value = '') => { const source = String(value || '').trim(); if (!source || source.startsWith('data:') || source.startsWith('blob:')) return source; const driveId = extractGoogleDriveFileId(source); return driveId ? `/api/drive-media?id=${encodeURIComponent(driveId)}&type=image` : source; };
 const fetchImageBlob = async (source) => { const response = await fetch(getCanvasSafeImageUrl(source), { credentials: 'same-origin', cache: 'reload' }); if (!response.ok) throw new Error(`Could not load creative image: HTTP ${response.status}`); const blob = await response.blob(); if (!blob.size) throw new Error('Creative image is empty.'); return blob; };
 
-const embedImages = async (clone) => {
+const prepareExportClone = async (clone) => {
   clone.querySelectorAll('.meta-editor-only').forEach((node) => node.remove());
   clone.querySelectorAll('.meta-free-element').forEach((node) => node.classList.remove('selected'));
+  clone.querySelectorAll('.meta-text-element,.meta-offer-element').forEach((node) => node.remove());
   const images = Array.from(clone.querySelectorAll('img'));
   await Promise.all(images.map(async (image) => {
     const source = image.getAttribute('src') || image.currentSrc || '';
@@ -28,7 +30,7 @@ const embedImages = async (clone) => {
   }));
 };
 
-async function exportCreative(creative, mimeType, extension) {
+async function exportCreative(creative, dishes, mimeType, extension) {
   const format = getMetaFormat(creative.formatId);
   const scene = document.querySelector('.meta-creative-scene');
   if (!scene) throw new Error('Creative preview is not ready.');
@@ -39,9 +41,10 @@ async function exportCreative(creative, mimeType, extension) {
   clone.style.position = 'relative'; clone.style.left = '0'; clone.style.top = '0'; clone.style.transform = 'none'; clone.style.width = `${format.width}px`; clone.style.height = `${format.height}px`;
   wrapper.appendChild(clone); document.body.appendChild(wrapper);
   try {
-    await embedImages(clone);
+    await prepareExportClone(clone);
     const canvas = await html2canvas(clone, { backgroundColor: null, width: format.width, height: format.height, windowWidth: format.width, windowHeight: format.height, scrollX: 0, scrollY: 0, scale: 1, useCORS: false, allowTaint: false, logging: false });
     if (canvas.width !== format.width || canvas.height !== format.height) throw new Error(`Export size mismatch: ${canvas.width}x${canvas.height}.`);
+    drawMetaCreativeTextLayers(canvas, creative, dishes, format);
     const blob = await new Promise((resolve, reject) => canvas.toBlob((value) => value ? resolve(value) : reject(new Error('Could not create image file.')), mimeType, .96));
     const url = URL.createObjectURL(blob); downloadUrl(url, `${safeName(creative.name)}-${format.label.replace(':','x')}.${extension}`); setTimeout(() => URL.revokeObjectURL(url), 1000);
   } finally { wrapper.remove(); }
@@ -93,7 +96,7 @@ export function MetaCreativeSection({ project }) {
   const updateElementTransform = (elementId, changes) => updateCreative({ selectedElementKey: elementId, elementTransforms: { ...(selectedCreative.elementTransforms || {}), [elementId]: { ...(selectedCreative.elementTransforms?.[elementId] || { x: .5, y: .5, scale: 1, z: 10 }), ...changes } } });
   const updateOfferTransform = (changes) => updateCreative({ selectedElementKey: 'offer', offerTransform: { ...(selectedCreative.offerTransform || { x: .2, y: .88, scale: 1, z: 30 }), ...changes } });
   const autoArrange = () => updateCreative({ elementTransforms: buildDefaultMetaElementTransforms(selectedCreative.selectedDishIds), selectedElementKey: selectedCreative.selectedDishIds[0] ? `${selectedCreative.selectedDishIds[0]}:image` : '' });
-  const handleExport = async (mimeType, extension) => { try { setExportStatus(`Preparing ${extension.toUpperCase()}...`); await exportCreative(selectedCreative, mimeType, extension); setExportStatus(`${extension.toUpperCase()} downloaded.`); } catch (error) { console.error(error); setExportStatus(error?.message || 'Export failed.'); } };
+  const handleExport = async (mimeType, extension) => { try { setExportStatus(`Preparing ${extension.toUpperCase()}...`); await exportCreative(selectedCreative, dishes, mimeType, extension); setExportStatus(`${extension.toUpperCase()} downloaded.`); } catch (error) { console.error(error); setExportStatus(error?.message || 'Export failed.'); } };
 
   if (!selectedCreative) return null;
   return <section className="app-page meta-creative-page">
