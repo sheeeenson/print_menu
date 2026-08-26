@@ -9,17 +9,14 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, Number(value)));
 const getFetchUrl = (value = '') => {
   const source = String(value || '').trim();
   if (!source || source.startsWith('data:') || source.startsWith('blob:') || source.startsWith('/')) return source;
-
   const driveId = extractGoogleDriveFileId(source);
   if (driveId) return `/api/drive-media?id=${encodeURIComponent(driveId)}&type=image`;
-
   try {
     const url = new URL(source);
     if (url.protocol === 'https:') return `/api/image-proxy?url=${encodeURIComponent(url.toString())}`;
   } catch {
     return source;
   }
-
   return source;
 };
 
@@ -45,7 +42,7 @@ const addReference = (references, data, width, height, x, y) => {
 
 const collectBorderReferences = (data, width, height) => {
   const references = [];
-  const samples = 12;
+  const samples = 16;
   for (let index = 0; index <= samples; index += 1) {
     const ratio = index / samples;
     addReference(references, data, width, height, ratio * (width - 1), 0);
@@ -124,15 +121,102 @@ const buildBackgroundMask = (imageData, width, height, sensitivity) => {
     }
   }
 
-  const mask = new ImageData(width, height);
-  for (let pixelIndex = 0; pixelIndex < background.length; pixelIndex += 1) {
-    const offset = pixelIndex * 4;
-    mask.data[offset] = 255;
-    mask.data[offset + 1] = 255;
-    mask.data[offset + 2] = 255;
-    mask.data[offset + 3] = background[pixelIndex] ? 0 : 255;
+  const foreground = new Uint8Array(width * height);
+  for (let index = 0; index < background.length; index += 1) foreground[index] = background[index] ? 0 : 1;
+  return foreground;
+};
+
+const morphMask = (source, width, height, amount) => {
+  const steps = Math.abs(Math.round(amount));
+  if (!steps) return source;
+  let current = source;
+  const expand = amount > 0;
+  for (let step = 0; step < steps; step += 1) {
+    const next = new Uint8Array(current.length);
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const index = y * width + x;
+        let value = expand ? 0 : 1;
+        for (let dy = -1; dy <= 1; dy += 1) {
+          for (let dx = -1; dx <= 1; dx += 1) {
+            const nx = x + dx;
+            const ny = y + dy;
+            const neighbor = nx >= 0 && ny >= 0 && nx < width && ny < height ? current[ny * width + nx] : 0;
+            if (expand && neighbor) value = 1;
+            if (!expand && !neighbor) value = 0;
+          }
+        }
+        next[index] = value;
+      }
+    }
+    current = next;
   }
-  return mask;
+  return current;
+};
+
+const fillSmallHoles = (source, width, height) => {
+  const visited = new Uint8Array(source.length);
+  const queue = new Int32Array(source.length);
+  let head = 0;
+  let tail = 0;
+  const seed = (index) => {
+    if (visited[index] || source[index]) return;
+    visited[index] = 1;
+    queue[tail++] = index;
+  };
+  for (let x = 0; x < width; x += 1) {
+    seed(x);
+    seed((height - 1) * width + x);
+  }
+  for (let y = 1; y < height - 1; y += 1) {
+    seed(y * width);
+    seed(y * width + width - 1);
+  }
+  while (head < tail) {
+    const index = queue[head++];
+    const x = index % width;
+    const y = Math.floor(index / width);
+    const neighbors = [];
+    if (x > 0) neighbors.push(index - 1);
+    if (x + 1 < width) neighbors.push(index + 1);
+    if (y > 0) neighbors.push(index - width);
+    if (y + 1 < height) neighbors.push(index + width);
+    neighbors.forEach(seed);
+  }
+  const result = source.slice();
+  for (let index = 0; index < result.length; index += 1) {
+    if (!source[index] && !visited[index]) result[index] = 1;
+  }
+  return result;
+};
+
+const maskToImageData = (mask, width, height) => {
+  const imageData = new ImageData(width, height);
+  for (let index = 0; index < mask.length; index += 1) {
+    const offset = index * 4;
+    imageData.data[offset] = 255;
+    imageData.data[offset + 1] = 255;
+    imageData.data[offset + 2] = 255;
+    imageData.data[offset + 3] = mask[index] ? 255 : 0;
+  }
+  return imageData;
+};
+
+const cleanEdgeColors = (context, amount) => {
+  if (!amount) return;
+  const image = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
+  const ratio = clamp(amount, 0, 100) / 100;
+  for (let offset = 0; offset < image.data.length; offset += 4) {
+    const alpha = image.data[offset + 3];
+    if (alpha <= 0 || alpha >= 245) continue;
+    const max = Math.max(image.data[offset], image.data[offset + 1], image.data[offset + 2]);
+    const min = Math.min(image.data[offset], image.data[offset + 1], image.data[offset + 2]);
+    const neutral = (max + min) / 2;
+    image.data[offset] += (neutral - image.data[offset]) * ratio * 0.65;
+    image.data[offset + 1] += (neutral - image.data[offset + 1]) * ratio * 0.65;
+    image.data[offset + 2] += (neutral - image.data[offset + 2]) * ratio * 0.65;
+  }
+  context.putImageData(image, 0, 0);
 };
 
 const canvasToBlob = (canvas) => new Promise((resolve, reject) => {
@@ -152,7 +236,10 @@ const rememberCutout = (key, url) => {
 export async function removeImageBackground(source, options = {}) {
   const sensitivity = clamp(options.sensitivity ?? 38, 0, 100);
   const softness = clamp(options.softness ?? 2, 0, 10);
-  const key = `${source}|${sensitivity}|${softness}`;
+  const expand = clamp(options.expand ?? 0, -12, 12);
+  const cleanup = clamp(options.cleanup ?? 35, 0, 100);
+  const fillHoles = options.fillHoles !== false;
+  const key = `${source}|${sensitivity}|${softness}|${expand}|${cleanup}|${fillHoles}`;
   const cached = cutoutCache.get(key);
   if (cached) return cached;
 
@@ -168,17 +255,19 @@ export async function removeImageBackground(source, options = {}) {
     const sampleContext = sampleCanvas.getContext('2d', { willReadFrequently: true });
     sampleContext.drawImage(image, 0, 0, maskWidth, maskHeight);
     const sampleData = sampleContext.getImageData(0, 0, maskWidth, maskHeight);
-    const mask = buildBackgroundMask(sampleData, maskWidth, maskHeight, sensitivity);
+    let mask = buildBackgroundMask(sampleData, maskWidth, maskHeight, sensitivity);
+    if (fillHoles) mask = fillSmallHoles(mask, maskWidth, maskHeight);
+    if (expand) mask = morphMask(mask, maskWidth, maskHeight, Math.round(expand * scale));
 
     const maskCanvas = document.createElement('canvas');
     maskCanvas.width = maskWidth;
     maskCanvas.height = maskHeight;
-    maskCanvas.getContext('2d').putImageData(mask, 0, 0);
+    maskCanvas.getContext('2d').putImageData(maskToImageData(mask, maskWidth, maskHeight), 0, 0);
 
     const outputCanvas = document.createElement('canvas');
     outputCanvas.width = image.width;
     outputCanvas.height = image.height;
-    const outputContext = outputCanvas.getContext('2d');
+    const outputContext = outputCanvas.getContext('2d', { willReadFrequently: true });
     outputContext.drawImage(image, 0, 0);
     outputContext.globalCompositeOperation = 'destination-in';
     outputContext.imageSmoothingEnabled = true;
@@ -187,6 +276,7 @@ export async function removeImageBackground(source, options = {}) {
     outputContext.drawImage(maskCanvas, 0, 0, image.width, image.height);
     outputContext.filter = 'none';
     outputContext.globalCompositeOperation = 'source-over';
+    cleanEdgeColors(outputContext, cleanup);
 
     const blob = await canvasToBlob(outputCanvas);
     const url = URL.createObjectURL(blob);
