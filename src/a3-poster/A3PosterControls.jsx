@@ -7,6 +7,7 @@ function PositionPair({ label, x, y, onX, onY }) {
 }
 
 export function A3PosterControls({ poster, updatePoster }) {
+  const customBackgroundEnabled = poster.customBackgroundEnabled ?? false;
   return <>
     <section className="app-control-group">
       <h3>Product data</h3>
@@ -30,9 +31,12 @@ export function A3PosterControls({ poster, updatePoster }) {
 
     <section className="app-control-group">
       <h3>Appearance</h3>
-      <label className="app-toggle"><input type="checkbox" checked={poster.autoBackground ?? true} onChange={(event) => updatePoster({ autoBackground: event.target.checked })} /><span>Auto background from dish image</span></label>
+      <label className="app-toggle"><input type="checkbox" checked={customBackgroundEnabled} onChange={(event) => updatePoster({ customBackgroundEnabled: event.target.checked, autoBackground: event.target.checked ? false : poster.autoBackground })} /><span>Use custom Google Drive background</span></label>
+      <label className="app-field"><span>Google Drive image link</span><input type="url" value={poster.customBackgroundUrl ?? ''} placeholder="https://drive.google.com/file/d/.../view" disabled={!customBackgroundEnabled} onChange={(event) => updatePoster({ customBackgroundUrl: event.target.value })} /></label>
+      <small>The background fills the entire A3 canvas and is included in PNG/JPG export. Use a public or link-accessible Drive image.</small>
+      <label className="app-toggle"><input type="checkbox" checked={poster.autoBackground ?? true} disabled={customBackgroundEnabled} onChange={(event) => updatePoster({ autoBackground: event.target.checked })} /><span>Auto background from dish image</span></label>
       <RangeControl label="Background tone" value={poster.backgroundTone ?? 0} min={-40} max={40} onChange={(backgroundTone) => updatePoster({ backgroundTone })} />
-      <label className="app-field"><span>Manual background</span><input type="color" value={poster.backgroundColor} disabled={poster.autoBackground ?? true} onChange={(event) => updatePoster({ backgroundColor: event.target.value })} /></label>
+      <label className="app-field"><span>Manual background</span><input type="color" value={poster.backgroundColor} disabled={customBackgroundEnabled || (poster.autoBackground ?? true)} onChange={(event) => updatePoster({ backgroundColor: event.target.value })} /></label>
       <label className="app-field"><span>Text</span><input type="color" value={poster.textColor} onChange={(event) => updatePoster({ textColor: event.target.value })} /></label>
       <label className="app-field"><span>Accent / offer badge</span><input type="color" value={poster.accentColor} onChange={(event) => updatePoster({ accentColor: event.target.value })} /></label>
       <RangeControl label="English product name size" value={poster.productNameSize ?? 86} min={28} max={480} onChange={(productNameSize) => updatePoster({ productNameSize })} suffix="px" />
