@@ -33,19 +33,63 @@ const getCanvasSafeImageUrl = (value = '') => {
   return driveId ? `/api/drive-media?id=${encodeURIComponent(driveId)}&type=image` : source;
 };
 
+const fetchPosterBlob = async (source) => {
+  const response = await fetch(getCanvasSafeImageUrl(source), {
+    credentials: 'same-origin',
+    cache: 'reload',
+    headers: { Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8' },
+  });
+  if (!response.ok) throw new Error(`Could not load poster image: HTTP ${response.status}`);
+  const blob = await response.blob();
+  if (!blob.size) throw new Error('Poster image is empty.');
+  return blob;
+};
+
+const rasterizeProductImage = async (image) => {
+  const source = image.getAttribute('src') || image.currentSrc || '';
+  if (!source) return;
+  const blob = source.startsWith('data:') ? await fetch(source).then((response) => response.blob()) : await fetchPosterBlob(source);
+  const bitmap = await createImageBitmap(blob);
+  try {
+    const styles = getComputedStyle(image);
+    const boxWidth = Math.max(1, Math.round(image.getBoundingClientRect().width));
+    const boxHeight = Math.max(1, Math.round(image.getBoundingClientRect().height));
+    const canvas = document.createElement('canvas');
+    canvas.width = boxWidth;
+    canvas.height = boxHeight;
+    canvas.className = image.className;
+    canvas.setAttribute('aria-hidden', 'true');
+    canvas.style.cssText = image.style.cssText;
+    canvas.style.width = `${boxWidth}px`;
+    canvas.style.height = `${boxHeight}px`;
+    canvas.style.objectFit = '';
+    canvas.style.display = styles.display;
+
+    const scale = Math.min(boxWidth / bitmap.width, boxHeight / bitmap.height);
+    const drawWidth = bitmap.width * scale;
+    const drawHeight = bitmap.height * scale;
+    const drawX = (boxWidth - drawWidth) / 2;
+    const drawY = (boxHeight - drawHeight) / 2;
+    const context = canvas.getContext('2d');
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    context.clearRect(0, 0, boxWidth, boxHeight);
+    context.drawImage(bitmap, drawX, drawY, drawWidth, drawHeight);
+    image.replaceWith(canvas);
+  } finally {
+    bitmap.close?.();
+  }
+};
+
 const embedImages = async (clone) => {
+  const productImages = Array.from(clone.querySelectorAll('img.a3-product-image'));
+  await Promise.all(productImages.map(rasterizeProductImage));
+
   const images = Array.from(clone.querySelectorAll('img'));
   await Promise.all(images.map(async (image) => {
     const source = image.getAttribute('src') || image.currentSrc || '';
     if (!source || source.startsWith('data:')) return;
-    const response = await fetch(getCanvasSafeImageUrl(source), {
-      credentials: 'same-origin',
-      cache: 'reload',
-      headers: { Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8' },
-    });
-    if (!response.ok) throw new Error(`Could not load poster image: HTTP ${response.status}`);
-    const blob = await response.blob();
-    if (!blob.size) throw new Error('Poster image is empty.');
+    const blob = await fetchPosterBlob(source);
     image.removeAttribute('crossorigin');
     image.src = await blobToDataUrl(blob);
     if (typeof image.decode === 'function') await image.decode().catch(() => undefined);
