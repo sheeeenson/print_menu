@@ -8,6 +8,7 @@ function PositionPair({ label, x, y, onX, onY }) {
 
 export function A3PosterControls({ poster, updatePoster }) {
   const customBackgroundEnabled = poster.customBackgroundEnabled ?? false;
+  const productCutoutEnabled = poster.productCutoutEnabled ?? false;
   return <>
     <section className="app-control-group">
       <h3>Product data</h3>
@@ -19,6 +20,14 @@ export function A3PosterControls({ poster, updatePoster }) {
       <label className="app-toggle"><input type="checkbox" checked={poster.showOldPrice ?? true} onChange={(event) => updatePoster({ showOldPrice: event.target.checked })} /><span>Show crossed old price when available</span></label>
       <label className="app-toggle"><input type="checkbox" checked={poster.showDescriptionEn ?? false} onChange={(event) => updatePoster({ showDescriptionEn: event.target.checked })} /><span>Show English description</span></label>
       <label className="app-toggle"><input type="checkbox" checked={poster.showDescriptionGe ?? false} onChange={(event) => updatePoster({ showDescriptionGe: event.target.checked })} /><span>Show Georgian description</span></label>
+    </section>
+
+    <section className="app-control-group">
+      <h3>Product cutout</h3>
+      <label className="app-toggle"><input type="checkbox" checked={productCutoutEnabled} onChange={(event) => updatePoster({ productCutoutEnabled: event.target.checked })} /><span>Remove product background</span></label>
+      <small>Best for product photos where the background reaches the outer edges. The removed area becomes transparent so your custom A3 background shows through.</small>
+      <RangeControl label="Cutout sensitivity" value={poster.productCutoutSensitivity ?? 38} min={0} max={100} onChange={(productCutoutSensitivity) => updatePoster({ productCutoutSensitivity })} />
+      <RangeControl label="Edge softness" value={poster.productCutoutSoftness ?? 2} min={0} max={10} onChange={(productCutoutSoftness) => updatePoster({ productCutoutSoftness })} suffix="px" />
     </section>
 
     <section className="app-control-group">
