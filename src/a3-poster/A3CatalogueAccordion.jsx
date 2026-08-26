@@ -15,8 +15,8 @@ export function A3CatalogueAccordion({ categories, dishes, selectedDishIds, onTo
   const [openCategoryId, setOpenCategoryId] = useState(selectedCategoryId);
 
   useEffect(() => {
-    if (selectedCategoryId && !openCategoryId) setOpenCategoryId(selectedCategoryId);
-  }, [openCategoryId, selectedCategoryId]);
+    setOpenCategoryId(selectedCategoryId);
+  }, [selectedCategoryId]);
 
   return <div className="a3-dish-picker a3-catalogue-accordion">
     {categoryGroups.map(({ category, dishes: categoryDishes }) => {
@@ -28,7 +28,7 @@ export function A3CatalogueAccordion({ categories, dishes, selectedDishIds, onTo
           type="button"
           className="a3-category-trigger"
           aria-expanded={isOpen}
-          onClick={() => setOpenCategoryId(isOpen ? null : category.id)}
+          onClick={() => setOpenCategoryId((current) => current === category.id ? null : category.id)}
         >
           <span className="a3-category-trigger-copy">
             <strong>{categoryName}</strong>
