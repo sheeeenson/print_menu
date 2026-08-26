@@ -5,19 +5,24 @@
 .meta-format-row button.active,.meta-product-count-row button.active{background:#111;color:#fff}
 .meta-canvas-wrap{position:relative;overflow:hidden;background:#ddd;box-shadow:0 18px 54px rgba(0,0,0,.16)}
 .meta-creative-scene{position:absolute;left:0;top:0;transform-origin:top left;overflow:hidden;font-family:Inter,Arial,sans-serif}
-.meta-custom-background{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:0;pointer-events:none}
-.meta-products-layer{position:absolute;inset:0;z-index:2;pointer-events:none}
-.meta-product-card{position:absolute;width:48%;height:48%;transform-origin:center;pointer-events:auto;cursor:grab;touch-action:none;user-select:none}
-.meta-product-card:active{cursor:grabbing}
-.meta-product-card.selected{outline:3px dashed rgba(30,120,255,.8);outline-offset:7px}
-.meta-product-image-wrap{position:absolute;inset:0 0 24% 0;display:flex;align-items:center;justify-content:center;pointer-events:none}
-.meta-product-image{width:100%;height:100%;object-fit:contain;display:block}
-.meta-product-name{position:absolute;left:3%;max-width:64%;display:block;line-height:.95;font-weight:900;z-index:3;transform-origin:left bottom}
-.meta-product-name-en{bottom:15%}
-.meta-product-name-ge{bottom:9%;font-family:Inter,"Noto Sans Georgian",Arial,sans-serif;font-weight:700;line-height:1.05}
-.meta-current-price{position:absolute;right:3%;bottom:3%;font-weight:900;line-height:.9;white-space:nowrap;z-index:4;transform-origin:right bottom}
-.meta-old-price{position:absolute;right:3%;bottom:12%;font-weight:700;line-height:1;opacity:.68;white-space:nowrap;z-index:4;transform-origin:right bottom}
-.meta-old-price::after{content:"";position:absolute;left:-4%;right:-4%;top:52%;height:5px;background:currentColor;transform:rotate(-8deg);border-radius:999px}
-.meta-product-resize-handle{position:absolute;right:-22px;bottom:-22px;width:44px;height:44px;border-radius:50%;border:5px solid #fff;background:#2173ff;box-shadow:0 5px 18px rgba(0,0,0,.25);cursor:nwse-resize;z-index:15}
-.meta-offer-badge{position:absolute;left:5%;bottom:5%;max-width:52%;padding:.34em .62em;border-radius:.42em;font-weight:900;line-height:.95;letter-spacing:-.03em;white-space:pre-line;text-align:center;z-index:20;transform-origin:left bottom}
+.meta-custom-background,.meta-texture-layer{position:absolute;width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;transform-origin:center}
+.meta-custom-background{z-index:0}
+.meta-texture-layer{z-index:1}
+.meta-dish-layer-group{position:static}
+.meta-free-element{position:absolute;transform-origin:center;cursor:grab;touch-action:none;user-select:none;min-width:28px;min-height:20px}
+.meta-free-element:active{cursor:grabbing}
+.meta-free-element.selected{outline:3px dashed rgba(30,120,255,.85);outline-offset:7px}
+.meta-element-resize-handle{position:absolute;right:-18px;bottom:-18px;width:36px;height:36px;border-radius:50%;border:4px solid #fff;background:#2173ff;box-shadow:0 5px 18px rgba(0,0,0,.25);cursor:nwse-resize;z-index:999}
+.meta-image-element{width:46%;height:46%}
+.meta-product-image-wrap{width:100%;height:100%;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.meta-product-image{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none}
+.meta-text-element{white-space:nowrap;line-height:1;pointer-events:auto}
+.meta-text-element>div{font-weight:900;line-height:1;white-space:nowrap}
+.meta-name-ge>div,.meta-description-ge>div{font-family:Inter,"Noto Sans Georgian",Arial,sans-serif}
+.meta-description-en>div,.meta-description-ge>div{font-weight:500;line-height:1.15;white-space:normal;max-width:420px}
+.meta-price-element>div{font-weight:900;line-height:.9}
+.meta-old-price-element>div{position:relative;font-weight:700;line-height:1;opacity:.68}
+.meta-old-price-element>div::after{content:"";position:absolute;left:-4%;right:-4%;top:52%;height:5px;background:currentColor;transform:rotate(-8deg);border-radius:999px}
+.meta-offer-element{max-width:58%}
+.meta-offer-badge{padding:.34em .62em;border-radius:.42em;font-weight:900;line-height:.95;letter-spacing:-.03em;white-space:pre-line;text-align:center;transform-origin:center}
 @media(max-width:1000px){.meta-creative-page{grid-template-columns:1fr}.meta-creative-side-panel{max-height:none}.meta-creative-preview-stage{padding:20px;overflow:auto}}
