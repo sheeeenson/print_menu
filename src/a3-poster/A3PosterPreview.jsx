@@ -69,23 +69,17 @@ export function A3PosterPreview({ poster, dishes }) {
 
   const background = autoBackground ? sampledBackground || applyTone(poster.backgroundColor || '#f4efe8', poster.backgroundTone ?? 0) : poster.backgroundColor;
   const showTopTitle = Boolean(singleDish && ((poster.showProductNameEn !== false && singleDish.nameEn) || (poster.showProductNameGe !== false && singleDish.nameGe)));
-  const showTopRow = showTopTitle || (poster.showOffer && poster.offerText);
 
   return (
     <section className="app-preview-shell" aria-label="A3 poster preview">
       <div className="app-canvas-wrap a3-poster-canvas-wrap" style={{ width: `${format.previewWidth}px`, aspectRatio: `${format.width} / ${format.height}` }}>
         <article className={`a3-poster-scene a3-template-${template}`} style={{ width: `${format.width}px`, height: `${format.height}px`, transform: `scale(${previewScale})`, background, color: poster.textColor, '--a3-accent': poster.accentColor }}>
-          {showTopRow ? (
+          {showTopTitle ? (
             <div className="a3-title-row">
-              {showTopTitle ? (
-                <div className="a3-title-copy">
-                  {poster.showProductNameEn !== false && singleDish.nameEn ? <strong className="a3-title-name a3-title-name-en" style={{ fontSize: `${poster.productNameSize}px`, transform: move(poster.productNameXOffset, poster.productNameYOffset) }}>{singleDish.nameEn}</strong> : null}
-                  {poster.showProductNameGe !== false && singleDish.nameGe ? <strong className="a3-title-name a3-title-name-ge" style={{ fontSize: `${poster.productNameGeSize ?? 62}px`, transform: move(poster.productNameGeXOffset, poster.productNameGeYOffset) }}>{singleDish.nameGe}</strong> : null}
-                </div>
-              ) : <span className="a3-title-spacer" />}
-              {poster.showOffer && poster.offerText ? (
-                <div className="a3-offer-badge" style={{ transform: move(poster.offerXOffset, poster.offerYOffset), background: poster.accentColor, color: poster.offerTextColor, fontSize: `${poster.offerSize}px` }}>{poster.offerText}</div>
-              ) : null}
+              <div className="a3-title-copy">
+                {poster.showProductNameEn !== false && singleDish.nameEn ? <strong className="a3-title-name a3-title-name-en" style={{ fontSize: `${poster.productNameSize}px`, transform: move(poster.productNameXOffset, poster.productNameYOffset) }}>{singleDish.nameEn}</strong> : null}
+                {poster.showProductNameGe !== false && singleDish.nameGe ? <strong className="a3-title-name a3-title-name-ge" style={{ fontSize: `${poster.productNameGeSize ?? 62}px`, transform: move(poster.productNameGeXOffset, poster.productNameGeYOffset) }}>{singleDish.nameGe}</strong> : null}
+              </div>
             </div>
           ) : null}
 
@@ -112,6 +106,10 @@ export function A3PosterPreview({ poster, dishes }) {
               );
             })}
           </div>
+
+          {poster.showOffer && poster.offerText ? (
+            <div className="a3-offer-badge a3-offer-badge-bottom-left" style={{ transform: move(poster.offerXOffset, poster.offerYOffset), background: poster.accentColor, color: poster.offerTextColor, fontSize: `${poster.offerSize}px` }}>{poster.offerText}</div>
+          ) : null}
         </article>
       </div>
       <small className="app-preview-size">A3 output: {format.width} × {format.height}px at 300 DPI ratio</small>

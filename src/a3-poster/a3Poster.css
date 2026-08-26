@@ -14,7 +14,8 @@
 .a3-title-name-en{font-weight:900}
 .a3-title-name-ge{font-family:Inter,"Noto Sans Georgian",Arial,sans-serif;font-weight:700;line-height:1.05;letter-spacing:-.02em}
 .a3-title-spacer{flex:1 1 auto}
-.a3-offer-badge{max-width:38%;padding:.32em .58em;border-radius:.42em;font-weight:900;line-height:.95;letter-spacing:-.03em;white-space:pre-line;text-align:center;transform-origin:right bottom;flex:0 0 auto}
+.a3-offer-badge{max-width:38%;padding:.32em .58em;border-radius:.42em;font-weight:900;line-height:.95;letter-spacing:-.03em;white-space:pre-line;text-align:center;transform-origin:left bottom;z-index:6}
+.a3-offer-badge-bottom-left{position:absolute;left:6%;bottom:8.1%}
 .a3-products{position:absolute;left:6%;right:6%;top:23%;bottom:6%;display:grid;gap:2.5%;align-items:stretch}
 .a3-template-single .a3-products{grid-template-columns:1fr}
 .a3-template-two .a3-products{grid-template-columns:repeat(2,1fr)}
