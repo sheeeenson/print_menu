@@ -47,7 +47,9 @@ export function A3PosterPreview({ poster, dishes }) {
   const template = poster.template || 'single';
   const singleDish = template === 'single' ? selectedDishes[0] : null;
   const [sampledBackground, setSampledBackground] = useState('');
-  const autoBackground = poster.autoBackground ?? true;
+  const customBackgroundEnabled = poster.customBackgroundEnabled ?? false;
+  const customBackgroundUrl = customBackgroundEnabled ? normalizeGoogleDriveImageUrl(poster.customBackgroundUrl) : '';
+  const autoBackground = !customBackgroundEnabled && (poster.autoBackground ?? true);
   const imageUrls = useMemo(() => selectedDishes.map((dish) => normalizeGoogleDriveImageUrl(dish.imageUrl)).filter(Boolean), [selectedDishes]);
   const imageKey = imageUrls.join('|');
 
@@ -74,6 +76,8 @@ export function A3PosterPreview({ poster, dishes }) {
     <section className="app-preview-shell" aria-label="A3 poster preview">
       <div className="app-canvas-wrap a3-poster-canvas-wrap" style={{ width: `${format.previewWidth}px`, aspectRatio: `${format.width} / ${format.height}` }}>
         <article className={`a3-poster-scene a3-template-${template}`} style={{ width: `${format.width}px`, height: `${format.height}px`, transform: `scale(${previewScale})`, background, color: poster.textColor, '--a3-accent': poster.accentColor }}>
+          {customBackgroundUrl ? <img className="a3-custom-background" src={customBackgroundUrl} alt="" /> : null}
+
           {showTopTitle ? (
             <div className="a3-title-row">
               <div className="a3-title-copy">
