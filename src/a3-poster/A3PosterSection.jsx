@@ -4,10 +4,10 @@ import { extractGoogleDriveFileId } from '../utils/imageUrls.js';
 import { A3CatalogueAccordion } from './A3CatalogueAccordion.jsx';
 import { A3PosterControls } from './A3PosterControls.jsx';
 import { A3PosterPreview } from './A3PosterPreview.jsx';
+import { buildDefaultA3ProductTransforms, getDefaultA3ProductTransform, MAX_A3_PRODUCTS } from './a3ProductLayout.js';
 import { A3_FORMATS, createA3Poster, getA3Format, loadA3PosterProject, saveA3PosterProject } from './a3PosterStorage.js';
 import './a3Poster.css';
 
-const maxItemsForTemplate = (template) => template === 'four' ? 4 : template === 'two' ? 2 : 1;
 const safeName = (value) => String(value || 'a3-poster').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'a3-poster';
 
 const downloadUrl = (url, filename) => {
@@ -35,8 +35,7 @@ const getCanvasSafeImageUrl = (value = '') => {
 
 const fetchPosterBlob = async (source) => {
   const response = await fetch(getCanvasSafeImageUrl(source), {
-    credentials: 'same-origin',
-    cache: 'reload',
+    credentials: 'same-origin', cache: 'reload',
     headers: { Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8' },
   });
   if (!response.ok) throw new Error(`Could not load poster image: HTTP ${response.status}`);
@@ -64,7 +63,6 @@ const rasterizeProductImage = async (image) => {
     const backingScale = Math.min(2.5, visualScale);
     const backingWidth = Math.max(boxWidth, Math.round(boxWidth * backingScale));
     const backingHeight = Math.max(boxHeight, Math.round(boxHeight * backingScale));
-
     const canvas = document.createElement('canvas');
     canvas.width = backingWidth;
     canvas.height = backingHeight;
@@ -75,7 +73,6 @@ const rasterizeProductImage = async (image) => {
     canvas.style.height = `${boxHeight}px`;
     canvas.style.objectFit = '';
     canvas.style.display = styles.display;
-
     const scale = Math.min(backingWidth / bitmap.width, backingHeight / bitmap.height);
     const drawWidth = bitmap.width * scale;
     const drawHeight = bitmap.height * scale;
@@ -87,15 +84,14 @@ const rasterizeProductImage = async (image) => {
     context.clearRect(0, 0, backingWidth, backingHeight);
     context.drawImage(bitmap, drawX, drawY, drawWidth, drawHeight);
     image.replaceWith(canvas);
-  } finally {
-    bitmap.close?.();
-  }
+  } finally { bitmap.close?.(); }
 };
 
 const embedImages = async (clone) => {
+  clone.querySelectorAll('.a3-product-resize-handle').forEach((node) => node.remove());
+  clone.querySelectorAll('.a3-free-product-card').forEach((node) => node.classList.remove('selected'));
   const productImages = Array.from(clone.querySelectorAll('img.a3-product-image'));
   await Promise.all(productImages.map(rasterizeProductImage));
-
   const images = Array.from(clone.querySelectorAll('img'));
   await Promise.all(images.map(async (image) => {
     const source = image.getAttribute('src') || image.currentSrc || '';
@@ -112,51 +108,28 @@ async function exportPoster(poster, mimeType, extension) {
   const scene = document.querySelector('.a3-poster-scene');
   if (!scene) throw new Error('Poster preview is not ready.');
   if (document.fonts?.ready) await document.fonts.ready;
-
   const wrapper = document.createElement('div');
-  wrapper.style.position = 'fixed';
-  wrapper.style.left = '0';
-  wrapper.style.top = '0';
-  wrapper.style.width = `${format.width}px`;
-  wrapper.style.height = `${format.height}px`;
-  wrapper.style.zIndex = '-9999';
-  wrapper.style.pointerEvents = 'none';
-  wrapper.style.overflow = 'hidden';
+  wrapper.style.position = 'fixed'; wrapper.style.left = '0'; wrapper.style.top = '0';
+  wrapper.style.width = `${format.width}px`; wrapper.style.height = `${format.height}px`;
+  wrapper.style.zIndex = '-9999'; wrapper.style.pointerEvents = 'none'; wrapper.style.overflow = 'hidden';
   const clone = scene.cloneNode(true);
-  clone.style.position = 'relative';
-  clone.style.left = '0';
-  clone.style.top = '0';
-  clone.style.transform = 'none';
-  clone.style.width = `${format.width}px`;
-  clone.style.height = `${format.height}px`;
+  clone.style.position = 'relative'; clone.style.left = '0'; clone.style.top = '0'; clone.style.transform = 'none';
+  clone.style.width = `${format.width}px`; clone.style.height = `${format.height}px`;
   const drawingOverlay = clone.querySelector('.a3-drawing-overlay');
   if (drawingOverlay) drawingOverlay.classList.remove('enabled');
-  wrapper.appendChild(clone);
-  document.body.appendChild(wrapper);
-
+  wrapper.appendChild(clone); document.body.appendChild(wrapper);
   try {
     await embedImages(clone);
     const canvas = await html2canvas(clone, {
-      backgroundColor: null,
-      width: format.width,
-      height: format.height,
-      windowWidth: format.width,
-      windowHeight: format.height,
-      scrollX: 0,
-      scrollY: 0,
-      scale: 1,
-      useCORS: false,
-      allowTaint: false,
-      logging: false,
+      backgroundColor: null, width: format.width, height: format.height, windowWidth: format.width, windowHeight: format.height,
+      scrollX: 0, scrollY: 0, scale: 1, useCORS: false, allowTaint: false, logging: false,
     });
     if (canvas.width !== format.width || canvas.height !== format.height) throw new Error(`Export size mismatch: ${canvas.width}x${canvas.height}.`);
     const blob = await new Promise((resolve, reject) => canvas.toBlob((value) => value ? resolve(value) : reject(new Error('Could not create image file.')), mimeType, 0.95));
     const url = URL.createObjectURL(blob);
     downloadUrl(url, `${safeName(poster.name)}-${format.id}.${extension}`);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-  } finally {
-    wrapper.remove();
-  }
+  } finally { wrapper.remove(); }
 }
 
 export function A3PosterSection({ project }) {
@@ -168,7 +141,6 @@ export function A3PosterSection({ project }) {
   const selectedPoster = a3Project.posters.find((poster) => poster.id === a3Project.selectedPosterId) ?? a3Project.posters[0];
 
   useEffect(() => saveA3PosterProject(a3Project), [a3Project]);
-
   const updateProject = (updater) => setA3Project((current) => updater(current));
   const updatePoster = (changes) => updateProject((current) => ({ ...current, posters: current.posters.map((poster) => poster.id === current.selectedPosterId ? { ...poster, ...changes } : poster) }));
   const updateDrawingStrokes = (nextStrokes, recordHistory = true) => {
@@ -178,79 +150,60 @@ export function A3PosterSection({ project }) {
     updatePoster({ drawingStrokes: nextStrokes });
   };
   const commitStroke = (stroke) => updateDrawingStrokes([...(selectedPoster.drawingStrokes ?? []), stroke]);
-  const eraseStrokes = (ids) => {
-    const idSet = new Set(ids);
-    const next = (selectedPoster.drawingStrokes ?? []).filter((stroke) => !idSet.has(stroke.id));
-    if (next.length !== (selectedPoster.drawingStrokes ?? []).length) updateDrawingStrokes(next);
-  };
-  const undoDrawing = () => {
-    const entry = drawingHistory[selectedPoster.id];
-    if (!entry?.undo?.length) return;
-    const previous = entry.undo[entry.undo.length - 1];
-    const currentStrokes = selectedPoster.drawingStrokes ?? [];
-    setDrawingHistory((current) => ({ ...current, [selectedPoster.id]: { undo: entry.undo.slice(0, -1), redo: [currentStrokes, ...(entry.redo ?? [])].slice(0, 60) } }));
-    updateDrawingStrokes(previous, false);
-  };
-  const redoDrawing = () => {
-    const entry = drawingHistory[selectedPoster.id];
-    if (!entry?.redo?.length) return;
-    const next = entry.redo[0];
-    const currentStrokes = selectedPoster.drawingStrokes ?? [];
-    setDrawingHistory((current) => ({ ...current, [selectedPoster.id]: { undo: [...(entry.undo ?? []), currentStrokes].slice(-60), redo: entry.redo.slice(1) } }));
-    updateDrawingStrokes(next, false);
-  };
-  const clearDrawing = () => {
-    if ((selectedPoster.drawingStrokes ?? []).length) updateDrawingStrokes([]);
+  const eraseStrokes = (ids) => { const idSet = new Set(ids); const next = (selectedPoster.drawingStrokes ?? []).filter((stroke) => !idSet.has(stroke.id)); if (next.length !== (selectedPoster.drawingStrokes ?? []).length) updateDrawingStrokes(next); };
+  const undoDrawing = () => { const entry = drawingHistory[selectedPoster.id]; if (!entry?.undo?.length) return; const previous = entry.undo[entry.undo.length - 1]; const currentStrokes = selectedPoster.drawingStrokes ?? []; setDrawingHistory((current) => ({ ...current, [selectedPoster.id]: { undo: entry.undo.slice(0, -1), redo: [currentStrokes, ...(entry.redo ?? [])].slice(0, 60) } })); updateDrawingStrokes(previous, false); };
+  const redoDrawing = () => { const entry = drawingHistory[selectedPoster.id]; if (!entry?.redo?.length) return; const next = entry.redo[0]; const currentStrokes = selectedPoster.drawingStrokes ?? []; setDrawingHistory((current) => ({ ...current, [selectedPoster.id]: { undo: [...(entry.undo ?? []), currentStrokes].slice(-60), redo: entry.redo.slice(1) } })); updateDrawingStrokes(next, false); };
+  const clearDrawing = () => { if ((selectedPoster.drawingStrokes ?? []).length) updateDrawingStrokes([]); };
+
+  const addPoster = () => { const poster = createA3Poster(dishes, `A3 Poster ${a3Project.posters.length + 1}`); updateProject((current) => ({ ...current, posters: [...current.posters, poster], selectedPosterId: poster.id })); };
+  const duplicatePoster = () => { const poster = { ...selectedPoster, id: `a3_${Math.random().toString(36).slice(2, 10)}`, name: `${selectedPoster.name} copy`, selectedDishIds: [...selectedPoster.selectedDishIds], productTransforms: JSON.parse(JSON.stringify(selectedPoster.productTransforms || {})), drawingStrokes: (selectedPoster.drawingStrokes ?? []).map((stroke) => ({ ...stroke, points: stroke.points.map((point) => ({ ...point })) })) }; updateProject((current) => ({ ...current, posters: [...current.posters, poster], selectedPosterId: poster.id })); };
+  const deletePoster = () => updateProject((current) => { if (current.posters.length <= 1) return current; const posters = current.posters.filter((poster) => poster.id !== current.selectedPosterId); return { ...current, posters, selectedPosterId: posters[0].id }; });
+
+  const handleProductCount = (productCount) => {
+    const nextIds = selectedPoster.selectedDishIds.slice(0, productCount);
+    const transforms = { ...(selectedPoster.productTransforms || {}) };
+    nextIds.forEach((id, index) => { if (!transforms[id]) transforms[id] = getDefaultA3ProductTransform(Math.max(productCount, nextIds.length), index); });
+    updatePoster({ productCount, selectedDishIds: nextIds, productTransforms: transforms, selectedProductId: nextIds.includes(selectedPoster.selectedProductId) ? selectedPoster.selectedProductId : (nextIds[0] || '') });
   };
 
-  const addPoster = () => {
-    const poster = createA3Poster(dishes, `A3 Poster ${a3Project.posters.length + 1}`);
-    updateProject((current) => ({ ...current, posters: [...current.posters, poster], selectedPosterId: poster.id }));
-  };
-  const duplicatePoster = () => {
-    const poster = { ...selectedPoster, id: `a3_${Math.random().toString(36).slice(2, 10)}`, name: `${selectedPoster.name} copy`, selectedDishIds: [...selectedPoster.selectedDishIds], drawingStrokes: (selectedPoster.drawingStrokes ?? []).map((stroke) => ({ ...stroke, points: stroke.points.map((point) => ({ ...point })) })) };
-    updateProject((current) => ({ ...current, posters: [...current.posters, poster], selectedPosterId: poster.id }));
-  };
-  const deletePoster = () => updateProject((current) => {
-    if (current.posters.length <= 1) return current;
-    const posters = current.posters.filter((poster) => poster.id !== current.selectedPosterId);
-    return { ...current, posters, selectedPosterId: posters[0].id };
-  });
-  const handleTemplate = (template) => updatePoster({ template, selectedDishIds: selectedPoster.selectedDishIds.slice(0, maxItemsForTemplate(template)) });
   const toggleDish = (dishId) => {
     const selected = selectedPoster.selectedDishIds.includes(dishId);
-    const max = maxItemsForTemplate(selectedPoster.template);
-    const next = selected ? selectedPoster.selectedDishIds.filter((id) => id !== dishId) : [...selectedPoster.selectedDishIds, dishId].slice(-max);
-    updatePoster({ selectedDishIds: next });
-  };
-  const handleExport = async (mimeType, extension) => {
-    try {
-      setExportStatus(`Preparing ${extension.toUpperCase()}...`);
-      await exportPoster(selectedPoster, mimeType, extension);
-      setExportStatus(`${extension.toUpperCase()} downloaded.`);
-    } catch (error) {
-      console.error(error);
-      setExportStatus(error?.message || 'Export failed.');
+    if (selected) {
+      const next = selectedPoster.selectedDishIds.filter((id) => id !== dishId);
+      updatePoster({ selectedDishIds: next, selectedProductId: selectedPoster.selectedProductId === dishId ? (next[0] || '') : selectedPoster.selectedProductId });
+      return;
     }
+    if (selectedPoster.selectedDishIds.length >= selectedPoster.productCount) return;
+    const next = [...selectedPoster.selectedDishIds, dishId].slice(0, MAX_A3_PRODUCTS);
+    const productTransforms = { ...(selectedPoster.productTransforms || {}) };
+    if (!productTransforms[dishId]) productTransforms[dishId] = getDefaultA3ProductTransform(selectedPoster.productCount, next.length - 1);
+    updatePoster({ selectedDishIds: next, productTransforms, selectedProductId: dishId });
   };
+
+  const updateProductTransform = (dishId, changes) => updatePoster({
+    productTransforms: { ...(selectedPoster.productTransforms || {}), [dishId]: { ...(selectedPoster.productTransforms?.[dishId] || getDefaultA3ProductTransform(selectedPoster.productCount, 0)), ...changes } },
+    selectedProductId: dishId,
+  });
+  const selectProduct = (dishId) => {
+    const maxZ = Math.max(2, ...Object.values(selectedPoster.productTransforms || {}).map((value) => Number(value?.z) || 2));
+    updateProductTransform(dishId, { z: maxZ + 1 });
+  };
+  const autoArrangeProducts = () => updatePoster({ productTransforms: buildDefaultA3ProductTransforms(selectedPoster.selectedDishIds) });
+
+  const handleExport = async (mimeType, extension) => { try { setExportStatus(`Preparing ${extension.toUpperCase()}...`); await exportPoster(selectedPoster, mimeType, extension); setExportStatus(`${extension.toUpperCase()} downloaded.`); } catch (error) { console.error(error); setExportStatus(error?.message || 'Export failed.'); } };
 
   if (!selectedPoster) return null;
   const history = drawingHistory[selectedPoster.id] ?? { undo: [], redo: [] };
-
   return <section className="app-page a3-poster-page">
     <aside className="app-side-panel a3-poster-side-panel">
       <header className="app-panel-header"><p>Print image</p><h2>A3 Poster</h2><span>Create printable A3 images from the same product catalogue used across the app.</span></header>
-
       <section className="app-control-group"><div className="panel-title-row"><h3>Posters</h3><button type="button" className="primary-action compact" onClick={addPoster}>＋ Add</button></div><div className="a3-poster-list">{a3Project.posters.map((poster) => <button key={poster.id} type="button" className={poster.id === selectedPoster.id ? 'selected' : ''} onClick={() => updateProject((current) => ({ ...current, selectedPosterId: poster.id }))}><strong>{poster.name}</strong><small>{getA3Format(poster.formatId).label}</small></button>)}</div><div className="action-row"><button type="button" onClick={duplicatePoster}>Duplicate</button><button type="button" className="danger" onClick={deletePoster}>Delete</button></div></section>
       <section className="app-control-group"><h3>Format</h3><div className="a3-poster-format-row">{A3_FORMATS.map((format) => <button key={format.id} type="button" className={selectedPoster.formatId === format.id ? 'active' : ''} onClick={() => updatePoster({ formatId: format.id })}>{format.label}</button>)}</div></section>
-      <section className="app-control-group"><h3>Layout</h3><div className="a3-template-row"><button type="button" className={selectedPoster.template === 'single' ? 'active' : ''} onClick={() => handleTemplate('single')}>1 product</button><button type="button" className={selectedPoster.template === 'two' ? 'active' : ''} onClick={() => handleTemplate('two')}>2 products</button><button type="button" className={selectedPoster.template === 'four' ? 'active' : ''} onClick={() => handleTemplate('four')}>4 products</button></div></section>
-      <section className="app-control-group"><h3>Catalogue</h3><small>{selectedPoster.selectedDishIds.length}/{maxItemsForTemplate(selectedPoster.template)} selected</small><A3CatalogueAccordion categories={categories} dishes={dishes} selectedDishIds={selectedPoster.selectedDishIds} onToggleDish={toggleDish} /></section>
-
+      <section className="app-control-group"><div className="panel-title-row"><h3>Products</h3><button type="button" onClick={autoArrangeProducts}>Auto arrange</button></div><div className="a3-template-row">{[1,2,3,4,5].map((count) => <button key={count} type="button" className={selectedPoster.productCount === count ? 'active' : ''} onClick={() => handleProductCount(count)}>{count}</button>)}</div><small>Choose up to {selectedPoster.productCount} products, then drag them directly on the poster. Drag the round corner handle to resize each product independently.</small></section>
+      <section className="app-control-group"><h3>Catalogue</h3><small>{selectedPoster.selectedDishIds.length}/{selectedPoster.productCount} selected</small><A3CatalogueAccordion categories={categories} dishes={dishes} selectedDishIds={selectedPoster.selectedDishIds} onToggleDish={toggleDish} /></section>
       <A3PosterControls poster={selectedPoster} updatePoster={updatePoster} onUndoDrawing={undoDrawing} onRedoDrawing={redoDrawing} onClearDrawing={clearDrawing} canUndoDrawing={history.undo.length > 0} canRedoDrawing={history.redo.length > 0} />
-
       <section className="app-control-group"><h3>Download</h3><div className="a3-export-row"><button type="button" onClick={() => handleExport('image/png', 'png')}>PNG</button><button type="button" onClick={() => handleExport('image/jpeg', 'jpg')}>JPG</button><button type="button" onClick={() => window.print()}>Print / PDF</button></div>{exportStatus ? <small className="app-preview-size">{exportStatus}</small> : null}</section>
     </aside>
-
-    <main className="app-preview-stage a3-poster-preview-stage"><div className="app-toolbar"><div><p>Preview</p><h2>{selectedPoster.name}</h2></div><div className="app-pill">{getA3Format(selectedPoster.formatId).label}</div></div><A3PosterPreview poster={selectedPoster} dishes={dishes} onCommitStroke={commitStroke} onEraseStrokes={eraseStrokes} /></main>
+    <main className="app-preview-stage a3-poster-preview-stage"><div className="app-toolbar"><div><p>Preview</p><h2>{selectedPoster.name}</h2></div><div className="app-pill">{getA3Format(selectedPoster.formatId).label}</div></div><A3PosterPreview poster={selectedPoster} dishes={dishes} onCommitStroke={commitStroke} onEraseStrokes={eraseStrokes} onUpdateProductTransform={updateProductTransform} onSelectProduct={selectProduct} /></main>
   </section>;
 }
