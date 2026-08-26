@@ -33,7 +33,7 @@ function ProductImage({ dish, creative }) {
   }, [dish.imageUrl, originalUrl, creative.productCutoutEnabled, creative.productCutoutSensitivity, creative.productCutoutSoftness, creative.productCutoutExpand, creative.productCutoutCleanup, creative.productCutoutProtection, creative.productCutoutFillHoles]);
   if (!displayUrl) return null;
   const shadow = creative.productCutoutEnabled && creative.productCutoutShadow ? 'drop-shadow(0 18px 18px rgba(0,0,0,.2))' : 'none';
-  return <img className="meta-product-image" src={displayUrl} alt="" style={{ filter: shadow }} />;
+  return <img className="meta-product-image" data-dish-id={dish.id} src={displayUrl} alt="" style={{ filter: shadow }} />;
 }
 
 function DraggableElement({ elementId, transform, sceneRef, selected, onSelect, onUpdate, children, className = '', resizable = true, minScale = .25, maxScale = 3 }) {
