@@ -26,8 +26,9 @@ export function A3PosterControls({ poster, updatePoster, onUndoDrawing, onRedoDr
     <section className="app-control-group">
       <h3>Product cutout</h3>
       <label className="app-toggle"><input type="checkbox" checked={productCutoutEnabled} onChange={(event) => updatePoster({ productCutoutEnabled: event.target.checked })} /><span>Remove product background</span></label>
-      <small>Use the refinements below to clean difficult edges after the automatic cutout.</small>
+      <small>Background color is now learned from dominant colors around the edge, so a plate or food touching the frame is less likely to be removed by mistake.</small>
       <RangeControl label="Cutout sensitivity" value={poster.productCutoutSensitivity ?? 38} min={0} max={100} onChange={(productCutoutSensitivity) => updatePoster({ productCutoutSensitivity })} />
+      <RangeControl label="Product protection" value={poster.productCutoutProtection ?? 45} min={0} max={100} onChange={(productCutoutProtection) => updatePoster({ productCutoutProtection })} suffix="%" />
       <RangeControl label="Edge softness" value={poster.productCutoutSoftness ?? 2} min={0} max={10} onChange={(productCutoutSoftness) => updatePoster({ productCutoutSoftness })} suffix="px" />
       <RangeControl label="Expand / contract mask" value={poster.productCutoutExpand ?? 0} min={-12} max={12} onChange={(productCutoutExpand) => updatePoster({ productCutoutExpand })} suffix="px" />
       <RangeControl label="Edge cleanup" value={poster.productCutoutCleanup ?? 35} min={0} max={100} onChange={(productCutoutCleanup) => updatePoster({ productCutoutCleanup })} suffix="%" />
@@ -43,8 +44,10 @@ export function A3PosterControls({ poster, updatePoster, onUndoDrawing, onRedoDr
       </div>
       <label className="app-field"><span>Drawing color</span><input type="color" value={poster.drawingColor ?? '#e53935'} disabled={(poster.drawingTool ?? 'pencil') === 'eraser'} onChange={(event) => updatePoster({ drawingColor: event.target.value })} /></label>
       <RangeControl label="Line thickness" value={poster.drawingSize ?? 18} min={2} max={160} onChange={(drawingSize) => updatePoster({ drawingSize })} suffix="px" />
+      <RangeControl label="Line smoothing" value={poster.drawingSmoothing ?? 72} min={0} max={100} onChange={(drawingSmoothing) => updatePoster({ drawingSmoothing })} suffix="%" />
+      {(poster.drawingTool ?? 'pencil') === 'marker' ? <RangeControl label="Marker opacity" value={poster.drawingMarkerOpacity ?? 34} min={8} max={85} onChange={(drawingMarkerOpacity) => updatePoster({ drawingMarkerOpacity })} suffix="%" /> : null}
       <div className="a3-drawing-actions"><button type="button" disabled={!canUndoDrawing} onClick={onUndoDrawing}>Undo</button><button type="button" disabled={!canRedoDrawing} onClick={onRedoDrawing}>Redo</button><button type="button" disabled={!poster.drawingStrokes?.length} onClick={onClearDrawing}>Clear</button></div>
-      <small>Draw directly on the preview. Eraser removes drawn strokes only; the product, background and text remain untouched.</small>
+      <small>Draw directly on the preview. Higher smoothing makes curves flow naturally instead of following every tiny mouse movement.</small>
     </section>
 
     <section className="app-control-group">
