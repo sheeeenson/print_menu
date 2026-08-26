@@ -26,6 +26,7 @@ export function A3PosterControls({ poster, updatePoster }) {
       <label className="app-toggle"><input type="checkbox" checked={poster.showOffer ?? false} onChange={(event) => updatePoster({ showOffer: event.target.checked })} /><span>Show offer badge</span></label>
       <label className="app-field"><span>Offer text</span><textarea rows="2" value={poster.offerText ?? ''} placeholder="-20% / NEW / SPECIAL OFFER" disabled={!poster.showOffer} onChange={(event) => updatePoster({ offerText: event.target.value })} /></label>
       <label className="app-field"><span>Offer text color</span><input type="color" value={poster.offerTextColor ?? '#ffffff'} disabled={!poster.showOffer} onChange={(event) => updatePoster({ offerTextColor: event.target.value })} /></label>
+      <label className="app-field"><span>Offer badge color</span><input type="color" value={poster.accentColor ?? '#d83b32'} disabled={!poster.showOffer} onChange={(event) => updatePoster({ accentColor: event.target.value })} /></label>
       <RangeControl label="Offer size" value={poster.offerSize ?? 78} min={24} max={360} onChange={(offerSize) => updatePoster({ offerSize })} suffix="px" />
     </section>
 
@@ -37,8 +38,14 @@ export function A3PosterControls({ poster, updatePoster }) {
       <label className="app-toggle"><input type="checkbox" checked={poster.autoBackground ?? true} disabled={customBackgroundEnabled} onChange={(event) => updatePoster({ autoBackground: event.target.checked })} /><span>Auto background from dish image</span></label>
       <RangeControl label="Background tone" value={poster.backgroundTone ?? 0} min={-40} max={40} onChange={(backgroundTone) => updatePoster({ backgroundTone })} />
       <label className="app-field"><span>Manual background</span><input type="color" value={poster.backgroundColor} disabled={customBackgroundEnabled || (poster.autoBackground ?? true)} onChange={(event) => updatePoster({ backgroundColor: event.target.value })} /></label>
-      <label className="app-field"><span>Text</span><input type="color" value={poster.textColor} onChange={(event) => updatePoster({ textColor: event.target.value })} /></label>
-      <label className="app-field"><span>Accent / offer badge</span><input type="color" value={poster.accentColor} onChange={(event) => updatePoster({ accentColor: event.target.value })} /></label>
+
+      <label className="app-field"><span>English title color</span><input type="color" value={poster.productNameColor ?? poster.textColor ?? '#161616'} onChange={(event) => updatePoster({ productNameColor: event.target.value })} /></label>
+      <label className="app-field"><span>Georgian title color</span><input type="color" value={poster.productNameGeColor ?? poster.textColor ?? '#161616'} onChange={(event) => updatePoster({ productNameGeColor: event.target.value })} /></label>
+      <label className="app-field"><span>English description color</span><input type="color" value={poster.descriptionEnColor ?? poster.textColor ?? '#161616'} onChange={(event) => updatePoster({ descriptionEnColor: event.target.value })} /></label>
+      <label className="app-field"><span>Georgian description color</span><input type="color" value={poster.descriptionGeColor ?? poster.textColor ?? '#161616'} onChange={(event) => updatePoster({ descriptionGeColor: event.target.value })} /></label>
+      <label className="app-field"><span>Current price color</span><input type="color" value={poster.currentPriceColor ?? poster.accentColor ?? '#d83b32'} onChange={(event) => updatePoster({ currentPriceColor: event.target.value })} /></label>
+      <label className="app-field"><span>Old price color</span><input type="color" value={poster.oldPriceColor ?? poster.textColor ?? '#161616'} onChange={(event) => updatePoster({ oldPriceColor: event.target.value })} /></label>
+
       <RangeControl label="English product name size" value={poster.productNameSize ?? 86} min={28} max={480} onChange={(productNameSize) => updatePoster({ productNameSize })} suffix="px" />
       <RangeControl label="Georgian product name size" value={poster.productNameGeSize ?? 62} min={24} max={420} onChange={(productNameGeSize) => updatePoster({ productNameGeSize })} suffix="px" />
       <RangeControl label="Description size" value={poster.descriptionSize ?? 48} min={24} max={180} onChange={(descriptionSize) => updatePoster({ descriptionSize })} suffix="px" />
