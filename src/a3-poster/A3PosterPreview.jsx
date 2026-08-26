@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getFallbackImageBackground, sampleImageAutofillColor } from '../utils/imageColor.js';
-import { normalizeGoogleDriveImageUrl } from '../utils/imageUrls.js';
+import { normalizeGoogleDriveImageUrl, normalizeGoogleDriveMediaUrl } from '../utils/imageUrls.js';
 import { removeImageBackground } from '../utils/removeImageBackground.js';
 import { getA3Format } from './a3PosterStorage.js';
 
@@ -40,9 +40,10 @@ const applyTone = (hex, tone = 0) => {
   return rgbToHex({ r: color.r + (target.r - color.r) * ratio, g: color.g + (target.g - color.g) * ratio, b: color.b + (target.b - color.b) * ratio });
 };
 const move = (x, y) => `translate(${x ?? 0}px, ${y ?? 0}px)`;
+const getA3ImageUrl = (value) => normalizeGoogleDriveMediaUrl(value) || normalizeGoogleDriveImageUrl(value);
 
 function ProductImage({ dish, poster }) {
-  const originalUrl = normalizeGoogleDriveImageUrl(dish.imageUrl);
+  const originalUrl = getA3ImageUrl(dish.imageUrl);
   const [displayUrl, setDisplayUrl] = useState(originalUrl);
   const cutoutEnabled = poster.productCutoutEnabled ?? false;
   const sensitivity = poster.productCutoutSensitivity ?? 38;
@@ -212,9 +213,9 @@ export function A3PosterPreview({ poster, dishes, onCommitStroke, onEraseStrokes
   const singleDish = template === 'single' ? selectedDishes[0] : null;
   const [sampledBackground, setSampledBackground] = useState('');
   const customBackgroundEnabled = poster.customBackgroundEnabled ?? false;
-  const customBackgroundUrl = customBackgroundEnabled ? normalizeGoogleDriveImageUrl(poster.customBackgroundUrl) : '';
+  const customBackgroundUrl = customBackgroundEnabled ? getA3ImageUrl(poster.customBackgroundUrl) : '';
   const autoBackground = !customBackgroundEnabled && (poster.autoBackground ?? true);
-  const imageUrls = useMemo(() => selectedDishes.map((dish) => normalizeGoogleDriveImageUrl(dish.imageUrl)).filter(Boolean), [selectedDishes]);
+  const imageUrls = useMemo(() => selectedDishes.map((dish) => getA3ImageUrl(dish.imageUrl)).filter(Boolean), [selectedDishes]);
   const imageKey = imageUrls.join('|');
 
   useEffect(() => {
