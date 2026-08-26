@@ -6,9 +6,10 @@ function PositionPair({ label, x, y, onX, onY }) {
   return <div className="a3-position-pair"><strong>{label}</strong><RangeControl label="X" value={x ?? 0} min={-1200} max={1200} onChange={onX} suffix="px" /><RangeControl label="Y" value={y ?? 0} min={-1200} max={1200} onChange={onY} suffix="px" /></div>;
 }
 
-export function A3PosterControls({ poster, updatePoster }) {
+export function A3PosterControls({ poster, updatePoster, onUndoDrawing, onRedoDrawing, onClearDrawing, canUndoDrawing, canRedoDrawing }) {
   const customBackgroundEnabled = poster.customBackgroundEnabled ?? false;
   const productCutoutEnabled = poster.productCutoutEnabled ?? false;
+  const drawingEnabled = poster.drawingEnabled ?? false;
   return <>
     <section className="app-control-group">
       <h3>Product data</h3>
@@ -25,9 +26,25 @@ export function A3PosterControls({ poster, updatePoster }) {
     <section className="app-control-group">
       <h3>Product cutout</h3>
       <label className="app-toggle"><input type="checkbox" checked={productCutoutEnabled} onChange={(event) => updatePoster({ productCutoutEnabled: event.target.checked })} /><span>Remove product background</span></label>
-      <small>Best for product photos where the background reaches the outer edges. The removed area becomes transparent so your custom A3 background shows through.</small>
+      <small>Use the refinements below to clean difficult edges after the automatic cutout.</small>
       <RangeControl label="Cutout sensitivity" value={poster.productCutoutSensitivity ?? 38} min={0} max={100} onChange={(productCutoutSensitivity) => updatePoster({ productCutoutSensitivity })} />
       <RangeControl label="Edge softness" value={poster.productCutoutSoftness ?? 2} min={0} max={10} onChange={(productCutoutSoftness) => updatePoster({ productCutoutSoftness })} suffix="px" />
+      <RangeControl label="Expand / contract mask" value={poster.productCutoutExpand ?? 0} min={-12} max={12} onChange={(productCutoutExpand) => updatePoster({ productCutoutExpand })} suffix="px" />
+      <RangeControl label="Edge cleanup" value={poster.productCutoutCleanup ?? 35} min={0} max={100} onChange={(productCutoutCleanup) => updatePoster({ productCutoutCleanup })} suffix="%" />
+      <label className="app-toggle"><input type="checkbox" checked={poster.productCutoutFillHoles ?? true} onChange={(event) => updatePoster({ productCutoutFillHoles: event.target.checked })} /><span>Fill holes inside product</span></label>
+      <label className="app-toggle"><input type="checkbox" checked={poster.productCutoutShadow ?? false} onChange={(event) => updatePoster({ productCutoutShadow: event.target.checked })} /><span>Keep soft product shadow</span></label>
+    </section>
+
+    <section className="app-control-group">
+      <h3>Drawing tools</h3>
+      <label className="app-toggle"><input type="checkbox" checked={drawingEnabled} onChange={(event) => updatePoster({ drawingEnabled: event.target.checked })} /><span>Enable drawing on poster</span></label>
+      <div className="a3-drawing-tool-row">
+        {['pencil', 'marker', 'eraser'].map((tool) => <button key={tool} type="button" className={(poster.drawingTool ?? 'pencil') === tool ? 'active' : ''} onClick={() => updatePoster({ drawingTool: tool })}>{tool === 'pencil' ? 'Pencil' : tool === 'marker' ? 'Marker' : 'Eraser'}</button>)}
+      </div>
+      <label className="app-field"><span>Drawing color</span><input type="color" value={poster.drawingColor ?? '#e53935'} disabled={(poster.drawingTool ?? 'pencil') === 'eraser'} onChange={(event) => updatePoster({ drawingColor: event.target.value })} /></label>
+      <RangeControl label="Line thickness" value={poster.drawingSize ?? 18} min={2} max={160} onChange={(drawingSize) => updatePoster({ drawingSize })} suffix="px" />
+      <div className="a3-drawing-actions"><button type="button" disabled={!canUndoDrawing} onClick={onUndoDrawing}>Undo</button><button type="button" disabled={!canRedoDrawing} onClick={onRedoDrawing}>Redo</button><button type="button" disabled={!poster.drawingStrokes?.length} onClick={onClearDrawing}>Clear</button></div>
+      <small>Draw directly on the preview. Eraser removes drawn strokes only; the product, background and text remain untouched.</small>
     </section>
 
     <section className="app-control-group">
