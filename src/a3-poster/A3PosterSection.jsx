@@ -45,6 +45,12 @@ const fetchPosterBlob = async (source) => {
   return blob;
 };
 
+const getTransformScale = (transform = '') => {
+  const match = String(transform).match(/scale\(([-\d.]+)\)/);
+  const value = match ? Number(match[1]) : 1;
+  return Number.isFinite(value) && value > 0 ? value : 1;
+};
+
 const rasterizeProductImage = async (image) => {
   const source = image.getAttribute('src') || image.currentSrc || '';
   if (!source) return;
@@ -54,9 +60,14 @@ const rasterizeProductImage = async (image) => {
     const styles = getComputedStyle(image);
     const boxWidth = Math.max(1, Math.round(image.offsetWidth || image.clientWidth || image.getBoundingClientRect().width));
     const boxHeight = Math.max(1, Math.round(image.offsetHeight || image.clientHeight || image.getBoundingClientRect().height));
+    const visualScale = Math.max(1, getTransformScale(styles.transform === 'none' ? image.style.transform : styles.transform));
+    const backingScale = Math.min(2.5, visualScale);
+    const backingWidth = Math.max(boxWidth, Math.round(boxWidth * backingScale));
+    const backingHeight = Math.max(boxHeight, Math.round(boxHeight * backingScale));
+
     const canvas = document.createElement('canvas');
-    canvas.width = boxWidth;
-    canvas.height = boxHeight;
+    canvas.width = backingWidth;
+    canvas.height = backingHeight;
     canvas.className = image.className;
     canvas.setAttribute('aria-hidden', 'true');
     canvas.style.cssText = image.style.cssText;
@@ -65,15 +76,15 @@ const rasterizeProductImage = async (image) => {
     canvas.style.objectFit = '';
     canvas.style.display = styles.display;
 
-    const scale = Math.min(boxWidth / bitmap.width, boxHeight / bitmap.height);
+    const scale = Math.min(backingWidth / bitmap.width, backingHeight / bitmap.height);
     const drawWidth = bitmap.width * scale;
     const drawHeight = bitmap.height * scale;
-    const drawX = (boxWidth - drawWidth) / 2;
-    const drawY = (boxHeight - drawHeight) / 2;
+    const drawX = (backingWidth - drawWidth) / 2;
+    const drawY = (backingHeight - drawHeight) / 2;
     const context = canvas.getContext('2d');
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = 'high';
-    context.clearRect(0, 0, boxWidth, boxHeight);
+    context.clearRect(0, 0, backingWidth, backingHeight);
     context.drawImage(bitmap, drawX, drawY, drawWidth, drawHeight);
     image.replaceWith(canvas);
   } finally {

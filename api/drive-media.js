@@ -25,9 +25,29 @@ const getSafeContentType = (upstreamResponse, mediaType) => {
   return mediaType === 'video' ? 'video/mp4' : 'image/jpeg';
 };
 
-const getFilename = (fileId, mediaType) => mediaType === 'video' ? `drive-video-${fileId}.mp4` : `drive-image-${fileId}.jpg`;
+const getFilename = (fileId, mediaType) => mediaType === 'video' ? `drive-video-${fileId}.mp4` : `drive-image-${fileId}`;
+
+const isUsableMediaResponse = (upstreamResponse) => {
+  const contentType = upstreamResponse.headers.get('content-type') || '';
+  return (upstreamResponse.ok || upstreamResponse.status === 206) && !contentType.includes('text/html');
+};
+
+const fetchDriveDownload = ({ fileId, method, headers }) => fetch(
+  `${DRIVE_DOWNLOAD_URL}${encodeURIComponent(fileId)}&export=download&confirm=t`,
+  {
+    method,
+    headers,
+    redirect: 'follow',
+  },
+);
 
 const fetchDriveMedia = async ({ fileId, mediaType, method, headers }) => {
+  // Always prefer the original Drive file. The old implementation preferred
+  // Google's thumbnail endpoint for images, which recompressed/resized the source
+  // and caused visible quality loss in A3 exports.
+  const originalResponse = await fetchDriveDownload({ fileId, method, headers });
+  if (isUsableMediaResponse(originalResponse)) return originalResponse;
+
   if (mediaType === 'image') {
     const thumbnailResponse = await fetch(`${DRIVE_THUMBNAIL_URL}${encodeURIComponent(fileId)}&sz=w4096`, {
       method,
@@ -38,17 +58,10 @@ const fetchDriveMedia = async ({ fileId, mediaType, method, headers }) => {
       redirect: 'follow',
     });
 
-    const thumbnailContentType = thumbnailResponse.headers.get('content-type') || '';
-    if ((thumbnailResponse.ok || thumbnailResponse.status === 206) && !thumbnailContentType.includes('text/html')) {
-      return thumbnailResponse;
-    }
+    if (isUsableMediaResponse(thumbnailResponse)) return thumbnailResponse;
   }
 
-  return fetch(`${DRIVE_DOWNLOAD_URL}${encodeURIComponent(fileId)}&export=download&confirm=t`, {
-    method,
-    headers,
-    redirect: 'follow',
-  });
+  return originalResponse;
 };
 
 export default async function handler(request, response) {
