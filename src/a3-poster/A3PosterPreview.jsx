@@ -49,35 +49,80 @@ function ProductImage({ dish, poster }) {
   const softness = poster.productCutoutSoftness ?? 2;
   const expand = poster.productCutoutExpand ?? 0;
   const cleanup = poster.productCutoutCleanup ?? 35;
+  const protection = poster.productCutoutProtection ?? 45;
   const fillHoles = poster.productCutoutFillHoles ?? true;
 
   useEffect(() => {
     let cancelled = false;
     setDisplayUrl(originalUrl);
     if (!cutoutEnabled || !dish.imageUrl) return undefined;
-    removeImageBackground(dish.imageUrl, { sensitivity, softness, expand, cleanup, fillHoles })
+    removeImageBackground(dish.imageUrl, { sensitivity, softness, expand, cleanup, protection, fillHoles })
       .then((url) => { if (!cancelled) setDisplayUrl(url || originalUrl); })
       .catch((error) => {
         console.warn('Could not remove product background.', error);
         if (!cancelled) setDisplayUrl(originalUrl);
       });
     return () => { cancelled = true; };
-  }, [cutoutEnabled, dish.imageUrl, originalUrl, sensitivity, softness, expand, cleanup, fillHoles]);
+  }, [cutoutEnabled, dish.imageUrl, originalUrl, sensitivity, softness, expand, cleanup, protection, fillHoles]);
 
   if (!displayUrl) return null;
   const shadow = cutoutEnabled && poster.productCutoutShadow ? 'drop-shadow(0 34px 28px rgba(0,0,0,.22))' : 'none';
   return <img className="a3-product-image" src={displayUrl} alt="" style={{ transform: `${move(poster.imageXOffset, poster.imageYOffset)} scale(${poster.imageScale})`, filter: shadow }} />;
 }
 
-const pointsToPath = (points = []) => points.length ? `M ${points.map((point) => `${point.x} ${point.y}`).join(' L ')}` : '';
+const chaikin = (points) => {
+  if (points.length < 3) return points;
+  const result = [points[0]];
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const current = points[index];
+    const next = points[index + 1];
+    result.push({ x: current.x * 0.75 + next.x * 0.25, y: current.y * 0.75 + next.y * 0.25 });
+    result.push({ x: current.x * 0.25 + next.x * 0.75, y: current.y * 0.25 + next.y * 0.75 });
+  }
+  result.push(points[points.length - 1]);
+  return result;
+};
+
+const smoothStrokePoints = (points = [], smoothing = 72) => {
+  if (points.length < 3) return points;
+  const amount = clamp(smoothing, 0, 100);
+  let result = points;
+  const iterations = amount >= 75 ? 3 : amount >= 45 ? 2 : amount >= 15 ? 1 : 0;
+  for (let index = 0; index < iterations; index += 1) result = chaikin(result);
+  return result;
+};
+
+const pointsToPath = (points = [], smoothing = 72) => {
+  const smoothed = smoothStrokePoints(points, smoothing);
+  if (!smoothed.length) return '';
+  if (smoothed.length === 1) return `M ${smoothed[0].x} ${smoothed[0].y} L ${smoothed[0].x + 0.01} ${smoothed[0].y + 0.01}`;
+  let path = `M ${smoothed[0].x} ${smoothed[0].y}`;
+  for (let index = 1; index < smoothed.length - 1; index += 1) {
+    const current = smoothed[index];
+    const next = smoothed[index + 1];
+    const midX = (current.x + next.x) / 2;
+    const midY = (current.y + next.y) / 2;
+    path += ` Q ${current.x} ${current.y} ${midX} ${midY}`;
+  }
+  const last = smoothed[smoothed.length - 1];
+  path += ` T ${last.x} ${last.y}`;
+  return path;
+};
+
+const distanceToSegment = (point, start, end) => {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  if (!dx && !dy) return Math.hypot(point.x - start.x, point.y - start.y);
+  const t = clamp(((point.x - start.x) * dx + (point.y - start.y) * dy) / (dx * dx + dy * dy), 0, 1);
+  return Math.hypot(point.x - (start.x + t * dx), point.y - (start.y + t * dy));
+};
+
 const strokeDistance = (stroke, point) => {
   const points = stroke.points ?? [];
+  if (!points.length) return Infinity;
+  if (points.length === 1) return Math.hypot(points[0].x - point.x, points[0].y - point.y);
   let best = Infinity;
-  points.forEach((candidate) => {
-    const dx = candidate.x - point.x;
-    const dy = candidate.y - point.y;
-    best = Math.min(best, Math.hypot(dx, dy));
-  });
+  for (let index = 0; index < points.length - 1; index += 1) best = Math.min(best, distanceToSegment(point, points[index], points[index + 1]));
   return best;
 };
 
@@ -87,24 +132,29 @@ function DrawingOverlay({ poster, format, onCommitStroke, onEraseStrokes }) {
   const enabled = poster.drawingEnabled ?? false;
   const tool = poster.drawingTool ?? 'pencil';
   const strokes = poster.drawingStrokes ?? [];
+  const smoothing = poster.drawingSmoothing ?? 72;
 
-  const pointFromEvent = (event) => {
+  const pointFromClient = (clientX, clientY) => {
     const rect = svgRef.current.getBoundingClientRect();
     return {
-      x: clamp((event.clientX - rect.left) * format.width / rect.width, 0, format.width),
-      y: clamp((event.clientY - rect.top) * format.height / rect.height, 0, format.height),
+      x: clamp((clientX - rect.left) * format.width / rect.width, 0, format.width),
+      y: clamp((clientY - rect.top) * format.height / rect.height, 0, format.height),
     };
+  };
+
+  const eraseAtPoint = (point) => {
+    const radius = Math.max(12, poster.drawingSize ?? 18) * 2.2;
+    const ids = strokes.filter((stroke) => strokeDistance(stroke, point) <= radius + (stroke.size ?? 12) / 2).map((stroke) => stroke.id);
+    if (ids.length) onEraseStrokes(ids);
   };
 
   const handlePointerDown = (event) => {
     if (!enabled) return;
     event.preventDefault();
     svgRef.current.setPointerCapture?.(event.pointerId);
-    const point = pointFromEvent(event);
+    const point = pointFromClient(event.clientX, event.clientY);
     if (tool === 'eraser') {
-      const radius = Math.max(12, poster.drawingSize ?? 18) * 2.2;
-      const ids = strokes.filter((stroke) => strokeDistance(stroke, point) <= radius + (stroke.size ?? 12)).map((stroke) => stroke.id);
-      if (ids.length) onEraseStrokes(ids);
+      eraseAtPoint(point);
       setActiveStroke({ tool: 'eraser', points: [point] });
       return;
     }
@@ -113,7 +163,8 @@ function DrawingOverlay({ poster, format, onCommitStroke, onEraseStrokes }) {
       tool,
       color: poster.drawingColor ?? '#e53935',
       size: poster.drawingSize ?? 18,
-      opacity: tool === 'marker' ? 0.38 : 1,
+      opacity: tool === 'marker' ? clamp((poster.drawingMarkerOpacity ?? 34) / 100, 0.08, 0.85) : 1,
+      smoothing,
       points: [point],
     });
   };
@@ -121,14 +172,22 @@ function DrawingOverlay({ poster, format, onCommitStroke, onEraseStrokes }) {
   const handlePointerMove = (event) => {
     if (!enabled || !activeStroke) return;
     event.preventDefault();
-    const point = pointFromEvent(event);
+    const sourceEvents = event.getCoalescedEvents?.() ?? [event];
+    const newPoints = sourceEvents.map((sourceEvent) => pointFromClient(sourceEvent.clientX, sourceEvent.clientY));
     if (tool === 'eraser') {
-      const radius = Math.max(12, poster.drawingSize ?? 18) * 2.2;
-      const ids = strokes.filter((stroke) => strokeDistance(stroke, point) <= radius + (stroke.size ?? 12)).map((stroke) => stroke.id);
-      if (ids.length) onEraseStrokes(ids);
+      newPoints.forEach(eraseAtPoint);
       return;
     }
-    setActiveStroke((current) => current ? { ...current, points: [...current.points, point] } : current);
+    setActiveStroke((current) => {
+      if (!current) return current;
+      const points = [...current.points];
+      newPoints.forEach((point) => {
+        const last = points[points.length - 1];
+        const minDistance = Math.max(1.5, (poster.drawingSize ?? 18) * 0.035);
+        if (!last || Math.hypot(point.x - last.x, point.y - last.y) >= minDistance) points.push(point);
+      });
+      return { ...current, points };
+    });
   };
 
   const finishStroke = (event) => {
@@ -141,7 +200,7 @@ function DrawingOverlay({ poster, format, onCommitStroke, onEraseStrokes }) {
   const visibleStrokes = activeStroke?.tool !== 'eraser' ? [...strokes, activeStroke].filter(Boolean) : strokes;
 
   return <svg ref={svgRef} className={`a3-drawing-overlay ${enabled ? 'enabled' : ''}`} viewBox={`0 0 ${format.width} ${format.height}`} preserveAspectRatio="none" onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={finishStroke} onPointerCancel={finishStroke}>
-    {visibleStrokes.map((stroke) => <path key={stroke.id} d={pointsToPath(stroke.points)} fill="none" stroke={stroke.color} strokeWidth={stroke.size} strokeOpacity={stroke.opacity ?? 1} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />)}
+    {visibleStrokes.map((stroke) => <path key={stroke.id} d={pointsToPath(stroke.points, stroke.smoothing ?? smoothing)} fill="none" stroke={stroke.color} strokeWidth={stroke.size} strokeOpacity={stroke.opacity ?? 1} strokeLinecap="round" strokeLinejoin="round" style={stroke.tool === 'marker' ? { mixBlendMode: 'multiply' } : undefined} />)}
   </svg>;
 }
 
