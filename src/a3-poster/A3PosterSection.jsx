@@ -74,6 +74,8 @@ async function exportPoster(poster, mimeType, extension) {
   clone.style.transform = 'none';
   clone.style.width = `${format.width}px`;
   clone.style.height = `${format.height}px`;
+  const drawingOverlay = clone.querySelector('.a3-drawing-overlay');
+  if (drawingOverlay) drawingOverlay.classList.remove('enabled');
   wrapper.appendChild(clone);
   document.body.appendChild(wrapper);
 
@@ -107,18 +109,51 @@ export function A3PosterSection({ project }) {
   const dishes = useMemo(() => (project.dishes ?? []).filter((dish) => dish.visible !== false && dish.imageUrl), [project.dishes]);
   const [a3Project, setA3Project] = useState(() => loadA3PosterProject(dishes));
   const [exportStatus, setExportStatus] = useState('');
+  const [drawingHistory, setDrawingHistory] = useState({});
   const selectedPoster = a3Project.posters.find((poster) => poster.id === a3Project.selectedPosterId) ?? a3Project.posters[0];
 
   useEffect(() => saveA3PosterProject(a3Project), [a3Project]);
 
   const updateProject = (updater) => setA3Project((current) => updater(current));
   const updatePoster = (changes) => updateProject((current) => ({ ...current, posters: current.posters.map((poster) => poster.id === current.selectedPosterId ? { ...poster, ...changes } : poster) }));
+  const updateDrawingStrokes = (nextStrokes, recordHistory = true) => {
+    if (!selectedPoster) return;
+    const previous = selectedPoster.drawingStrokes ?? [];
+    if (recordHistory) setDrawingHistory((current) => ({ ...current, [selectedPoster.id]: { undo: [...(current[selectedPoster.id]?.undo ?? []), previous].slice(-60), redo: [] } }));
+    updatePoster({ drawingStrokes: nextStrokes });
+  };
+  const commitStroke = (stroke) => updateDrawingStrokes([...(selectedPoster.drawingStrokes ?? []), stroke]);
+  const eraseStrokes = (ids) => {
+    const idSet = new Set(ids);
+    const next = (selectedPoster.drawingStrokes ?? []).filter((stroke) => !idSet.has(stroke.id));
+    if (next.length !== (selectedPoster.drawingStrokes ?? []).length) updateDrawingStrokes(next);
+  };
+  const undoDrawing = () => {
+    const entry = drawingHistory[selectedPoster.id];
+    if (!entry?.undo?.length) return;
+    const previous = entry.undo[entry.undo.length - 1];
+    const currentStrokes = selectedPoster.drawingStrokes ?? [];
+    setDrawingHistory((current) => ({ ...current, [selectedPoster.id]: { undo: entry.undo.slice(0, -1), redo: [currentStrokes, ...(entry.redo ?? [])].slice(0, 60) } }));
+    updateDrawingStrokes(previous, false);
+  };
+  const redoDrawing = () => {
+    const entry = drawingHistory[selectedPoster.id];
+    if (!entry?.redo?.length) return;
+    const next = entry.redo[0];
+    const currentStrokes = selectedPoster.drawingStrokes ?? [];
+    setDrawingHistory((current) => ({ ...current, [selectedPoster.id]: { undo: [...(entry.undo ?? []), currentStrokes].slice(-60), redo: entry.redo.slice(1) } }));
+    updateDrawingStrokes(next, false);
+  };
+  const clearDrawing = () => {
+    if ((selectedPoster.drawingStrokes ?? []).length) updateDrawingStrokes([]);
+  };
+
   const addPoster = () => {
     const poster = createA3Poster(dishes, `A3 Poster ${a3Project.posters.length + 1}`);
     updateProject((current) => ({ ...current, posters: [...current.posters, poster], selectedPosterId: poster.id }));
   };
   const duplicatePoster = () => {
-    const poster = { ...selectedPoster, id: `a3_${Math.random().toString(36).slice(2, 10)}`, name: `${selectedPoster.name} copy`, selectedDishIds: [...selectedPoster.selectedDishIds] };
+    const poster = { ...selectedPoster, id: `a3_${Math.random().toString(36).slice(2, 10)}`, name: `${selectedPoster.name} copy`, selectedDishIds: [...selectedPoster.selectedDishIds], drawingStrokes: (selectedPoster.drawingStrokes ?? []).map((stroke) => ({ ...stroke, points: stroke.points.map((point) => ({ ...point })) })) };
     updateProject((current) => ({ ...current, posters: [...current.posters, poster], selectedPosterId: poster.id }));
   };
   const deletePoster = () => updateProject((current) => {
@@ -145,31 +180,22 @@ export function A3PosterSection({ project }) {
   };
 
   if (!selectedPoster) return null;
+  const history = drawingHistory[selectedPoster.id] ?? { undo: [], redo: [] };
 
   return <section className="app-page a3-poster-page">
     <aside className="app-side-panel a3-poster-side-panel">
       <header className="app-panel-header"><p>Print image</p><h2>A3 Poster</h2><span>Create printable A3 images from the same product catalogue used across the app.</span></header>
 
-      <section className="app-control-group">
-        <div className="panel-title-row"><h3>Posters</h3><button type="button" className="primary-action compact" onClick={addPoster}>＋ Add</button></div>
-        <div className="a3-poster-list">{a3Project.posters.map((poster) => <button key={poster.id} type="button" className={poster.id === selectedPoster.id ? 'selected' : ''} onClick={() => updateProject((current) => ({ ...current, selectedPosterId: poster.id }))}><strong>{poster.name}</strong><small>{getA3Format(poster.formatId).label}</small></button>)}</div>
-        <div className="action-row"><button type="button" onClick={duplicatePoster}>Duplicate</button><button type="button" className="danger" onClick={deletePoster}>Delete</button></div>
-      </section>
-
+      <section className="app-control-group"><div className="panel-title-row"><h3>Posters</h3><button type="button" className="primary-action compact" onClick={addPoster}>＋ Add</button></div><div className="a3-poster-list">{a3Project.posters.map((poster) => <button key={poster.id} type="button" className={poster.id === selectedPoster.id ? 'selected' : ''} onClick={() => updateProject((current) => ({ ...current, selectedPosterId: poster.id }))}><strong>{poster.name}</strong><small>{getA3Format(poster.formatId).label}</small></button>)}</div><div className="action-row"><button type="button" onClick={duplicatePoster}>Duplicate</button><button type="button" className="danger" onClick={deletePoster}>Delete</button></div></section>
       <section className="app-control-group"><h3>Format</h3><div className="a3-poster-format-row">{A3_FORMATS.map((format) => <button key={format.id} type="button" className={selectedPoster.formatId === format.id ? 'active' : ''} onClick={() => updatePoster({ formatId: format.id })}>{format.label}</button>)}</div></section>
-
       <section className="app-control-group"><h3>Layout</h3><div className="a3-template-row"><button type="button" className={selectedPoster.template === 'single' ? 'active' : ''} onClick={() => handleTemplate('single')}>1 product</button><button type="button" className={selectedPoster.template === 'two' ? 'active' : ''} onClick={() => handleTemplate('two')}>2 products</button><button type="button" className={selectedPoster.template === 'four' ? 'active' : ''} onClick={() => handleTemplate('four')}>4 products</button></div></section>
+      <section className="app-control-group"><h3>Catalogue</h3><small>{selectedPoster.selectedDishIds.length}/{maxItemsForTemplate(selectedPoster.template)} selected</small><A3CatalogueAccordion categories={categories} dishes={dishes} selectedDishIds={selectedPoster.selectedDishIds} onToggleDish={toggleDish} /></section>
 
-      <section className="app-control-group">
-        <h3>Catalogue</h3><small>{selectedPoster.selectedDishIds.length}/{maxItemsForTemplate(selectedPoster.template)} selected</small>
-        <A3CatalogueAccordion categories={categories} dishes={dishes} selectedDishIds={selectedPoster.selectedDishIds} onToggleDish={toggleDish} />
-      </section>
-
-      <A3PosterControls poster={selectedPoster} updatePoster={updatePoster} />
+      <A3PosterControls poster={selectedPoster} updatePoster={updatePoster} onUndoDrawing={undoDrawing} onRedoDrawing={redoDrawing} onClearDrawing={clearDrawing} canUndoDrawing={history.undo.length > 0} canRedoDrawing={history.redo.length > 0} />
 
       <section className="app-control-group"><h3>Download</h3><div className="a3-export-row"><button type="button" onClick={() => handleExport('image/png', 'png')}>PNG</button><button type="button" onClick={() => handleExport('image/jpeg', 'jpg')}>JPG</button><button type="button" onClick={() => window.print()}>Print / PDF</button></div>{exportStatus ? <small className="app-preview-size">{exportStatus}</small> : null}</section>
     </aside>
 
-    <main className="app-preview-stage a3-poster-preview-stage"><div className="app-toolbar"><div><p>Preview</p><h2>{selectedPoster.name}</h2></div><div className="app-pill">{getA3Format(selectedPoster.formatId).label}</div></div><A3PosterPreview poster={selectedPoster} dishes={dishes} /></main>
+    <main className="app-preview-stage a3-poster-preview-stage"><div className="app-toolbar"><div><p>Preview</p><h2>{selectedPoster.name}</h2></div><div className="app-pill">{getA3Format(selectedPoster.formatId).label}</div></div><A3PosterPreview poster={selectedPoster} dishes={dishes} onCommitStroke={commitStroke} onEraseStrokes={eraseStrokes} /></main>
   </section>;
 }
