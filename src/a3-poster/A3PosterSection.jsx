@@ -1,6 +1,7 @@
 import html2canvas from 'html2canvas';
 import { useEffect, useMemo, useState } from 'react';
-import { extractGoogleDriveFileId, normalizeGoogleDriveImageUrl } from '../utils/imageUrls.js';
+import { extractGoogleDriveFileId } from '../utils/imageUrls.js';
+import { A3CatalogueAccordion } from './A3CatalogueAccordion.jsx';
 import { A3PosterControls } from './A3PosterControls.jsx';
 import { A3PosterPreview } from './A3PosterPreview.jsx';
 import { A3_FORMATS, createA3Poster, getA3Format, loadA3PosterProject, saveA3PosterProject } from './a3PosterStorage.js';
@@ -161,15 +162,7 @@ export function A3PosterSection({ project }) {
 
       <section className="app-control-group">
         <h3>Catalogue</h3><small>{selectedPoster.selectedDishIds.length}/{maxItemsForTemplate(selectedPoster.template)} selected</small>
-        <div className="a3-dish-picker">{categories.map((category) => {
-          const categoryDishes = dishes.filter((dish) => dish.categoryId === category.id);
-          if (!categoryDishes.length) return null;
-          return <div key={category.id}><div className="a3-category-title">{category.nameEn || category.nameGe || 'Category'}</div>{categoryDishes.map((dish) => {
-            const selected = selectedPoster.selectedDishIds.includes(dish.id);
-            const imageUrl = normalizeGoogleDriveImageUrl(dish.imageUrl);
-            return <label key={dish.id} className={selected ? 'selected' : ''}><input type="checkbox" checked={selected} onChange={() => toggleDish(dish.id)} /><img src={imageUrl} alt="" /><span><strong>{dish.nameEn || dish.nameGe}</strong><small>{dish.nameGe}</small></span></label>;
-          })}</div>;
-        })}</div>
+        <A3CatalogueAccordion categories={categories} dishes={dishes} selectedDishIds={selectedPoster.selectedDishIds} onToggleDish={toggleDish} />
       </section>
 
       <A3PosterControls poster={selectedPoster} updatePoster={updatePoster} />
