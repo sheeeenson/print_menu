@@ -5,6 +5,7 @@ import { A3CatalogueAccordion } from '../a3-poster/A3CatalogueAccordion.jsx';
 import '../a3-poster/a3Poster.css';
 import { MetaCreativeControls } from './MetaCreativeControls.jsx';
 import { MetaCreativePreview } from './MetaCreativePreview.jsx';
+import { drawMetaCreativeProductLayers } from './metaCreativeCanvasProducts.js';
 import { drawMetaCreativeTextLayers } from './metaCreativeCanvasText.js';
 import { buildDefaultMetaElementTransforms, createMetaCreative, getMetaFormat, loadMetaCreativeProject, META_FORMATS, saveMetaCreativeProject } from './metaCreativeStorage.js';
 import './metaCreative.css';
@@ -14,53 +15,11 @@ const downloadUrl = (url, filename) => { const link = document.createElement('a'
 const blobToDataUrl = (blob) => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result || '')); reader.onerror = () => reject(reader.error || new Error('Could not read image data.')); reader.readAsDataURL(blob); });
 const getCanvasSafeImageUrl = (value = '') => { const source = String(value || '').trim(); if (!source || source.startsWith('data:') || source.startsWith('blob:')) return source; const driveId = extractGoogleDriveFileId(source); return driveId ? `/api/drive-media?id=${encodeURIComponent(driveId)}&type=image` : source; };
 const fetchImageBlob = async (source) => { const response = await fetch(getCanvasSafeImageUrl(source), { credentials: 'same-origin', cache: 'reload' }); if (!response.ok) throw new Error(`Could not load creative image: HTTP ${response.status}`); const blob = await response.blob(); if (!blob.size) throw new Error('Creative image is empty.'); return blob; };
-const getTransformScale = (transform = '') => { const match = String(transform).match(/scale\(([-\d.]+)\)/); const value = match ? Number(match[1]) : 1; return Number.isFinite(value) && value > 0 ? value : 1; };
-
-const rasterizeProductImage = async (image) => {
-  const source = image.getAttribute('src') || image.currentSrc || '';
-  if (!source) return;
-  const blob = source.startsWith('data:') || source.startsWith('blob:') ? await fetch(source).then((response) => response.blob()) : await fetchImageBlob(source);
-  const bitmap = await createImageBitmap(blob);
-  try {
-    const boxWidth = Math.max(1, Math.round(image.offsetWidth || image.clientWidth || image.getBoundingClientRect().width));
-    const boxHeight = Math.max(1, Math.round(image.offsetHeight || image.clientHeight || image.getBoundingClientRect().height));
-    const parent = image.closest('.meta-free-element');
-    const parentScale = parent ? getTransformScale(getComputedStyle(parent).transform) : 1;
-    const backingScale = Math.min(3, Math.max(1, parentScale));
-    const backingWidth = Math.max(boxWidth, Math.round(boxWidth * backingScale));
-    const backingHeight = Math.max(boxHeight, Math.round(boxHeight * backingScale));
-    const canvas = document.createElement('canvas');
-    canvas.width = backingWidth;
-    canvas.height = backingHeight;
-    canvas.className = image.className;
-    canvas.setAttribute('aria-hidden', 'true');
-    canvas.style.cssText = image.style.cssText;
-    canvas.style.width = `${boxWidth}px`;
-    canvas.style.height = `${boxHeight}px`;
-    canvas.style.objectFit = '';
-    canvas.style.display = 'block';
-    const ratio = Math.min(backingWidth / bitmap.width, backingHeight / bitmap.height);
-    const drawWidth = bitmap.width * ratio;
-    const drawHeight = bitmap.height * ratio;
-    const drawX = (backingWidth - drawWidth) / 2;
-    const drawY = (backingHeight - drawHeight) / 2;
-    const context = canvas.getContext('2d');
-    context.imageSmoothingEnabled = true;
-    context.imageSmoothingQuality = 'high';
-    context.clearRect(0, 0, backingWidth, backingHeight);
-    context.drawImage(bitmap, drawX, drawY, drawWidth, drawHeight);
-    image.replaceWith(canvas);
-  } finally {
-    bitmap.close?.();
-  }
-};
 
 const prepareExportClone = async (clone) => {
   clone.querySelectorAll('.meta-editor-only').forEach((node) => node.remove());
   clone.querySelectorAll('.meta-free-element').forEach((node) => node.classList.remove('selected'));
-  clone.querySelectorAll('.meta-text-element,.meta-offer-element').forEach((node) => node.remove());
-  const productImages = Array.from(clone.querySelectorAll('img.meta-product-image'));
-  await Promise.all(productImages.map(rasterizeProductImage));
+  clone.querySelectorAll('.meta-text-element,.meta-offer-element,.meta-image-element').forEach((node) => node.remove());
   const images = Array.from(clone.querySelectorAll('img'));
   await Promise.all(images.map(async (image) => {
     const source = image.getAttribute('src') || image.currentSrc || '';
@@ -84,9 +43,18 @@ async function exportCreative(creative, dishes, mimeType, extension) {
   wrapper.appendChild(clone); document.body.appendChild(wrapper);
   try {
     await prepareExportClone(clone);
-    const canvas = await html2canvas(clone, { backgroundColor: null, width: format.width, height: format.height, windowWidth: format.width, windowHeight: format.height, scrollX: 0, scrollY: 0, scale: 1, useCORS: false, allowTaint: false, logging: false });
-    if (canvas.width !== format.width || canvas.height !== format.height) throw new Error(`Export size mismatch: ${canvas.width}x${canvas.height}.`);
+    const baseCanvas = await html2canvas(clone, { backgroundColor: null, width: format.width, height: format.height, windowWidth: format.width, windowHeight: format.height, scrollX: 0, scrollY: 0, scale: 1, useCORS: false, allowTaint: false, logging: false });
+    if (baseCanvas.width !== format.width || baseCanvas.height !== format.height) throw new Error(`Export size mismatch: ${baseCanvas.width}x${baseCanvas.height}.`);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = format.width;
+    canvas.height = format.height;
+    const context = canvas.getContext('2d');
+    context.clearRect(0, 0, format.width, format.height);
+    context.drawImage(baseCanvas, 0, 0);
+    await drawMetaCreativeProductLayers(canvas, creative, dishes, format);
     drawMetaCreativeTextLayers(canvas, creative, dishes, format);
+
     const blob = await new Promise((resolve, reject) => canvas.toBlob((value) => value ? resolve(value) : reject(new Error('Could not create image file.')), mimeType, .96));
     const url = URL.createObjectURL(blob); downloadUrl(url, `${safeName(creative.name)}-${format.label.replace(':','x')}.${extension}`); setTimeout(() => URL.revokeObjectURL(url), 1000);
   } finally { wrapper.remove(); }
