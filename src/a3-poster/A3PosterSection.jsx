@@ -52,8 +52,8 @@ const rasterizeProductImage = async (image) => {
   const bitmap = await createImageBitmap(blob);
   try {
     const styles = getComputedStyle(image);
-    const boxWidth = Math.max(1, Math.round(image.getBoundingClientRect().width));
-    const boxHeight = Math.max(1, Math.round(image.getBoundingClientRect().height));
+    const boxWidth = Math.max(1, Math.round(image.offsetWidth || image.clientWidth || image.getBoundingClientRect().width));
+    const boxHeight = Math.max(1, Math.round(image.offsetHeight || image.clientHeight || image.getBoundingClientRect().height));
     const canvas = document.createElement('canvas');
     canvas.width = boxWidth;
     canvas.height = boxHeight;
