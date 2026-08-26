@@ -143,6 +143,14 @@ const downloadViaJob = async ({ baseUrl, payload, filename, extension, fallbackM
   throw new Error(`${extension.toUpperCase()} export timed out after 15 minutes.`);
 };
 
+const downloadViaDirectRender = async ({ baseUrl, payload, filename, extension, fallbackMessage, onStatus, rendererLabel }) => {
+  onStatus?.(`Rendering ${extension.toUpperCase()} via ${rendererLabel || 'renderer'}...`);
+  const response = await postJson(`${baseUrl}/render`, payload);
+  if (!response.ok) throw new Error(await getRenderErrorMessage(response, fallbackMessage));
+  onStatus?.(`Downloading ${extension.toUpperCase()}... 100%`);
+  await downloadBlobResponse(response, filename, extension);
+};
+
 export async function downloadHtmlRender({
   endpoint,
   output = 'mp4',
@@ -170,24 +178,55 @@ export async function downloadHtmlRender({
 
   const cloudBaseUrl = endpoint ? endpoint.replace(/\/$/, '').replace(/\/render$/, '') : getRendererBaseUrl();
   const localBaseUrl = getLocalRendererBaseUrl();
-  const shouldUseLocalOnly = output === 'mp4' || output === 'webm' || output === 'png';
+  let cloudError = null;
 
-  if (shouldUseLocalOnly) {
-    onStatus?.('Checking local renderer...');
-    if (!(await isLocalRendererAvailable(localBaseUrl))) {
-      throw new Error('Local renderer is not running. Start it at http://localhost:3020 and try again.');
-    }
-    await downloadViaJob({ baseUrl: localBaseUrl, payload, filename, extension, fallbackMessage, onStatus, rendererLabel: 'local renderer' });
+  try {
+    await downloadViaJob({
+      baseUrl: cloudBaseUrl,
+      payload,
+      filename,
+      extension,
+      fallbackMessage,
+      onStatus,
+      rendererLabel: 'cloud renderer',
+    });
     return;
+  } catch (jobError) {
+    cloudError = jobError;
+    console.warn('Cloud render job failed, trying direct cloud render.', jobError);
   }
 
   try {
-    await downloadViaJob({ baseUrl: cloudBaseUrl, payload, filename, extension, fallbackMessage, onStatus, rendererLabel: 'cloud renderer' });
-  } catch (jobError) {
-    onStatus?.('Job export failed, trying direct render...');
-    const directEndpoint = `${cloudBaseUrl}/render`;
-    const response = await postJson(directEndpoint, payload);
-    if (!response.ok) throw new Error(await getRenderErrorMessage(response, jobError instanceof Error ? jobError.message : fallbackMessage));
-    await downloadBlobResponse(response, filename, extension);
+    await downloadViaDirectRender({
+      baseUrl: cloudBaseUrl,
+      payload,
+      filename,
+      extension,
+      fallbackMessage,
+      onStatus,
+      rendererLabel: 'cloud renderer',
+    });
+    return;
+  } catch (directCloudError) {
+    cloudError = directCloudError;
+    console.warn('Direct cloud render failed, checking local renderer.', directCloudError);
   }
+
+  onStatus?.('Cloud renderer unavailable. Checking local renderer...');
+  if (await isLocalRendererAvailable(localBaseUrl)) {
+    await downloadViaJob({
+      baseUrl: localBaseUrl,
+      payload,
+      filename,
+      extension,
+      fallbackMessage,
+      onStatus,
+      rendererLabel: 'local renderer',
+    });
+    return;
+  }
+
+  throw new Error(cloudError instanceof Error
+    ? cloudError.message
+    : 'Cloud renderer is unavailable and local renderer is not running.');
 }
