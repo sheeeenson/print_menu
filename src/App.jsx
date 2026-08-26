@@ -4,6 +4,7 @@ import { ContentSection } from './components/ContentSection.jsx';
 import { LayoutPrintSection } from './components/LayoutPrintSection.jsx';
 import { MainNavigation } from './components/MainNavigation.jsx';
 import { ImageMenuSection } from './image-menu/ImageMenuSection.jsx';
+import { MetaCreativeSection } from './meta-creative/MetaCreativeSection.jsx';
 import { APP_SECTIONS } from './models/menu.js';
 import { installPromoHtmlDownloadButton } from './promo-generator/promoHtmlDownload.js';
 import { PromoSectionV2 } from './promo-generator/PromoSectionV2.jsx';
@@ -22,90 +23,38 @@ export function App() {
   const lastSavedProjectRef = useRef('');
   const { project } = snapshot;
 
+  useEffect(() => { installPromoHtmlDownloadButton(); }, []);
   useEffect(() => {
-    installPromoHtmlDownloadButton();
-  }, []);
-
-  useEffect(() => {
-    if (!cloudProjectId) {
-      setCloudReady(true);
-      return;
-    }
-
+    if (!cloudProjectId) { setCloudReady(true); return; }
     let cancelled = false;
-
     loadCloudProject(cloudProjectId)
-      .then((cloudProject) => {
-        if (cancelled) return;
-        if (cloudProject) {
-          store.actions.importProject(cloudProject);
-          lastSavedProjectRef.current = JSON.stringify(cloudProject);
-        }
-      })
-      .catch((error) => {
-        console.warn('Cloud project load failed. Continuing with local project.', error);
-      })
-      .finally(() => {
-        if (!cancelled) {
-          cloudLoadFinishedRef.current = true;
-          setCloudReady(true);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
+      .then((cloudProject) => { if (cancelled) return; if (cloudProject) { store.actions.importProject(cloudProject); lastSavedProjectRef.current = JSON.stringify(cloudProject); } })
+      .catch((error) => { console.warn('Cloud project load failed. Continuing with local project.', error); })
+      .finally(() => { if (!cancelled) { cloudLoadFinishedRef.current = true; setCloudReady(true); } });
+    return () => { cancelled = true; };
   }, [cloudProjectId, store]);
 
   useEffect(() => {
     if (!cloudReady || !cloudLoadFinishedRef.current || !cloudProjectId) return undefined;
-
     const serializedProject = JSON.stringify(project);
     if (serializedProject === lastSavedProjectRef.current) return undefined;
-
     const saveTimer = window.setTimeout(() => {
       saveCloudProject(cloudProjectId, project)
-        .then(() => {
-          lastSavedProjectRef.current = serializedProject;
-        })
-        .catch((error) => {
-          console.warn('Cloud project save failed. Local save is still active.', error);
-        });
+        .then(() => { lastSavedProjectRef.current = serializedProject; })
+        .catch((error) => { console.warn('Cloud project save failed. Local save is still active.', error); });
     }, 900);
-
     return () => window.clearTimeout(saveTimer);
   }, [cloudReady, cloudProjectId, project]);
 
   const renderSection = () => {
-    if (project.selectedSection === APP_SECTIONS.CONTENT) {
-      return <ContentSection project={project} searchTerm={searchTerm} onSearchChange={setSearchTerm} actions={store.actions} />;
-    }
-
-    if (project.selectedSection === APP_SECTIONS.IMAGE_MENU) {
-      return <ImageMenuSection project={project} />;
-    }
-
-    if (project.selectedSection === APP_SECTIONS.TV_PROMO) {
-      return <PromoSectionV2 project={project} />;
-    }
-
-    if (project.selectedSection === APP_SECTIONS.SITE_BANNER) {
-      return <SiteBannerSection project={project} />;
-    }
-
-    if (project.selectedSection === APP_SECTIONS.A3_POSTER) {
-      return <A3PosterSection project={project} />;
-    }
-
+    if (project.selectedSection === APP_SECTIONS.CONTENT) return <ContentSection project={project} searchTerm={searchTerm} onSearchChange={setSearchTerm} actions={store.actions} />;
+    if (project.selectedSection === APP_SECTIONS.IMAGE_MENU) return <ImageMenuSection project={project} />;
+    if (project.selectedSection === APP_SECTIONS.TV_PROMO) return <PromoSectionV2 project={project} />;
+    if (project.selectedSection === APP_SECTIONS.SITE_BANNER) return <SiteBannerSection project={project} />;
+    if (project.selectedSection === APP_SECTIONS.A3_POSTER) return <A3PosterSection project={project} />;
+    if (project.selectedSection === APP_SECTIONS.META_CREATIVE) return <MetaCreativeSection project={project} />;
     return <LayoutPrintSection project={project} actions={store.actions} />;
   };
 
-  return (
-    <div className="app-shell">
-      <MainNavigation snapshot={snapshot} actions={store.actions} />
-      <main className="workspace">
-        {renderSection()}
-      </main>
-    </div>
-  );
+  return <div className="app-shell"><MainNavigation snapshot={snapshot} actions={store.actions} /><main className="workspace">{renderSection()}</main></div>;
 }
