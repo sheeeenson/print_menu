@@ -2,13 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { getFallbackImageBackground, sampleImageAutofillColor } from '../utils/imageColor.js';
 import { normalizeGoogleDriveImageUrl, normalizeGoogleDriveMediaUrl } from '../utils/imageUrls.js';
 import { removeImageBackground } from '../utils/removeImageBackground.js';
-import { getDefaultMetaProductTransform, getMetaFormat } from './metaCreativeStorage.js';
+import { buildDefaultMetaElementTransforms, getMetaFormat } from './metaCreativeStorage.js';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, Number(value)));
 const formatPrice = (value) => { const number = Number(value); return Number.isFinite(number) && number > 0 ? `${number.toFixed(2)}₾` : ''; };
 const getPriceData = (dish) => { const variant = (dish?.priceVariants ?? []).find((item) => Number(item?.newPrice ?? item?.price ?? item?.oldPrice) > 0); return { current: formatPrice(dish?.newPrice ?? variant?.newPrice ?? variant?.price ?? dish?.price), old: formatPrice(dish?.oldPrice ?? variant?.oldPrice) }; };
 const getImageUrl = (value) => normalizeGoogleDriveMediaUrl(value) || normalizeGoogleDriveImageUrl(value);
-const move = (x, y) => `translate(${x ?? 0}px, ${y ?? 0}px)`;
+const elementKey = (dishId, type) => `${dishId}:${type}`;
 const hexToRgb = (hex) => { const raw = String(hex || '').replace('#', ''); const value = raw.length === 3 ? raw.split('').map((c) => c + c).join('') : raw; const n = Number.parseInt(value, 16); return Number.isFinite(n) ? { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 } : { r: 244, g: 239, b: 232 }; };
 const rgbToHex = ({ r, g, b }) => `#${[r, g, b].map((v) => clamp(Math.round(v), 0, 255).toString(16).padStart(2, '0')).join('')}`;
 const averageColors = (colors) => { const valid = colors.filter(Boolean); if (!valid.length) return ''; const total = valid.map(hexToRgb).reduce((sum, c) => ({ r: sum.r + c.r, g: sum.g + c.g, b: sum.b + c.b }), { r: 0, g: 0, b: 0 }); return rgbToHex({ r: total.r / valid.length, g: total.g / valid.length, b: total.b / valid.length }); };
@@ -36,16 +36,12 @@ function ProductImage({ dish, creative }) {
   return <img className="meta-product-image" src={displayUrl} alt="" style={{ filter: shadow }} />;
 }
 
-function ProductCard({ dish, creative, index, count, sceneRef, onUpdateProductTransform, onSelectProduct }) {
-  const transform = creative.productTransforms?.[dish.id] || getDefaultMetaProductTransform(count, index);
-  const selected = creative.selectedProductId === dish.id;
+function DraggableElement({ elementId, transform, sceneRef, selected, onSelect, onUpdate, children, className = '', resizable = true, minScale = .25, maxScale = 3 }) {
   const dragRef = useRef(null);
-  const price = getPriceData(dish);
-  const scale = clamp((transform.scale ?? 1) * (creative.imageScale ?? 1), .18, 2.4);
-
   const start = (event, type) => {
     if (event.button !== undefined && event.button !== 0) return;
-    event.preventDefault(); event.stopPropagation(); onSelectProduct(dish.id);
+    event.preventDefault(); event.stopPropagation();
+    onSelect(elementId);
     const rect = sceneRef.current?.getBoundingClientRect(); if (!rect) return;
     dragRef.current = { type, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, x: transform.x ?? .5, y: transform.y ?? .5, scale: transform.scale ?? 1, width: rect.width, height: rect.height, size: Math.max(120, Math.min(rect.width, rect.height)) };
     event.currentTarget.setPointerCapture?.(event.pointerId);
@@ -53,32 +49,31 @@ function ProductCard({ dish, creative, index, count, sceneRef, onUpdateProductTr
   const movePointer = (event) => {
     const drag = dragRef.current; if (!drag || drag.pointerId !== event.pointerId) return;
     event.preventDefault();
-    if (drag.type === 'move') onUpdateProductTransform(dish.id, { x: clamp(drag.x + (event.clientX - drag.startX) / drag.width, -.15, 1.15), y: clamp(drag.y + (event.clientY - drag.startY) / drag.height, -.15, 1.15) });
-    else onUpdateProductTransform(dish.id, { scale: clamp(drag.scale + ((event.clientX - drag.startX) + (event.clientY - drag.startY)) / drag.size, .2, 1.9) });
+    if (drag.type === 'move') {
+      onUpdate(elementId, { x: clamp(drag.x + (event.clientX - drag.startX) / drag.width, -.1, 1.1), y: clamp(drag.y + (event.clientY - drag.startY) / drag.height, -.1, 1.1) });
+    } else {
+      onUpdate(elementId, { scale: clamp(drag.scale + ((event.clientX - drag.startX) + (event.clientY - drag.startY)) / drag.size, minScale, maxScale) });
+    }
   };
   const finish = (event) => { dragRef.current = null; event.currentTarget.releasePointerCapture?.(event.pointerId); };
-
-  return <div className={`meta-product-card ${selected ? 'selected' : ''}`} style={{ left: `${(transform.x ?? .5) * 100}%`, top: `${(transform.y ?? .5) * 100}%`, zIndex: transform.z ?? index + 2, transform: `translate(-50%,-50%) scale(${scale})` }} onPointerDown={(event) => start(event, 'move')} onPointerMove={movePointer} onPointerUp={finish} onPointerCancel={finish}>
-    <div className="meta-product-image-wrap"><ProductImage dish={dish} creative={creative} /></div>
-    {creative.showProductNameEn !== false && dish.nameEn ? <strong className="meta-product-name meta-product-name-en" style={{ fontSize: `${creative.productNameSize}px`, color: creative.productNameColor, transform: move(creative.productNameXOffset, creative.productNameYOffset) }}>{dish.nameEn}</strong> : null}
-    {creative.showProductNameGe !== false && dish.nameGe ? <strong className="meta-product-name meta-product-name-ge" style={{ fontSize: `${creative.productNameGeSize}px`, color: creative.productNameGeColor, transform: move(creative.productNameGeXOffset, creative.productNameGeYOffset) }}>{dish.nameGe}</strong> : null}
-    {creative.showPrice && price.current ? <span className="meta-current-price" style={{ fontSize: `${creative.priceSize}px`, color: creative.currentPriceColor, transform: move(creative.currentPriceXOffset, creative.currentPriceYOffset) }}>{price.current}</span> : null}
-    {creative.showPrice && creative.showOldPrice && price.old ? <span className="meta-old-price" style={{ fontSize: `${creative.oldPriceSize}px`, color: creative.oldPriceColor, transform: move(creative.oldPriceXOffset, creative.oldPriceYOffset) }}>{price.old}</span> : null}
-    {selected ? <button type="button" className="meta-product-resize-handle meta-editor-only" aria-label="Resize product" onPointerDown={(event) => start(event, 'resize')} onPointerMove={movePointer} onPointerUp={finish} onPointerCancel={finish} /> : null}
+  return <div className={`meta-free-element ${className} ${selected ? 'selected' : ''}`} style={{ left: `${(transform.x ?? .5) * 100}%`, top: `${(transform.y ?? .5) * 100}%`, zIndex: transform.z ?? 10, transform: `translate(-50%,-50%) scale(${transform.scale ?? 1})` }} onPointerDown={(event) => start(event, 'move')} onPointerMove={movePointer} onPointerUp={finish} onPointerCancel={finish}>
+    {children}
+    {selected && resizable ? <button type="button" className="meta-element-resize-handle meta-editor-only" aria-label="Resize element" onPointerDown={(event) => start(event, 'resize')} onPointerMove={movePointer} onPointerUp={finish} onPointerCancel={finish} /> : null}
   </div>;
 }
 
-export function MetaCreativePreview({ creative, dishes, onUpdateProductTransform, onSelectProduct }) {
+export function MetaCreativePreview({ creative, dishes, onUpdateElementTransform, onSelectElement, onUpdateOfferTransform }) {
   const format = getMetaFormat(creative.formatId);
   const sceneRef = useRef(null);
   const selectedDishes = useMemo(() => creative.selectedDishIds.map((id) => dishes.find((dish) => dish.id === id)).filter(Boolean), [creative.selectedDishIds, dishes]);
   const previewScale = format.previewWidth / format.width;
-  const count = Math.max(1, creative.productCount || selectedDishes.length || 1);
   const customBackgroundUrl = creative.customBackgroundEnabled ? getImageUrl(creative.customBackgroundUrl) : '';
+  const textureUrl = creative.textureEnabled ? getImageUrl(creative.textureUrl) : '';
   const autoBackground = !creative.customBackgroundEnabled && (creative.autoBackground ?? true);
   const imageUrls = useMemo(() => selectedDishes.map((dish) => getImageUrl(dish.imageUrl)).filter(Boolean), [selectedDishes]);
   const imageKey = imageUrls.join('|');
   const [sampledBackground, setSampledBackground] = useState('');
+
   useEffect(() => {
     let cancelled = false; setSampledBackground('');
     if (!autoBackground || !imageUrls.length) return undefined;
@@ -87,14 +82,37 @@ export function MetaCreativePreview({ creative, dishes, onUpdateProductTransform
     }).catch(() => { if (!cancelled) setSampledBackground(applyTone(getFallbackImageBackground(0), creative.backgroundTone ?? 0)); });
     return () => { cancelled = true; };
   }, [autoBackground, imageKey, creative.backgroundTone]);
+
   const background = autoBackground ? sampledBackground || applyTone(creative.backgroundColor || '#f4efe8', creative.backgroundTone ?? 0) : creative.backgroundColor;
+  const defaults = useMemo(() => buildDefaultMetaElementTransforms(selectedDishes.map((dish) => dish.id)), [selectedDishes]);
+  const getTransform = (dishId, type) => creative.elementTransforms?.[elementKey(dishId, type)] || defaults[elementKey(dishId, type)] || { x: .5, y: .5, scale: 1, z: 10 };
+  const isSelected = (key) => creative.selectedElementKey === key;
 
   return <section className="app-preview-shell" aria-label="Meta creative preview">
     <div className="app-canvas-wrap meta-canvas-wrap" style={{ width: `${format.previewWidth}px`, aspectRatio: `${format.width} / ${format.height}` }}>
       <article ref={sceneRef} className="meta-creative-scene" style={{ width: `${format.width}px`, height: `${format.height}px`, transform: `scale(${previewScale})`, background, color: creative.textColor }}>
-        {customBackgroundUrl ? <img className="meta-custom-background" src={customBackgroundUrl} alt="" /> : null}
-        <div className="meta-products-layer">{selectedDishes.map((dish, index) => <ProductCard key={dish.id} dish={dish} creative={creative} index={index} count={count} sceneRef={sceneRef} onUpdateProductTransform={onUpdateProductTransform} onSelectProduct={onSelectProduct} />)}</div>
-        {creative.showOffer && creative.offerText ? <div className="meta-offer-badge" style={{ transform: move(creative.offerXOffset, creative.offerYOffset), background: creative.accentColor, color: creative.offerTextColor, fontSize: `${creative.offerSize}px` }}>{creative.offerText}</div> : null}
+        {customBackgroundUrl ? <img className="meta-custom-background" src={customBackgroundUrl} alt="" style={{ left: `${(creative.backgroundX ?? .5) * 100}%`, top: `${(creative.backgroundY ?? .5) * 100}%`, transform: `translate(-50%,-50%) scale(${creative.backgroundScale ?? 1})` }} /> : null}
+        {textureUrl ? <img className="meta-texture-layer" src={textureUrl} alt="" style={{ left: `${(creative.textureX ?? .5) * 100}%`, top: `${(creative.textureY ?? .5) * 100}%`, opacity: creative.textureOpacity ?? .35, mixBlendMode: creative.textureBlendMode ?? 'normal', transform: `translate(-50%,-50%) scale(${creative.textureScale ?? 1})` }} /> : null}
+
+        {selectedDishes.map((dish) => {
+          const price = getPriceData(dish);
+          const renderElement = (type, content, className, style = {}, resizable = true) => {
+            const key = elementKey(dish.id, type);
+            if (!content) return null;
+            return <DraggableElement key={key} elementId={key} transform={getTransform(dish.id, type)} sceneRef={sceneRef} selected={isSelected(key)} onSelect={onSelectElement} onUpdate={onUpdateElementTransform} className={className} resizable={resizable}>{typeof content === 'function' ? content() : <div style={style}>{content}</div>}</DraggableElement>;
+          };
+          return <div key={dish.id} className="meta-dish-layer-group">
+            {renderElement('image', () => <div className="meta-product-image-wrap"><ProductImage dish={dish} creative={creative} /></div>, 'meta-image-element')}
+            {creative.showProductNameEn !== false && dish.nameEn ? renderElement('nameEn', dish.nameEn, 'meta-text-element meta-name-en', { fontSize: `${creative.productNameSize}px`, color: creative.productNameColor }) : null}
+            {creative.showProductNameGe !== false && dish.nameGe ? renderElement('nameGe', dish.nameGe, 'meta-text-element meta-name-ge', { fontSize: `${creative.productNameGeSize}px`, color: creative.productNameGeColor }) : null}
+            {creative.showDescriptionEn && dish.descriptionEn ? renderElement('descriptionEn', dish.descriptionEn, 'meta-text-element meta-description-en', { fontSize: `${creative.descriptionSize}px`, color: creative.descriptionEnColor }) : null}
+            {creative.showDescriptionGe && dish.descriptionGe ? renderElement('descriptionGe', dish.descriptionGe, 'meta-text-element meta-description-ge', { fontSize: `${creative.descriptionSize}px`, color: creative.descriptionGeColor }) : null}
+            {creative.showPrice && price.current ? renderElement('price', price.current, 'meta-text-element meta-price-element', { fontSize: `${creative.priceSize}px`, color: creative.currentPriceColor }) : null}
+            {creative.showPrice && creative.showOldPrice && price.old ? renderElement('oldPrice', price.old, 'meta-text-element meta-old-price-element', { fontSize: `${creative.oldPriceSize}px`, color: creative.oldPriceColor }) : null}
+          </div>;
+        })}
+
+        {creative.showOffer && creative.offerText ? <DraggableElement elementId="offer" transform={creative.offerTransform || { x: .2, y: .88, scale: 1, z: 30 }} sceneRef={sceneRef} selected={creative.selectedElementKey === 'offer'} onSelect={onSelectElement} onUpdate={(_, changes) => onUpdateOfferTransform(changes)} className="meta-offer-element"><div className="meta-offer-badge" style={{ background: creative.accentColor, color: creative.offerTextColor, fontSize: `${creative.offerSize}px` }}>{creative.offerText}</div></DraggableElement> : null}
       </article>
     </div>
     <small className="app-preview-size">Meta output: {format.width} × {format.height}px · {format.label}</small>
