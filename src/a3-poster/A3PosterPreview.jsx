@@ -70,6 +70,12 @@ export function A3PosterPreview({ poster, dishes }) {
   }, [autoBackground, imageKey, poster.backgroundTone]);
 
   const background = autoBackground ? sampledBackground || applyTone(poster.backgroundColor || '#f4efe8', poster.backgroundTone ?? 0) : poster.backgroundColor;
+  const titleEnColor = poster.productNameColor ?? poster.textColor ?? '#161616';
+  const titleGeColor = poster.productNameGeColor ?? poster.textColor ?? '#161616';
+  const descriptionEnColor = poster.descriptionEnColor ?? poster.textColor ?? '#161616';
+  const descriptionGeColor = poster.descriptionGeColor ?? poster.textColor ?? '#161616';
+  const currentPriceColor = poster.currentPriceColor ?? poster.accentColor ?? '#d83b32';
+  const oldPriceColor = poster.oldPriceColor ?? poster.textColor ?? '#161616';
   const showTopTitle = Boolean(singleDish && ((poster.showProductNameEn !== false && singleDish.nameEn) || (poster.showProductNameGe !== false && singleDish.nameGe)));
 
   return (
@@ -81,8 +87,8 @@ export function A3PosterPreview({ poster, dishes }) {
           {showTopTitle ? (
             <div className="a3-title-row">
               <div className="a3-title-copy">
-                {poster.showProductNameEn !== false && singleDish.nameEn ? <strong className="a3-title-name a3-title-name-en" style={{ fontSize: `${poster.productNameSize}px`, transform: move(poster.productNameXOffset, poster.productNameYOffset) }}>{singleDish.nameEn}</strong> : null}
-                {poster.showProductNameGe !== false && singleDish.nameGe ? <strong className="a3-title-name a3-title-name-ge" style={{ fontSize: `${poster.productNameGeSize ?? 62}px`, transform: move(poster.productNameGeXOffset, poster.productNameGeYOffset) }}>{singleDish.nameGe}</strong> : null}
+                {poster.showProductNameEn !== false && singleDish.nameEn ? <strong className="a3-title-name a3-title-name-en" style={{ fontSize: `${poster.productNameSize}px`, color: titleEnColor, transform: move(poster.productNameXOffset, poster.productNameYOffset) }}>{singleDish.nameEn}</strong> : null}
+                {poster.showProductNameGe !== false && singleDish.nameGe ? <strong className="a3-title-name a3-title-name-ge" style={{ fontSize: `${poster.productNameGeSize ?? 62}px`, color: titleGeColor, transform: move(poster.productNameGeXOffset, poster.productNameGeYOffset) }}>{singleDish.nameGe}</strong> : null}
               </div>
             </div>
           ) : null}
@@ -98,21 +104,21 @@ export function A3PosterPreview({ poster, dishes }) {
                     {imageUrl ? <img className="a3-product-image" src={imageUrl} alt="" style={{ transform: `${move(poster.imageXOffset, poster.imageYOffset)} scale(${poster.imageScale})` }} /> : null}
                   </div>
 
-                  {showCardNames && poster.showProductNameEn !== false && dish.nameEn ? <strong className="a3-product-name a3-product-name-en" style={{ fontSize: `${poster.productNameSize}px`, transform: move(poster.productNameXOffset, poster.productNameYOffset) }}>{dish.nameEn}</strong> : null}
-                  {showCardNames && poster.showProductNameGe !== false && dish.nameGe ? <strong className="a3-product-name a3-product-name-ge" style={{ fontSize: `${poster.productNameGeSize ?? 62}px`, transform: move(poster.productNameGeXOffset, poster.productNameGeYOffset) }}>{dish.nameGe}</strong> : null}
+                  {showCardNames && poster.showProductNameEn !== false && dish.nameEn ? <strong className="a3-product-name a3-product-name-en" style={{ fontSize: `${poster.productNameSize}px`, color: titleEnColor, transform: move(poster.productNameXOffset, poster.productNameYOffset) }}>{dish.nameEn}</strong> : null}
+                  {showCardNames && poster.showProductNameGe !== false && dish.nameGe ? <strong className="a3-product-name a3-product-name-ge" style={{ fontSize: `${poster.productNameGeSize ?? 62}px`, color: titleGeColor, transform: move(poster.productNameGeXOffset, poster.productNameGeYOffset) }}>{dish.nameGe}</strong> : null}
 
-                  {poster.showDescriptionEn && dish.descriptionEn ? <p className="a3-product-description a3-description-en" style={{ fontSize: `${poster.descriptionSize}px`, transform: move(poster.descriptionEnXOffset, poster.descriptionEnYOffset) }}>{dish.descriptionEn}</p> : null}
-                  {poster.showDescriptionGe && dish.descriptionGe ? <p className="a3-product-description a3-description-ge" style={{ fontSize: `${poster.descriptionSize}px`, transform: move(poster.descriptionGeXOffset, poster.descriptionGeYOffset) }}>{dish.descriptionGe}</p> : null}
+                  {poster.showDescriptionEn && dish.descriptionEn ? <p className="a3-product-description a3-description-en" style={{ fontSize: `${poster.descriptionSize}px`, color: descriptionEnColor, transform: move(poster.descriptionEnXOffset, poster.descriptionEnYOffset) }}>{dish.descriptionEn}</p> : null}
+                  {poster.showDescriptionGe && dish.descriptionGe ? <p className="a3-product-description a3-description-ge" style={{ fontSize: `${poster.descriptionSize}px`, color: descriptionGeColor, transform: move(poster.descriptionGeXOffset, poster.descriptionGeYOffset) }}>{dish.descriptionGe}</p> : null}
 
-                  {poster.showPrice && price.current ? <span className="a3-current-price" style={{ fontSize: `${poster.priceSize}px`, transform: move(poster.currentPriceXOffset, poster.currentPriceYOffset) }}>{price.current}</span> : null}
-                  {poster.showPrice && poster.showOldPrice && price.old ? <span className="a3-old-price" style={{ fontSize: `${poster.oldPriceSize}px`, transform: move(poster.oldPriceXOffset, poster.oldPriceYOffset) }}>{price.old}</span> : null}
+                  {poster.showPrice && price.current ? <span className="a3-current-price" style={{ fontSize: `${poster.priceSize}px`, color: currentPriceColor, transform: move(poster.currentPriceXOffset, poster.currentPriceYOffset) }}>{price.current}</span> : null}
+                  {poster.showPrice && poster.showOldPrice && price.old ? <span className="a3-old-price" style={{ fontSize: `${poster.oldPriceSize}px`, color: oldPriceColor, transform: move(poster.oldPriceXOffset, poster.oldPriceYOffset) }}>{price.old}</span> : null}
                 </div>
               );
             })}
           </div>
 
           {poster.showOffer && poster.offerText ? (
-            <div className="a3-offer-badge a3-offer-badge-bottom-left" style={{ transform: move(poster.offerXOffset, poster.offerYOffset), background: poster.accentColor, color: poster.offerTextColor, fontSize: `${poster.offerSize}px` }}>{poster.offerText}</div>
+            <div className="a3-offer-badge a3-offer-badge-bottom-left" style={{ transform: move(poster.offerXOffset, poster.offerYOffset), background: poster.accentColor, color: poster.offerTextColor ?? '#ffffff', fontSize: `${poster.offerSize}px` }}>{poster.offerText}</div>
           ) : null}
         </article>
       </div>
