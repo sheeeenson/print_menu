@@ -25,7 +25,7 @@ export function A3PosterControls({ poster, updatePoster }) {
       <label className="app-toggle"><input type="checkbox" checked={poster.showOffer ?? false} onChange={(event) => updatePoster({ showOffer: event.target.checked })} /><span>Show offer badge</span></label>
       <label className="app-field"><span>Offer text</span><textarea rows="2" value={poster.offerText ?? ''} placeholder="-20% / NEW / SPECIAL OFFER" disabled={!poster.showOffer} onChange={(event) => updatePoster({ offerText: event.target.value })} /></label>
       <label className="app-field"><span>Offer text color</span><input type="color" value={poster.offerTextColor ?? '#ffffff'} disabled={!poster.showOffer} onChange={(event) => updatePoster({ offerTextColor: event.target.value })} /></label>
-      <RangeControl label="Offer size" value={poster.offerSize ?? 78} min={36} max={180} onChange={(offerSize) => updatePoster({ offerSize })} suffix="px" />
+      <RangeControl label="Offer size" value={poster.offerSize ?? 78} min={24} max={360} onChange={(offerSize) => updatePoster({ offerSize })} suffix="px" />
     </section>
 
     <section className="app-control-group">
@@ -35,11 +35,11 @@ export function A3PosterControls({ poster, updatePoster }) {
       <label className="app-field"><span>Manual background</span><input type="color" value={poster.backgroundColor} disabled={poster.autoBackground ?? true} onChange={(event) => updatePoster({ backgroundColor: event.target.value })} /></label>
       <label className="app-field"><span>Text</span><input type="color" value={poster.textColor} onChange={(event) => updatePoster({ textColor: event.target.value })} /></label>
       <label className="app-field"><span>Accent / offer badge</span><input type="color" value={poster.accentColor} onChange={(event) => updatePoster({ accentColor: event.target.value })} /></label>
-      <RangeControl label="English product name size" value={poster.productNameSize ?? 86} min={36} max={260} onChange={(productNameSize) => updatePoster({ productNameSize })} suffix="px" />
-      <RangeControl label="Georgian product name size" value={poster.productNameGeSize ?? 62} min={28} max={220} onChange={(productNameGeSize) => updatePoster({ productNameGeSize })} suffix="px" />
-      <RangeControl label="Description size" value={poster.descriptionSize ?? 48} min={24} max={110} onChange={(descriptionSize) => updatePoster({ descriptionSize })} suffix="px" />
-      <RangeControl label="Price size" value={poster.priceSize} min={70} max={260} onChange={(priceSize) => updatePoster({ priceSize })} suffix="px" />
-      <RangeControl label="Old price size" value={poster.oldPriceSize ?? 82} min={36} max={160} onChange={(oldPriceSize) => updatePoster({ oldPriceSize })} suffix="px" />
+      <RangeControl label="English product name size" value={poster.productNameSize ?? 86} min={28} max={480} onChange={(productNameSize) => updatePoster({ productNameSize })} suffix="px" />
+      <RangeControl label="Georgian product name size" value={poster.productNameGeSize ?? 62} min={24} max={420} onChange={(productNameGeSize) => updatePoster({ productNameGeSize })} suffix="px" />
+      <RangeControl label="Description size" value={poster.descriptionSize ?? 48} min={24} max={180} onChange={(descriptionSize) => updatePoster({ descriptionSize })} suffix="px" />
+      <RangeControl label="Price size" value={poster.priceSize} min={48} max={520} onChange={(priceSize) => updatePoster({ priceSize })} suffix="px" />
+      <RangeControl label="Old price size" value={poster.oldPriceSize ?? 82} min={32} max={360} onChange={(oldPriceSize) => updatePoster({ oldPriceSize })} suffix="px" />
       <RangeControl label="Product size" value={poster.imageScale} min={0.4} max={1.8} step={0.05} onChange={(imageScale) => updatePoster({ imageScale })} />
     </section>
 
