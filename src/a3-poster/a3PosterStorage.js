@@ -1,4 +1,5 @@
-import { buildDefaultA3ProductTransforms, getA3ProductCount } from './a3ProductLayout.js';
+import { buildDefaultA3ProductTransforms, getA3ProductCount, getDefaultA3ProductTransform } from './a3ProductLayout.js';
+import { buildDefaultA3ElementTransforms, getA3ElementKey } from './a3IndependentLayers.js';
 
 const STORAGE_KEY = 'restaurantMenuStudio:a3PosterProject:v1';
 
@@ -16,7 +17,12 @@ export function createA3Poster(dishes = [], name = 'A3 Poster') {
   const selectedDishIds = firstDish ? [firstDish.id] : [];
   return {
     id: createId(), name, formatId: 'a3Portrait', template: 'free', productCount: 1,
-    selectedDishIds, productTransforms: buildDefaultA3ProductTransforms(selectedDishIds), selectedProductId: firstDish?.id ?? '',
+    selectedDishIds,
+    productTransforms: buildDefaultA3ProductTransforms(selectedDishIds),
+    elementTransforms: buildDefaultA3ElementTransforms(selectedDishIds, getDefaultA3ProductTransform),
+    selectedProductId: firstDish?.id ?? '',
+    selectedElementKey: firstDish ? getA3ElementKey(firstDish.id, 'image') : '',
+    offerTransform: { x: .18, y: .88, scale: 1, z: 70 },
     headline: '', subheadline: '', showPrice: true, showOldPrice: true, showProductNameEn: true, showProductNameGe: true,
     showDescriptionEn: false, showDescriptionGe: false, showOffer: false, offerText: '', backgroundColor: '#f4efe8',
     autoBackground: true, backgroundTone: 0, customBackgroundEnabled: false, customBackgroundUrl: '',
@@ -38,6 +44,20 @@ const normalizePoster = (poster) => {
   const selectedDishIds = Array.isArray(poster?.selectedDishIds) ? poster.selectedDishIds.slice(0, 5) : [];
   const productCount = getA3ProductCount({ ...poster, selectedDishIds });
   const defaults = buildDefaultA3ProductTransforms(selectedDishIds);
+  const elementDefaults = buildDefaultA3ElementTransforms(selectedDishIds, getDefaultA3ProductTransform);
+  const legacy = poster?.productTransforms || {};
+
+  selectedDishIds.forEach((id, index) => {
+    const legacyTransform = legacy[id];
+    const imageKey = getA3ElementKey(id, 'image');
+    if (legacyTransform && !poster?.elementTransforms?.[imageKey]) {
+      elementDefaults[imageKey] = {
+        ...getDefaultA3ProductTransform(selectedDishIds.length || 1, index),
+        ...legacyTransform,
+      };
+    }
+  });
+
   return {
     autoBackground: true, backgroundTone: 0, customBackgroundEnabled: false, customBackgroundUrl: '',
     productCutoutEnabled: false, productCutoutSensitivity: 38, productCutoutSoftness: 2, productCutoutExpand: 0,
@@ -57,10 +77,15 @@ const normalizePoster = (poster) => {
     descriptionGeXOffset: poster?.metaXOffset ?? 0, descriptionGeYOffset: poster?.metaYOffset ?? 0,
     currentPriceXOffset: poster?.metaXOffset ?? 0, currentPriceYOffset: poster?.metaYOffset ?? 0,
     oldPriceXOffset: poster?.metaXOffset ?? 0, oldPriceYOffset: poster?.metaYOffset ?? 0, offerXOffset: 0, offerYOffset: 0,
+    selectedElementKey: '',
+    offerTransform: { x: .18, y: .88, scale: 1, z: 70 },
     ...poster,
     template: 'free', productCount, selectedDishIds,
     productTransforms: { ...defaults, ...(poster?.productTransforms || {}) },
+    elementTransforms: { ...elementDefaults, ...(poster?.elementTransforms || {}) },
+    offerTransform: { x: .18, y: .88, scale: 1, z: 70, ...(poster?.offerTransform || {}) },
     selectedProductId: poster?.selectedProductId || selectedDishIds[0] || '',
+    selectedElementKey: poster?.selectedElementKey || (selectedDishIds[0] ? getA3ElementKey(selectedDishIds[0], 'image') : ''),
   };
 };
 
