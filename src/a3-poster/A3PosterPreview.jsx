@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getFallbackImageBackground, sampleImageAutofillColor } from '../utils/imageColor.js';
 import { normalizeGoogleDriveImageUrl } from '../utils/imageUrls.js';
+import { removeImageBackground } from '../utils/removeImageBackground.js';
 import { getA3Format } from './a3PosterStorage.js';
 
 const formatPrice = (value) => {
@@ -39,6 +40,34 @@ const applyTone = (hex, tone = 0) => {
   return rgbToHex({ r: color.r + (target.r - color.r) * ratio, g: color.g + (target.g - color.g) * ratio, b: color.b + (target.b - color.b) * ratio });
 };
 const move = (x, y) => `translate(${x ?? 0}px, ${y ?? 0}px)`;
+
+function ProductImage({ dish, poster }) {
+  const originalUrl = normalizeGoogleDriveImageUrl(dish.imageUrl);
+  const [displayUrl, setDisplayUrl] = useState(originalUrl);
+  const cutoutEnabled = poster.productCutoutEnabled ?? false;
+  const sensitivity = poster.productCutoutSensitivity ?? 38;
+  const softness = poster.productCutoutSoftness ?? 2;
+
+  useEffect(() => {
+    let cancelled = false;
+    setDisplayUrl(originalUrl);
+    if (!cutoutEnabled || !dish.imageUrl) return undefined;
+
+    removeImageBackground(dish.imageUrl, { sensitivity, softness })
+      .then((url) => {
+        if (!cancelled) setDisplayUrl(url || originalUrl);
+      })
+      .catch((error) => {
+        console.warn('Could not remove product background.', error);
+        if (!cancelled) setDisplayUrl(originalUrl);
+      });
+
+    return () => { cancelled = true; };
+  }, [cutoutEnabled, dish.imageUrl, originalUrl, sensitivity, softness]);
+
+  if (!displayUrl) return null;
+  return <img className="a3-product-image" src={displayUrl} alt="" style={{ transform: `${move(poster.imageXOffset, poster.imageYOffset)} scale(${poster.imageScale})` }} />;
+}
 
 export function A3PosterPreview({ poster, dishes }) {
   const format = getA3Format(poster.formatId);
@@ -95,13 +124,12 @@ export function A3PosterPreview({ poster, dishes }) {
 
           <div className="a3-products">
             {selectedDishes.map((dish) => {
-              const imageUrl = normalizeGoogleDriveImageUrl(dish.imageUrl);
               const price = getPriceData(dish);
               const showCardNames = template !== 'single';
               return (
                 <div key={dish.id} className="a3-product-card">
                   <div className="a3-product-image-wrap">
-                    {imageUrl ? <img className="a3-product-image" src={imageUrl} alt="" style={{ transform: `${move(poster.imageXOffset, poster.imageYOffset)} scale(${poster.imageScale})` }} /> : null}
+                    <ProductImage dish={dish} poster={poster} />
                   </div>
 
                   {showCardNames && poster.showProductNameEn !== false && dish.nameEn ? <strong className="a3-product-name a3-product-name-en" style={{ fontSize: `${poster.productNameSize}px`, color: titleEnColor, transform: move(poster.productNameXOffset, poster.productNameYOffset) }}>{dish.nameEn}</strong> : null}
