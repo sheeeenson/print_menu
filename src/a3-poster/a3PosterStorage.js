@@ -30,6 +30,8 @@ export function createA3Poster(dishes = [], name = 'A3 Poster') {
     backgroundColor: '#f4efe8',
     autoBackground: true,
     backgroundTone: 0,
+    customBackgroundEnabled: false,
+    customBackgroundUrl: '',
     textColor: '#161616',
     accentColor: '#d83b32',
     offerTextColor: '#ffffff',
@@ -68,6 +70,8 @@ export function createA3Poster(dishes = [], name = 'A3 Poster') {
 const normalizePoster = (poster) => ({
   autoBackground: true,
   backgroundTone: 0,
+  customBackgroundEnabled: false,
+  customBackgroundUrl: '',
   showOldPrice: true,
   showProductNameEn: true,
   showProductNameGe: true,
