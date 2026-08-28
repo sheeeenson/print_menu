@@ -2,7 +2,7 @@ const DEFAULT_RENDERER_ENDPOINT = 'https://print-menu.onrender.com/render';
 const DEFAULT_LOCAL_RENDERER_BASE_URL = 'http://localhost:3020';
 const JOB_POLL_INTERVAL_MS = 1200;
 const JOB_TIMEOUT_MS = 900000;
-const LOCAL_HEALTH_TIMEOUT_MS = 900;
+const LOCAL_HEALTH_TIMEOUT_MS = 1800;
 
 export const getSafeRenderFilename = (value, fallback = 'html-video') => String(value || fallback)
   .trim()
@@ -72,7 +72,7 @@ const isLocalRendererAvailable = async (baseUrl) => {
   const timeout = setTimeout(() => controller.abort(), LOCAL_HEALTH_TIMEOUT_MS);
 
   try {
-    const response = await fetch(`${baseUrl}/health`, { signal: controller.signal });
+    const response = await fetch(`${baseUrl}/health`, { signal: controller.signal, cache: 'no-store' });
     if (!response.ok) return false;
     const payload = await response.json().catch(() => null);
     return Boolean(payload?.ok);
@@ -106,7 +106,9 @@ const getProgressText = ({ status, extension, rendererLabel, progress }) => {
       ? 'encoding video'
       : progress?.stage === 'capturing_png'
         ? 'capturing PNG'
-        : 'starting render';
+        : progress?.stage === 'capturing_frames'
+          ? 'capturing frames'
+          : 'starting render';
   return `Rendering ${extension.toUpperCase()} via ${label}... ${stage}`;
 };
 
@@ -123,7 +125,7 @@ const downloadViaJob = async ({ baseUrl, payload, filename, extension, fallbackM
   const startedAt = Date.now();
   while (Date.now() - startedAt < JOB_TIMEOUT_MS) {
     await wait(JOB_POLL_INTERVAL_MS);
-    const statusResponse = await fetch(`${baseUrl}/jobs/${jobId}`);
+    const statusResponse = await fetch(`${baseUrl}/jobs/${jobId}`, { cache: 'no-store' });
     if (!statusResponse.ok) throw new Error(await getRenderErrorMessage(statusResponse, fallbackMessage));
 
     const status = await statusResponse.json();
@@ -178,7 +180,30 @@ export async function downloadHtmlRender({
 
   const cloudBaseUrl = endpoint ? endpoint.replace(/\/$/, '').replace(/\/render$/, '') : getRendererBaseUrl();
   const localBaseUrl = getLocalRendererBaseUrl();
-  let cloudError = null;
+  let lastError = null;
+
+  onStatus?.('Checking high-quality local renderer...');
+  if (await isLocalRendererAvailable(localBaseUrl)) {
+    try {
+      onStatus?.('High-quality renderer ready: Full HD / 24 fps.');
+      await downloadViaJob({
+        baseUrl: localBaseUrl,
+        payload,
+        filename,
+        extension,
+        fallbackMessage,
+        onStatus,
+        rendererLabel: 'local HQ renderer',
+      });
+      return;
+    } catch (localError) {
+      lastError = localError;
+      console.warn('Local high-quality render failed, falling back to cloud renderer.', localError);
+      onStatus?.('Local renderer failed. Trying cloud fallback...');
+    }
+  } else {
+    onStatus?.('Local renderer is not running. Using cloud fallback...');
+  }
 
   try {
     await downloadViaJob({
@@ -192,7 +217,7 @@ export async function downloadHtmlRender({
     });
     return;
   } catch (jobError) {
-    cloudError = jobError;
+    lastError = jobError;
     console.warn('Cloud render job failed, trying direct cloud render.', jobError);
   }
 
@@ -208,25 +233,11 @@ export async function downloadHtmlRender({
     });
     return;
   } catch (directCloudError) {
-    cloudError = directCloudError;
-    console.warn('Direct cloud render failed, checking local renderer.', directCloudError);
+    lastError = directCloudError;
+    console.warn('Direct cloud render failed.', directCloudError);
   }
 
-  onStatus?.('Cloud renderer unavailable. Checking local renderer...');
-  if (await isLocalRendererAvailable(localBaseUrl)) {
-    await downloadViaJob({
-      baseUrl: localBaseUrl,
-      payload,
-      filename,
-      extension,
-      fallbackMessage,
-      onStatus,
-      rendererLabel: 'local renderer',
-    });
-    return;
-  }
-
-  throw new Error(cloudError instanceof Error
-    ? cloudError.message
-    : 'Cloud renderer is unavailable and local renderer is not running.');
+  throw new Error(lastError instanceof Error
+    ? lastError.message
+    : 'Video renderer is unavailable. Start the local renderer and try again.');
 }

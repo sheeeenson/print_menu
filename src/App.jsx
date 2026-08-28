@@ -8,6 +8,7 @@ import { MetaCreativeSection } from './meta-creative/MetaCreativeSection.jsx';
 import { APP_SECTIONS } from './models/menu.js';
 import { installPromoHtmlDownloadButton } from './promo-generator/promoHtmlDownload.js';
 import { PromoSectionV2 } from './promo-generator/PromoSectionV2.jsx';
+import { installTvPromoRendererGuide } from './promo-generator/tvPromoRendererGuide.js';
 import { SiteBannerSection } from './site-banner/SiteBannerSection.jsx';
 import { ensureCloudProjectIdInUrl, loadCloudProject, saveCloudProject } from './state/cloudProjectSync.js';
 import { createProjectStore } from './state/projectStore.js';
@@ -24,6 +25,7 @@ export function App() {
   const { project } = snapshot;
 
   useEffect(() => { installPromoHtmlDownloadButton(); }, []);
+  useEffect(() => installTvPromoRendererGuide(), []);
   useEffect(() => {
     if (!cloudProjectId) { setCloudReady(true); return; }
     let cancelled = false;
