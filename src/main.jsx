@@ -34,6 +34,7 @@ import './promoRenderProgressBridge.js';
 import './promoRenderProgressInlineOverride.js';
 import './promoVideoOverlaySupport.js';
 import './posterFormatScale.js';
+import './posterUiLabels.js';
 import './ui/appUnifiedPrimitives.css';
 import './ui/appConsistentControls.css';
 import './ui/appFinalResponsiveAudit.css';
