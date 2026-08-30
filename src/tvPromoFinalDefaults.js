@@ -1,4 +1,4 @@
-const DEFAULT_CTA_SIZE = 72;
+const DEFAULT_CTA_SIZE = 64;
 const RESET_GROUPS = new Set(['Text block', 'Price', 'CTA']);
 
 const getPanel = () => document.querySelector('.promo-generator-panel');
