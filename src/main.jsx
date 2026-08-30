@@ -22,6 +22,8 @@ import './unifiedAppTheme.css';
 import './mobileUxEnhancements.css';
 import './promoEnhancements.css';
 import './promoCtaPriceBaseline.css';
+import './promoCtaVisualDefaults.css';
+import './promoCtaDefaultUpgrade.js';
 import './removeGifCornerRadius.css';
 import './gifOverlayControls.css';
 import './dishSizeBoost.js';
