@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { normalizeGoogleDriveImageUrl } from '../utils/imageUrls.js';
 
-export function A3CatalogueAccordion({ categories, dishes, selectedDishIds, onToggleDish }) {
+export function A3CatalogueAccordion({ categories, dishes, selectedDishIds, onToggleDish, selectedIds, onToggle }) {
+  const effectiveSelectedDishIds = Array.isArray(selectedDishIds) ? selectedDishIds : (Array.isArray(selectedIds) ? selectedIds : []);
+  const effectiveOnToggleDish = onToggleDish || onToggle || (() => {});
+
   const categoryGroups = useMemo(() => categories.map((category) => ({
     category,
     dishes: dishes.filter((dish) => dish.categoryId === category.id),
   })).filter((group) => group.dishes.length), [categories, dishes]);
 
   const selectedCategoryId = useMemo(() => {
-    const selectedDish = dishes.find((dish) => selectedDishIds.includes(dish.id));
+    const selectedDish = dishes.find((dish) => effectiveSelectedDishIds.includes(dish.id));
     return selectedDish?.categoryId ?? categoryGroups[0]?.category.id ?? null;
-  }, [categoryGroups, dishes, selectedDishIds]);
+  }, [categoryGroups, dishes, effectiveSelectedDishIds]);
 
   const [openCategoryId, setOpenCategoryId] = useState(selectedCategoryId);
 
@@ -21,7 +24,7 @@ export function A3CatalogueAccordion({ categories, dishes, selectedDishIds, onTo
   return <div className="a3-dish-picker a3-catalogue-accordion">
     {categoryGroups.map(({ category, dishes: categoryDishes }) => {
       const isOpen = openCategoryId === category.id;
-      const selectedCount = categoryDishes.filter((dish) => selectedDishIds.includes(dish.id)).length;
+      const selectedCount = categoryDishes.filter((dish) => effectiveSelectedDishIds.includes(dish.id)).length;
       const categoryName = category.nameEn || category.nameGe || 'Category';
       return <section key={category.id} className={`a3-category-accordion ${isOpen ? 'open' : ''}`}>
         <button
@@ -39,10 +42,10 @@ export function A3CatalogueAccordion({ categories, dishes, selectedDishIds, onTo
 
         {isOpen ? <div className="a3-category-content">
           {categoryDishes.map((dish) => {
-            const selected = selectedDishIds.includes(dish.id);
+            const selected = effectiveSelectedDishIds.includes(dish.id);
             const imageUrl = normalizeGoogleDriveImageUrl(dish.imageUrl);
             return <label key={dish.id} className={selected ? 'selected' : ''}>
-              <input type="checkbox" checked={selected} onChange={() => onToggleDish(dish.id)} />
+              <input type="checkbox" checked={selected} onChange={() => effectiveOnToggleDish(dish.id)} />
               <img src={imageUrl} alt="" />
               <span>
                 <strong>{dish.nameEn || dish.nameGe}</strong>
