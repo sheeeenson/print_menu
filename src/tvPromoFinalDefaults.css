@@ -1,17 +1,24 @@
 /* Final TV Promo render defaults. This file must be imported last. */
 .promo-scene .promo-cta {
-  font-size: var(--tv-promo-cta-size, 72px) !important;
+  font-size: var(--tv-promo-cta-size, 64px) !important;
   line-height: 1 !important;
   transform-origin: left bottom !important;
   margin-bottom: 42px !important;
+}
+
+/* Keep the default CTA completely still. Optional CTA motion still works when
+   the user explicitly enables one of the extra CTA effects. */
+.promo-scene:not(.promo-extra-cta-pulse):not(.promo-extra-cta-shake):not(.promo-extra-cta-glow) .promo-cta {
+  animation: none !important;
+  transform: none !important;
 }
 
 .promo-scene .promo-cta-with-badge {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  padding: 30px 56px !important;
-  min-height: 108px !important;
+  padding: 26px 48px !important;
+  min-height: 96px !important;
   border-radius: 999px !important;
   box-sizing: border-box !important;
 }
