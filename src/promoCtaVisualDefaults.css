@@ -1,0 +1,33 @@
+/* TV Promo: stronger default CTA and a cleaner shared visual baseline with sale price. */
+.promo-cta-with-badge {
+  padding: 28px 48px !important;
+  min-height: 92px !important;
+  border-radius: 999px !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.promo-cta-no-badge {
+  min-height: 0 !important;
+}
+
+.promo-price-card,
+.promo-cta {
+  transform-origin: bottom !important;
+}
+
+.promo-price-card {
+  transform-origin: right bottom !important;
+}
+
+.promo-price-card strong {
+  display: block;
+  line-height: .86 !important;
+  position: relative;
+  top: .035em;
+}
+
+.promo-cta {
+  transform-origin: left bottom !important;
+  line-height: 1 !important;
+}
