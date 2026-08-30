@@ -22,12 +22,16 @@ const alignScene = (scene) => {
   const cta = scene.querySelector('.promo-cta');
   if (!(priceCard instanceof HTMLElement) || !(salePrice instanceof HTMLElement) || !(cta instanceof HTMLElement)) return;
 
+  // Never move the current-price glyph independently: the old and new price
+  // must remain one visual stack. Baseline correction is applied to the whole card.
+  salePrice.style.removeProperty('--tv-promo-price-baseline-shift');
+
   if (!shouldAutoAlign()) {
-    salePrice.style.removeProperty('--tv-promo-price-baseline-shift');
+    priceCard.style.removeProperty('--tv-promo-price-baseline-delta');
     return;
   }
 
-  salePrice.style.setProperty('--tv-promo-price-baseline-shift', '0px');
+  priceCard.style.setProperty('--tv-promo-price-baseline-delta', '0px');
 
   window.requestAnimationFrame(() => {
     const sceneRect = scene.getBoundingClientRect();
@@ -37,8 +41,8 @@ const alignScene = (scene) => {
     const ctaRect = cta.getBoundingClientRect();
     const deltaScreenPx = ctaRect.bottom - priceRect.bottom;
     const deltaScenePx = deltaScreenPx / renderScale;
-    const safeShift = Math.max(-160, Math.min(160, deltaScenePx));
-    salePrice.style.setProperty('--tv-promo-price-baseline-shift', `${safeShift.toFixed(2)}px`);
+    const safeDelta = Math.max(-160, Math.min(160, deltaScenePx));
+    priceCard.style.setProperty('--tv-promo-price-baseline-delta', `${safeDelta.toFixed(2)}px`);
   });
 };
 
