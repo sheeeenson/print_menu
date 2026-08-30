@@ -1,15 +1,16 @@
-/* Final TV Promo render defaults. This file must be imported last. */
+/* Final TV Promo render defaults. This file must win over runtime-injected effect styles. */
 .promo-scene .promo-cta {
+  position: absolute !important;
   font-size: var(--tv-promo-cta-size, 64px) !important;
   line-height: 1 !important;
   transform-origin: left bottom !important;
   margin-bottom: 42px !important;
-}
 
-/* Keep the default CTA completely still. Optional CTA motion still works when
-   the user explicitly enables one of the extra CTA effects. */
-.promo-scene:not(.promo-extra-cta-pulse):not(.promo-extra-cta-shake):not(.promo-extra-cta-glow) .promo-cta {
+  /* The CTA must stay visually fixed unless we deliberately reintroduce a
+     dedicated motion system later. Older runtime styles were changing both
+     position and transform, which caused the visible vertical twitch. */
   animation: none !important;
+  transition: none !important;
   transform: none !important;
 }
 
@@ -24,6 +25,7 @@
 }
 
 .promo-scene .promo-price-card {
+  position: absolute !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: flex-end !important;
