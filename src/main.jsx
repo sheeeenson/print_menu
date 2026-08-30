@@ -31,6 +31,7 @@ import './gifOverlayControls.css';
 import './dishSizeBoost.js';
 import './promoExtraEffects.js';
 import './promoWideMovement.js';
+import './promoCtaDefaultsV4.js';
 import './promoDishAnchorReset.js';
 import './promoSafeAreaOverlay.js';
 import './promoDurationExportFix.js';
