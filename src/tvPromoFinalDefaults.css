@@ -1,10 +1,13 @@
-/* Final TV Promo render defaults. This file must win over runtime-injected effect styles. */
+/* Final TV Promo render defaults. Geometry stays stable; motion is enabled only when an effect class is explicitly active. */
 .promo-scene .promo-cta {
   position: absolute !important;
   font-size: var(--tv-promo-cta-size, 64px) !important;
   line-height: 1 !important;
   transform-origin: left bottom !important;
   margin-bottom: 42px !important;
+}
+
+.promo-scene:not(.promo-extra-cta-pulse):not(.promo-extra-cta-shake):not(.promo-extra-cta-glow) .promo-cta {
   animation: none !important;
   transition: none !important;
   transform: none !important;
@@ -29,6 +32,9 @@
   gap: 12px !important;
   transform-origin: right bottom !important;
   margin-bottom: calc(42px - var(--tv-promo-price-baseline-delta, 0px)) !important;
+}
+
+.promo-scene:not(.promo-effect-price-punch):not(.promo-effect-price-shake):not(.promo-extra-price-heartbeat):not(.promo-extra-price-tilt):not(.promo-extra-price-bounce) .promo-price-card {
   animation: none !important;
   transition: none !important;
   transform: none !important;
@@ -40,6 +46,9 @@
   position: static !important;
   top: auto !important;
   margin: 0 !important;
+}
+
+.promo-scene:not(.promo-effect-price-flip):not(.promo-effect-price-glow) .promo-price-card strong {
   animation: none !important;
   transition: none !important;
   transform: none !important;
@@ -49,7 +58,4 @@
   display: block !important;
   line-height: 1 !important;
   margin: 0 !important;
-  animation: none !important;
-  transition: none !important;
-  transform: none !important;
 }
