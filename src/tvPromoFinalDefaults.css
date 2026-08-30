@@ -3,6 +3,7 @@
   font-size: var(--tv-promo-cta-size, 72px) !important;
   line-height: 1 !important;
   transform-origin: left bottom !important;
+  margin-bottom: 42px !important;
 }
 
 .promo-scene .promo-cta-with-badge {
@@ -16,12 +17,25 @@
 }
 
 .promo-scene .promo-price-card {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+  justify-content: flex-end !important;
+  gap: 12px !important;
   transform-origin: right bottom !important;
+  margin-bottom: calc(42px - var(--tv-promo-price-baseline-delta, 0px)) !important;
 }
 
 .promo-scene .promo-price-card strong {
   display: block !important;
   line-height: 1 !important;
-  position: relative !important;
-  top: var(--tv-promo-price-baseline-shift, 0px) !important;
+  position: static !important;
+  top: auto !important;
+  margin: 0 !important;
+}
+
+.promo-scene .promo-price-card .promo-old-price {
+  display: block !important;
+  line-height: 1 !important;
+  margin: 0 !important;
 }
