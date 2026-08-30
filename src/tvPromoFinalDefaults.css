@@ -1,0 +1,27 @@
+/* Final TV Promo render defaults. This file must be imported last. */
+.promo-scene .promo-cta {
+  font-size: var(--tv-promo-cta-size, 72px) !important;
+  line-height: 1 !important;
+  transform-origin: left bottom !important;
+}
+
+.promo-scene .promo-cta-with-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 30px 56px !important;
+  min-height: 108px !important;
+  border-radius: 999px !important;
+  box-sizing: border-box !important;
+}
+
+.promo-scene .promo-price-card {
+  transform-origin: right bottom !important;
+}
+
+.promo-scene .promo-price-card strong {
+  display: block !important;
+  line-height: 1 !important;
+  position: relative !important;
+  top: 18px !important;
+}
