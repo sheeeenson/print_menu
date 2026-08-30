@@ -1,0 +1,27 @@
+/* Posters: product imagery must never cover titles, descriptions, prices or offers.
+   The editor may still change element z values internally, but these layer bands
+   guarantee a stable visual hierarchy in both preview and exported artwork. */
+.a3-poster-scene .a3-image-element {
+  z-index: 100 !important;
+}
+
+.a3-poster-scene .a3-text-element,
+.a3-poster-scene .a3-title-row,
+.a3-poster-scene .a3-product-name,
+.a3-poster-scene .a3-product-description,
+.a3-poster-scene .a3-current-price,
+.a3-poster-scene .a3-old-price {
+  z-index: 1000 !important;
+}
+
+.a3-poster-scene .a3-offer-element,
+.a3-poster-scene .a3-offer-badge,
+.a3-poster-scene .a3-offer-badge-bottom-left {
+  z-index: 2000 !important;
+}
+
+/* Editor affordances stay above artwork without changing the exported layer order. */
+.a3-poster-scene .a3-free-element.selected::before,
+.a3-poster-scene .a3-element-resize-handle {
+  z-index: 3000 !important;
+}
