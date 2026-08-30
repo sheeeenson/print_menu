@@ -44,6 +44,8 @@ import './posterUiLabels.js';
 import './ui/appUnifiedPrimitives.css';
 import './ui/appConsistentControls.css';
 import './ui/appFinalResponsiveAudit.css';
+import './tvPromoFinalDefaults.js';
+import './tvPromoFinalDefaults.css';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>
