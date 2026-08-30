@@ -38,7 +38,7 @@ export function MainNavigation({ snapshot, actions }) {
         <button className={isImageMenu ? 'active' : ''} type="button" onClick={() => actions.setSection(APP_SECTIONS.IMAGE_MENU)}>Image Menu</button>
         <button className={isTvPromo ? 'active' : ''} type="button" onClick={() => actions.setSection(APP_SECTIONS.TV_PROMO)}>TV Promo</button>
         <button className={isSiteBanner ? 'active' : ''} type="button" onClick={() => actions.setSection(APP_SECTIONS.SITE_BANNER)}>Site Banner</button>
-        <button className={isA3Poster ? 'active' : ''} type="button" onClick={() => actions.setSection(APP_SECTIONS.A3_POSTER)}>A3 Poster</button>
+        <button className={isA3Poster ? 'active' : ''} type="button" onClick={() => actions.setSection(APP_SECTIONS.A3_POSTER)}>Posters</button>
         <button className={isMetaCreative ? 'active' : ''} type="button" onClick={() => actions.setSection(APP_SECTIONS.META_CREATIVE)}>Meta Creatives</button>
       </div>
       <div className={`save-status ${saveStatusClass}`} aria-live="polite">{saveStatus}</div>
