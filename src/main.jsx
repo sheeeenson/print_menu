@@ -46,6 +46,7 @@ import './ui/appConsistentControls.css';
 import './ui/appFinalResponsiveAudit.css';
 import './tvPromoFinalDefaults.js';
 import './tvPromoFinalDefaults.css';
+import './tvPromoBaselineAlign.js';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>

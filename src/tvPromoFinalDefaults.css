@@ -23,5 +23,5 @@
   display: block !important;
   line-height: 1 !important;
   position: relative !important;
-  top: 18px !important;
+  top: var(--tv-promo-price-baseline-shift, 0px) !important;
 }
