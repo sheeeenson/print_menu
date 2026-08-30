@@ -4,15 +4,19 @@ import { buildDefaultA3ElementTransforms, getA3ElementKey } from './a3Independen
 const STORAGE_KEY = 'restaurantMenuStudio:a3PosterProject:v1';
 
 export const A3_FORMATS = Object.freeze([
-  { id: 'a3Portrait', label: 'A3 Portrait', width: 3508, height: 4961, previewWidth: 520 },
-  { id: 'a3Landscape', label: 'A3 Landscape', width: 4961, height: 3508, previewWidth: 720 },
+  { id: 'a3Portrait', size: 'A3', orientation: 'portrait', label: 'A3 Portrait', width: 3508, height: 4961, dpi: 300, previewWidth: 520 },
+  { id: 'a3Landscape', size: 'A3', orientation: 'landscape', label: 'A3 Landscape', width: 4961, height: 3508, dpi: 300, previewWidth: 720 },
+  { id: 'a2Portrait', size: 'A2', orientation: 'portrait', label: 'A2 Portrait', width: 4961, height: 7016, dpi: 300, previewWidth: 520 },
+  { id: 'a2Landscape', size: 'A2', orientation: 'landscape', label: 'A2 Landscape', width: 7016, height: 4961, dpi: 300, previewWidth: 720 },
+  { id: 'a1Portrait', size: 'A1', orientation: 'portrait', label: 'A1 Portrait', width: 4677, height: 6622, dpi: 200, previewWidth: 520 },
+  { id: 'a1Landscape', size: 'A1', orientation: 'landscape', label: 'A1 Landscape', width: 6622, height: 4677, dpi: 200, previewWidth: 720 },
 ]);
 
 export const getA3Format = (id) => A3_FORMATS.find((format) => format.id === id) ?? A3_FORMATS[0];
 
 const createId = () => `a3_${Math.random().toString(36).slice(2, 10)}`;
 
-export function createA3Poster(dishes = [], name = 'A3 Poster') {
+export function createA3Poster(dishes = [], name = 'Poster') {
   const firstDish = dishes.find((dish) => dish?.imageUrl);
   const selectedDishIds = firstDish ? [firstDish.id] : [];
   return {
@@ -80,6 +84,7 @@ const normalizePoster = (poster) => {
     selectedElementKey: '',
     offerTransform: { x: .18, y: .88, scale: 1, z: 70 },
     ...poster,
+    formatId: getA3Format(poster?.formatId).id,
     template: 'free', productCount, selectedDishIds,
     productTransforms: { ...defaults, ...(poster?.productTransforms || {}) },
     elementTransforms: { ...elementDefaults, ...(poster?.elementTransforms || {}) },
