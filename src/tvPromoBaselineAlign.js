@@ -22,8 +22,6 @@ const alignScene = (scene) => {
   const cta = scene.querySelector('.promo-cta');
   if (!(priceCard instanceof HTMLElement) || !(salePrice instanceof HTMLElement) || !(cta instanceof HTMLElement)) return;
 
-  // Never move the current-price glyph independently: the old and new price
-  // must remain one visual stack. Baseline correction is applied to the whole card.
   salePrice.style.removeProperty('--tv-promo-price-baseline-shift');
 
   if (!shouldAutoAlign()) {
@@ -31,6 +29,8 @@ const alignScene = (scene) => {
     return;
   }
 
+  // Measure from a neutral state, then apply the correction once. Do not watch
+  // our own style mutations, otherwise the alignment oscillates frame to frame.
   priceCard.style.setProperty('--tv-promo-price-baseline-delta', '0px');
 
   window.requestAnimationFrame(() => {
@@ -56,10 +56,16 @@ const alignAll = () => {
   });
 };
 
+const scheduleAlignBurst = () => {
+  window.setTimeout(alignAll, 0);
+  window.setTimeout(alignAll, 120);
+  window.setTimeout(alignAll, 500);
+};
+
 if (typeof window !== 'undefined') {
-  window.addEventListener('load', alignAll);
+  window.addEventListener('load', scheduleAlignBurst);
   window.addEventListener('resize', alignAll);
-  document.fonts?.ready?.then(alignAll).catch(() => {});
+  document.fonts?.ready?.then(scheduleAlignBurst).catch(() => {});
 
   document.addEventListener('input', (event) => {
     if (event.target instanceof HTMLInputElement && event.target.type === 'range') {
@@ -70,14 +76,9 @@ if (typeof window !== 'undefined') {
   document.addEventListener('change', (event) => {
     const target = event.target;
     if (target instanceof HTMLInputElement && target.name === 'tv-promo-dish') {
-      window.setTimeout(alignAll, 0);
+      scheduleAlignBurst();
     }
   }, true);
 
-  const observer = new MutationObserver(alignAll);
-  observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
-
-  window.setTimeout(alignAll, 0);
-  window.setTimeout(alignAll, 250);
-  window.setTimeout(alignAll, 1000);
+  scheduleAlignBurst();
 }

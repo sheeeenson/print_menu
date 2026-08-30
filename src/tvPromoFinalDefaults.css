@@ -5,10 +5,6 @@
   line-height: 1 !important;
   transform-origin: left bottom !important;
   margin-bottom: 42px !important;
-
-  /* The CTA must stay visually fixed unless we deliberately reintroduce a
-     dedicated motion system later. Older runtime styles were changing both
-     position and transform, which caused the visible vertical twitch. */
   animation: none !important;
   transition: none !important;
   transform: none !important;
@@ -33,6 +29,9 @@
   gap: 12px !important;
   transform-origin: right bottom !important;
   margin-bottom: calc(42px - var(--tv-promo-price-baseline-delta, 0px)) !important;
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
 }
 
 .promo-scene .promo-price-card strong {
@@ -41,10 +40,16 @@
   position: static !important;
   top: auto !important;
   margin: 0 !important;
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
 }
 
 .promo-scene .promo-price-card .promo-old-price {
   display: block !important;
   line-height: 1 !important;
   margin: 0 !important;
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
 }
