@@ -8,42 +8,51 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Fetch Sushi24 page and assets
+      - name: Fetch Sushi24 page, assets and menu API
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p scrape/assets
+          mkdir -p scrape/assets scrape/api
           python - <<'PY'
-          import re, json, pathlib, urllib.parse, urllib.request
+          import re, json, pathlib, urllib.parse, urllib.request, html as htmlmod
           base='https://sushi24.ge/en/market/sushi-24-vazha'
-          req=urllib.request.Request(base,headers={'User-Agent':'Mozilla/5.0'})
-          html=urllib.request.urlopen(req,timeout=30).read().decode('utf-8','replace')
-          pathlib.Path('scrape/page.html').write_text(html,encoding='utf-8')
+          headers={'User-Agent':'Mozilla/5.0','Accept':'*/*'}
+          def fetch(url, path):
+            try:
+              req=urllib.request.Request(url,headers=headers)
+              with urllib.request.urlopen(req,timeout=45) as r:
+                data=r.read(); status=r.status; final=r.geturl(); ctype=r.headers.get('content-type','')
+              pathlib.Path(path).write_bytes(data)
+              return {'url':url,'status':status,'final':final,'content_type':ctype,'bytes':len(data),'path':path}
+            except Exception as e:
+              pathlib.Path(path+'.error.txt').write_text(repr(e),encoding='utf-8')
+              return {'url':url,'error':repr(e),'path':path+'.error.txt'}
+          page=fetch(base,'scrape/page.html')
+          html=pathlib.Path('scrape/page.html').read_text('utf-8','replace')
           srcs=re.findall(r'<script[^>]+src=["\']([^"\']+)',html,re.I)
           hrefs=re.findall(r'<link[^>]+href=["\']([^"\']+)',html,re.I)
           urls=[]
           for u in srcs+hrefs:
-            full=urllib.parse.urljoin(base,u)
+            full=urllib.parse.urljoin(base,htmlmod.unescape(u))
             if full.startswith('https://sushi24.ge/') and ('.js' in full or '.css' in full): urls.append(full)
           urls=list(dict.fromkeys(urls))
-          manifest=[]
-          for i,u in enumerate(urls):
-            try:
-              req=urllib.request.Request(u,headers={'User-Agent':'Mozilla/5.0'})
-              data=urllib.request.urlopen(req,timeout=30).read()
-              path=f'scrape/assets/{i:03d}.txt'
-              pathlib.Path(path).write_bytes(data)
-              manifest.append({'url':u,'path':path,'bytes':len(data)})
-            except Exception as e:
-              manifest.append({'url':u,'error':repr(e)})
+          manifest=[page]
+          for i,u in enumerate(urls): manifest.append(fetch(u,f'scrape/assets/{i:03d}.txt'))
+          candidates=[
+            'https://sushi24.ge/api/v2/menu/11445/bundle',
+            'https://sushi24.ge/api/v2/menu/11445/en/bundle',
+            'https://sushi24.ge/api/v2/menu/sushi-24-vazha/bundle',
+            'https://sushi24.ge/api/v2/menu/sushi-24-vazha/en/bundle',
+          ]
+          for i,u in enumerate(candidates): manifest.append(fetch(u,f'scrape/api/{i:02d}.txt'))
           pathlib.Path('scrape/manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
-          alltxt='\n'.join(pathlib.Path(x['path']).read_text('utf-8','replace') for x in manifest if 'path' in x)
-          pats=['api.getorder.biz','X-GETORDER-AUTH','getorder','/api/v1/','providers/10/locations','menu/']
+          alltxt='\n'.join(pathlib.Path(x['path']).read_text('utf-8','replace') for x in manifest if 'path' in x and pathlib.Path(x['path']).exists())
+          pats=['api.getorder.biz','X-GETORDER-AUTH','getorder','/api/v1/','/api/v2','menu/','image_url','files.getorder.biz','media.getorder.biz']
           hits={p:[] for p in pats}
           for p in pats:
             for m in re.finditer(re.escape(p),alltxt,re.I):
-              hits[p].append(alltxt[max(0,m.start()-500):m.end()+1000])
-              if len(hits[p])>=20: break
+              hits[p].append(alltxt[max(0,m.start()-700):m.end()+1500])
+              if len(hits[p])>=30: break
           pathlib.Path('scrape/hits.json').write_text(json.dumps(hits,ensure_ascii=False,indent=2),encoding='utf-8')
           PY
       - uses: actions/upload-artifact@v4
