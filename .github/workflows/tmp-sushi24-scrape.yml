@@ -1,0 +1,53 @@
+name: tmp-sushi24-scrape
+on:
+  push:
+    branches:
+      - tmp/sushi24-menu-fetch
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch Sushi24 page and assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p scrape/assets
+          python - <<'PY'
+          import re, json, pathlib, urllib.parse, urllib.request
+          base='https://sushi24.ge/en/market/sushi-24-vazha'
+          req=urllib.request.Request(base,headers={'User-Agent':'Mozilla/5.0'})
+          html=urllib.request.urlopen(req,timeout=30).read().decode('utf-8','replace')
+          pathlib.Path('scrape/page.html').write_text(html,encoding='utf-8')
+          srcs=re.findall(r'<script[^>]+src=["\']([^"\']+)',html,re.I)
+          hrefs=re.findall(r'<link[^>]+href=["\']([^"\']+)',html,re.I)
+          urls=[]
+          for u in srcs+hrefs:
+            full=urllib.parse.urljoin(base,u)
+            if full.startswith('https://sushi24.ge/') and ('.js' in full or '.css' in full): urls.append(full)
+          urls=list(dict.fromkeys(urls))
+          manifest=[]
+          for i,u in enumerate(urls):
+            try:
+              req=urllib.request.Request(u,headers={'User-Agent':'Mozilla/5.0'})
+              data=urllib.request.urlopen(req,timeout=30).read()
+              path=f'scrape/assets/{i:03d}.txt'
+              pathlib.Path(path).write_bytes(data)
+              manifest.append({'url':u,'path':path,'bytes':len(data)})
+            except Exception as e:
+              manifest.append({'url':u,'error':repr(e)})
+          pathlib.Path('scrape/manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
+          alltxt='\n'.join(pathlib.Path(x['path']).read_text('utf-8','replace') for x in manifest if 'path' in x)
+          pats=['api.getorder.biz','X-GETORDER-AUTH','getorder','/api/v1/','providers/10/locations','menu/']
+          hits={p:[] for p in pats}
+          for p in pats:
+            for m in re.finditer(re.escape(p),alltxt,re.I):
+              hits[p].append(alltxt[max(0,m.start()-500):m.end()+1000])
+              if len(hits[p])>=20: break
+          pathlib.Path('scrape/hits.json').write_text(json.dumps(hits,ensure_ascii=False,indent=2),encoding='utf-8')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sushi24-scrape
+          path: scrape
+          retention-days: 1
