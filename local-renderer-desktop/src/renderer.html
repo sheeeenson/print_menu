@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Print Menu Renderer</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #151515;
+        color: #f6f1e8;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(circle at top left, #3a2e24, #151515 48%, #101010);
+      }
+
+      .app {
+        padding: 28px;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: flex-start;
+        margin-bottom: 24px;
+      }
+
+      h1 {
+        margin: 0 0 6px;
+        font-size: 28px;
+        letter-spacing: -0.03em;
+      }
+
+      .subtitle {
+        margin: 0;
+        color: #c7bda9;
+        font-size: 14px;
+      }
+
+      .status-card,
+      .log-card {
+        border: 1px solid rgba(255,255,255,0.12);
+        background: rgba(20,20,20,0.74);
+        border-radius: 18px;
+        padding: 18px;
+        box-shadow: 0 16px 44px rgba(0,0,0,0.22);
+      }
+
+      .status-row {
+        display: grid;
+        grid-template-columns: 140px 1fr;
+        gap: 10px;
+        margin: 9px 0;
+        font-size: 14px;
+      }
+
+      .label {
+        color: #a89f91;
+      }
+
+      .value {
+        color: #fffaf2;
+        word-break: break-word;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 999px;
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 700;
+        background: #3b3026;
+        color: #f6d3aa;
+      }
+
+      .pill::before {
+        content: '';
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+        background: #d49a48;
+      }
+
+      .pill.running {
+        background: rgba(35, 105, 58, 0.35);
+        color: #bdf0c6;
+      }
+
+      .pill.running::before {
+        background: #56d777;
+      }
+
+      .pill.error {
+        background: rgba(136, 38, 38, 0.35);
+        color: #ffc4c4;
+      }
+
+      .pill.error::before {
+        background: #ff6565;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      button {
+        border: 0;
+        border-radius: 12px;
+        padding: 11px 14px;
+        background: #f4c06a;
+        color: #1f160d;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      button.secondary {
+        background: rgba(255,255,255,0.1);
+        color: #fffaf2;
+      }
+
+      button:hover {
+        filter: brightness(1.05);
+      }
+
+      .log-card {
+        margin-top: 18px;
+      }
+
+      .log-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .log-title h2 {
+        margin: 0;
+        font-size: 16px;
+      }
+
+      pre {
+        margin: 0;
+        min-height: 190px;
+        max-height: 230px;
+        overflow: auto;
+        white-space: pre-wrap;
+        font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        color: #ded7cb;
+        background: rgba(0,0,0,0.26);
+        border-radius: 12px;
+        padding: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <section class="header">
+        <div>
+          <h1>Print Menu Renderer</h1>
+          <p class="subtitle">Local render helper for MP4, WebM and PNG export.</p>
+        </div>
+        <div id="statusPill" class="pill">Starting</div>
+      </section>
+
+      <section class="status-card">
+        <div class="status-row"><div class="label">URL</div><div class="value">http://localhost:3020</div></div>
+        <div class="status-row"><div class="label">State</div><div id="state" class="value">Starting...</div></div>
+        <div class="status-row"><div class="label">Render scale</div><div id="renderScale" class="value">-</div></div>
+        <div class="status-row"><div class="label">PNG capture</div><div id="pngStillCapture" class="value">-</div></div>
+        <div class="status-row"><div class="label">Text quality</div><div id="highQualityText" class="value">-</div></div>
+        <div class="status-row"><div class="label">Started by app</div><div id="startedByApp" class="value">-</div></div>
+
+        <div class="actions">
+          <button id="startButton">Start</button>
+          <button id="restartButton" class="secondary">Restart</button>
+          <button id="healthButton" class="secondary">Check health</button>
+          <button id="openSiteButton" class="secondary">Open Print Menu</button>
+        </div>
+      </section>
+
+      <section class="log-card">
+        <div class="log-title">
+          <h2>Logs</h2>
+          <button id="clearButton" class="secondary">Clear</button>
+        </div>
+        <pre id="logs"></pre>
+      </section>
+    </main>
+
+    <script>
+      const statusPill = document.getElementById('statusPill');
+      const state = document.getElementById('state');
+      const renderScale = document.getElementById('renderScale');
+      const pngStillCapture = document.getElementById('pngStillCapture');
+      const highQualityText = document.getElementById('highQualityText');
+      const startedByApp = document.getElementById('startedByApp');
+      const logs = document.getElementById('logs');
+
+      const setStatus = (payload) => {
+        const nextState = payload?.state || (payload?.ok ? 'running' : 'error');
+        statusPill.className = `pill ${nextState === 'running' ? 'running' : nextState === 'error' ? 'error' : ''}`;
+        statusPill.textContent = nextState;
+        state.textContent = payload?.error || nextState;
+        renderScale.textContent = payload?.health?.renderScale ?? '-';
+        pngStillCapture.textContent = payload?.health?.pngStillCapture === true ? 'true' : payload?.health?.pngStillCapture ?? '-';
+        highQualityText.textContent = payload?.health?.highQualityText === true ? 'true' : payload?.health?.highQualityText ?? '-';
+        startedByApp.textContent = payload?.startedByApp === true ? 'true' : payload?.startedByApp === false ? 'false' : '-';
+      };
+
+      const appendLog = (line) => {
+        if (!line) return;
+        logs.textContent += `${line}\n`;
+        logs.scrollTop = logs.scrollHeight;
+      };
+
+      window.printMenuRenderer.onStatus(setStatus);
+      window.printMenuRenderer.onLog(appendLog);
+
+      document.getElementById('startButton').addEventListener('click', async () => {
+        setStatus({ state: 'starting' });
+        setStatus(await window.printMenuRenderer.start());
+      });
+
+      document.getElementById('restartButton').addEventListener('click', async () => {
+        await window.printMenuRenderer.stop();
+        setStatus({ state: 'starting' });
+        setStatus(await window.printMenuRenderer.start());
+      });
+
+      document.getElementById('healthButton').addEventListener('click', async () => {
+        const health = await window.printMenuRenderer.health();
+        setStatus({ state: health.ok ? 'running' : 'error', ...health });
+        appendLog(JSON.stringify(health, null, 2));
+      });
+
+      document.getElementById('openSiteButton').addEventListener('click', () => {
+        window.printMenuRenderer.openUrl('https://print-menu.vercel.app/');
+      });
+
+      document.getElementById('clearButton').addEventListener('click', () => {
+        logs.textContent = '';
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,619 @@
+/* Responsive app layer. Loaded last from main.jsx. */
+
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 0 !important;
+}
+
+body {
+  min-width: 0 !important;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+img,
+svg,
+canvas,
+video {
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  max-width: 100%;
+}
+
+.app-shell,
+.workspace {
+  width: 100%;
+  min-width: 0 !important;
+}
+
+.main-navigation,
+.main-navigation.top-nav {
+  min-width: 0 !important;
+}
+
+.category-panel,
+.layout-admin-panel,
+.promo-generator-panel,
+.dish-workspace,
+.preview-stage,
+.promo-generator-preview-stage,
+.paper-scroll,
+.promo-preview-shell {
+  min-width: 0 !important;
+}
+
+/* Large laptops and medium desktops */
+@media (max-width: 1440px) {
+  .main-navigation,
+  .main-navigation.top-nav {
+    padding-left: 18px;
+    padding-right: 18px;
+    gap: 12px;
+  }
+
+  .brand-block,
+  .compact-brand-block {
+    min-width: 0 !important;
+  }
+
+  .section-tabs button,
+  .project-actions button {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .content-section {
+    grid-template-columns: minmax(310px, 340px) minmax(0, 1fr) !important;
+  }
+
+  .layout-print-section {
+    grid-template-columns: minmax(320px, 360px) minmax(0, 1fr) !important;
+  }
+
+  .promo-generator-section {
+    grid-template-columns: minmax(330px, 380px) minmax(0, 1fr) !important;
+  }
+}
+
+/* Tablets / narrow laptops */
+@media (max-width: 1180px) {
+  button,
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  .main-navigation,
+  .main-navigation.top-nav {
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: max(10px, env(safe-area-inset-top)) 14px 10px !important;
+    overflow: visible !important;
+  }
+
+  .brand-block,
+  .compact-brand-block {
+    width: auto !important;
+    min-width: 0 !important;
+    flex: 0 0 auto;
+  }
+
+  .brand-mark {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    flex: 0 0 auto;
+  }
+
+  .section-tabs {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    justify-content: flex-start !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+
+  .section-tabs::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .section-tabs button {
+    flex: 0 0 auto !important;
+    min-width: max-content;
+    min-height: 42px;
+    white-space: nowrap;
+  }
+
+  .project-actions {
+    justify-self: end;
+    display: flex;
+    max-width: 360px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .project-actions button {
+    flex: 0 0 auto;
+    min-height: 42px;
+    white-space: nowrap;
+  }
+
+  .save-status {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    width: 100%;
+    max-width: none !important;
+    margin-left: 0 !important;
+    padding: 6px 10px;
+    font-size: 0.78rem;
+  }
+
+  .content-section,
+  .layout-print-section,
+  .promo-generator-section {
+    display: grid !important;
+    grid-template-columns: minmax(280px, 34vw) minmax(0, 1fr) !important;
+    min-height: auto !important;
+  }
+
+  .category-panel,
+  .layout-admin-panel,
+  .promo-generator-panel {
+    padding: 18px !important;
+    max-height: none !important;
+  }
+
+  .dish-workspace,
+  .preview-stage,
+  .promo-generator-preview-stage {
+    padding: 18px !important;
+  }
+
+  .workspace-toolbar,
+  .preview-toolbar,
+  .promo-generator-toolbar,
+  .panel-title-row,
+  .editor-card-title,
+  .subsection-title {
+    gap: 12px;
+  }
+
+  .workspace-toolbar h1,
+  .preview-toolbar h1,
+  .promo-generator-toolbar h2 {
+    font-size: clamp(1.35rem, 2.2vw, 1.9rem) !important;
+  }
+
+  .two-column-fields,
+  .four-column-fields,
+  .panel-two-column,
+  .badge-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .image-preview {
+    width: min(100%, 260px) !important;
+  }
+
+  .paper-scroll,
+  .promo-preview-shell {
+    width: 100%;
+    overflow: auto !important;
+    -webkit-overflow-scrolling: touch;
+    justify-items: start !important;
+  }
+
+  .paper-page {
+    transform-origin: top left !important;
+  }
+
+  .paper-a3.paper-landscape {
+    transform: scale(0.62) !important;
+    margin-right: -38% !important;
+    margin-bottom: -38% !important;
+  }
+
+  .promo-canvas-wrap {
+    width: min(780px, calc(100vw - 380px)) !important;
+    min-width: 360px !important;
+  }
+}
+
+/* Phones and small tablets: stack everything */
+@media (max-width: 920px) {
+  html,
+  body,
+  #root {
+    overflow-x: hidden;
+  }
+
+  .workspace {
+    min-height: auto !important;
+  }
+
+  .main-navigation,
+  .main-navigation.top-nav {
+    display: grid !important;
+    grid-template-columns: 42px minmax(0, 1fr) !important;
+    width: 100%;
+    min-height: auto !important;
+    max-height: none !important;
+    padding: max(8px, env(safe-area-inset-top)) 10px 10px !important;
+    gap: 8px !important;
+    align-items: stretch !important;
+    position: sticky;
+    top: 0;
+    overflow: visible !important;
+  }
+
+  .brand-block,
+  .compact-brand-block {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0 !important;
+    width: auto !important;
+    gap: 0;
+  }
+
+  .brand-mark {
+    width: 38px;
+    height: 38px;
+  }
+
+  .project-name-input {
+    width: 100%;
+    min-width: 0;
+    font-size: 1rem;
+  }
+
+  .section-tabs {
+    grid-column: 2;
+    grid-row: 1;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    border-radius: 18px;
+    padding: 5px;
+    touch-action: pan-x;
+  }
+
+  .section-tabs button {
+    min-height: 42px;
+    padding: 9px 13px;
+  }
+
+  .save-status {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    order: 2;
+  }
+
+  .project-actions {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    order: 3;
+    width: 100% !important;
+    max-width: none !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    overflow: visible !important;
+    border-radius: 16px;
+  }
+
+  .project-actions button,
+  .primary-action,
+  .secondary-action,
+  .promo-duration-buttons button,
+  .promo-format-buttons button {
+    min-height: 44px;
+  }
+
+  .content-section,
+  .layout-print-section,
+  .promo-generator-section {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    min-height: auto !important;
+  }
+
+  .category-panel,
+  .layout-admin-panel,
+  .promo-generator-panel {
+    width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid #dfd6c9;
+    padding: 16px !important;
+  }
+
+  .dish-workspace,
+  .preview-stage,
+  .promo-generator-preview-stage {
+    width: 100% !important;
+    padding: 16px !important;
+    overflow: visible !important;
+  }
+
+  .workspace-toolbar,
+  .preview-toolbar,
+  .promo-generator-toolbar,
+  .panel-title-row,
+  .editor-card-title,
+  .subsection-title {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    align-items: start !important;
+    gap: 10px;
+  }
+
+  .workspace-toolbar h1,
+  .preview-toolbar h1,
+  .promo-generator-toolbar h2 {
+    font-size: 1.35rem !important;
+    line-height: 1.08;
+  }
+
+  .action-row,
+  .print-action-row,
+  .page-actions {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    justify-content: stretch !important;
+  }
+
+  .action-row button,
+  .print-action-row button,
+  .page-actions button,
+  .workspace-toolbar button,
+  .subsection-title button {
+    width: 100%;
+  }
+
+  .dish-grid,
+  .category-list,
+  .page-list,
+  .category-checkbox-list,
+  .design-control-list {
+    gap: 12px !important;
+  }
+
+  .editor-card,
+  .empty-state,
+  .placeholder-panel {
+    border-radius: 18px !important;
+    padding: 16px !important;
+  }
+
+  .placeholder-panel {
+    margin: 16px !important;
+    min-height: 320px !important;
+  }
+
+  .placeholder-panel h1 {
+    font-size: 1.45rem !important;
+  }
+
+  .two-column-fields,
+  .four-column-fields,
+  .panel-two-column,
+  .badge-row,
+  .promo-duration-buttons,
+  .promo-format-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .field-label input,
+  .field-label textarea,
+  .field-label select,
+  .image-menu-control input,
+  .image-menu-control textarea,
+  .image-menu-control select,
+  .badge-row input,
+  .badge-row select {
+    min-height: 44px;
+  }
+
+  .image-preview {
+    width: 100% !important;
+    height: 180px !important;
+  }
+
+  .paper-scroll,
+  .promo-preview-shell {
+    width: 100% !important;
+    padding: 12px 12px 28px !important;
+    border-radius: 20px !important;
+    overflow: auto !important;
+    justify-items: start !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .paper-a4.paper-portrait,
+  .paper-a4.paper-landscape,
+  .paper-a3.paper-portrait,
+  .paper-a3.paper-landscape {
+    transform: scale(0.56) !important;
+    margin-right: -44% !important;
+    margin-bottom: -44% !important;
+  }
+
+  .promo-output-pill,
+  .preview-toolbar span {
+    width: fit-content;
+    max-width: 100%;
+    white-space: normal !important;
+    border-radius: 18px !important;
+  }
+
+  .promo-panel-group {
+    gap: 12px !important;
+  }
+
+  .promo-toggle-field {
+    min-height: 44px;
+  }
+
+  .promo-select-section {
+    margin-left: -4px;
+    margin-right: -4px;
+  }
+
+  .promo-category-picker,
+  .image-menu-category-picker,
+  .image-menu-dish-picker,
+  .promo-dish-picker {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .promo-dish-picker label,
+  .image-menu-dish-picker label {
+    min-width: 0;
+  }
+
+  .promo-dish-picker img,
+  .image-menu-dish-picker img {
+    width: 56px;
+    height: 56px;
+    object-fit: cover;
+    flex: 0 0 auto;
+  }
+
+  .promo-canvas-wrap {
+    width: min(720px, calc(100vw - 56px)) !important;
+    min-width: 320px !important;
+    border-radius: 18px !important;
+  }
+
+  .promo-scene {
+    transform-origin: top left !important;
+  }
+}
+
+/* Small phones */
+@media (max-width: 520px) {
+  .main-navigation,
+  .main-navigation.top-nav {
+    grid-template-columns: 40px minmax(0, 1fr) !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  .brand-mark {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+  }
+
+  .section-tabs {
+    padding: 4px !important;
+  }
+
+  .section-tabs button {
+    min-height: 40px;
+    padding: 8px 11px !important;
+    font-size: 0.88rem;
+  }
+
+  .project-actions,
+  .two-column-fields,
+  .four-column-fields,
+  .panel-two-column,
+  .badge-row,
+  .promo-duration-buttons,
+  .promo-format-buttons {
+    grid-template-columns: 1fr !important;
+  }
+
+  .category-panel,
+  .layout-admin-panel,
+  .promo-generator-panel,
+  .dish-workspace,
+  .preview-stage,
+  .promo-generator-preview-stage {
+    padding: 12px !important;
+  }
+
+  .editor-card {
+    padding: 14px !important;
+  }
+
+  .promo-preview-shell,
+  .paper-scroll {
+    padding: 10px 10px 24px !important;
+  }
+
+  .promo-canvas-wrap {
+    width: calc(100vw - 44px) !important;
+    min-width: 300px !important;
+  }
+
+  .promo-preview-size,
+  .save-status {
+    font-size: 0.8rem;
+    line-height: 1.35;
+  }
+
+  .paper-a4.paper-portrait,
+  .paper-a4.paper-landscape,
+  .paper-a3.paper-portrait,
+  .paper-a3.paper-landscape {
+    transform: scale(0.48) !important;
+    margin-right: -52% !important;
+    margin-bottom: -52% !important;
+  }
+}
+
+/* Very small phones */
+@media (max-width: 380px) {
+  .section-tabs button {
+    padding-left: 9px !important;
+    padding-right: 9px !important;
+    font-size: 0.82rem;
+  }
+
+  .promo-canvas-wrap {
+    min-width: 280px !important;
+  }
+
+  .paper-a4.paper-portrait,
+  .paper-a4.paper-landscape,
+  .paper-a3.paper-portrait,
+  .paper-a3.paper-landscape {
+    transform: scale(0.42) !important;
+    margin-right: -58% !important;
+    margin-bottom: -58% !important;
+  }
+}
+
+/* Wide screens: keep work areas readable instead of endlessly stretching. */
+@media (min-width: 1600px) {
+  .dish-workspace,
+  .preview-stage,
+  .promo-generator-preview-stage {
+    padding-left: clamp(28px, 3vw, 56px) !important;
+    padding-right: clamp(28px, 3vw, 56px) !important;
+  }
+
+  .dish-grid {
+    max-width: 1320px;
+  }
+}

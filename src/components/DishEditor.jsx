@@ -1,5 +1,5 @@
 import { BADGE_TYPES } from '../models/menu.js';
-import { normalizeGoogleDriveImageUrl } from '../utils/imageUrls.js';
+import { normalizeGoogleDriveImageUrl, normalizeGoogleDriveMediaUrl } from '../utils/imageUrls.js';
 import { formatOptionalNumber, parseOptionalNumber } from '../utils/pricing.js';
 
 const DEFAULT_SIZE_VARIANTS = Object.freeze([
@@ -32,9 +32,11 @@ export function DishEditor({ dish, actions }) {
   const hasSizePrices = (dish.priceVariants ?? []).length > 0;
   const updateText = (field) => (event) => actions.updateDish(dish.id, { [field]: event.target.value });
   const updateImageUrl = (event) => actions.updateDish(dish.id, { imageUrl: normalizeGoogleDriveImageUrl(event.target.value) });
+  const updatePromoBackgroundUrl = (event) => actions.updateDish(dish.id, { promoBackgroundUrl: normalizeGoogleDriveMediaUrl(event.target.value) });
   const updateBoolean = (field) => (event) => actions.updateDish(dish.id, { [field]: event.target.checked });
   const updatePrice = (field) => (event) => actions.updateDish(dish.id, { [field]: parseOptionalNumber(event.target.value) }, field);
   const updateDishType = (event) => actions.updateDish(dish.id, { dishType: event.target.value, optionGroups: dish.optionGroups ?? [] });
+  const isTransparentProduct = dish.imageMode === 'transparent' || dish.transparentImage === true;
 
   return (
     <article className={`editor-card dish-editor ${dish.visible ? '' : 'hidden-dish'} ${hasSizePrices ? 'has-size-prices' : ''}`}>
@@ -80,6 +82,23 @@ export function DishEditor({ dish, actions }) {
         <input type="checkbox" checked={Boolean(dish.blurImage)} onChange={updateBoolean('blurImage')} />
         Blur photo
       </label>
+      <label className="toggle-label">
+        <input
+          type="checkbox"
+          checked={isTransparentProduct}
+          onChange={(event) => actions.updateDish(dish.id, { imageMode: event.target.checked ? 'transparent' : 'regular', transparentImage: event.target.checked })}
+        />
+        Product photo has no background
+      </label>
+      {isTransparentProduct ? (
+        <TextInput
+          dish={dish}
+          field="promoBackgroundUrl"
+          label="Default TV Promo Background URL"
+          placeholder="Image/video URL or Google Drive link"
+          onChange={updatePromoBackgroundUrl}
+        />
+      ) : null}
       {dish.imageUrl ? (
         <div className={`image-preview ${dish.blurImage ? 'blurred-image-preview' : ''}`}>
           <img src={dish.imageUrl} alt={`${dish.nameEn} preview`} />
@@ -96,7 +115,7 @@ function TextInput({ dish, field, label, placeholder = '', onChange }) {
   return (
     <label className="field-label">
       {label}
-      <input value={dish[field]} placeholder={placeholder} onChange={onChange} />
+      <input value={dish[field] ?? ''} placeholder={placeholder} onChange={onChange} />
     </label>
   );
 }
@@ -105,7 +124,7 @@ function TextareaInput({ dish, field, label, onChange }) {
   return (
     <label className="field-label">
       {label}
-      <textarea rows="3" value={dish[field]} onChange={onChange} />
+      <textarea rows="3" value={dish[field] ?? ''} onChange={onChange} />
     </label>
   );
 }
@@ -234,8 +253,8 @@ function BadgeEditor({ dish, actions }) {
         <h4>Badges</h4>
         <button type="button" onClick={() => actions.addBadge(dish.id)}>+ Badge</button>
       </div>
-      {dish.badges.length === 0 ? <p className="muted-text">No badges yet.</p> : null}
-      {dish.badges.map((badge) => (
+      {(dish.badges ?? []).length === 0 ? <p className="muted-text">No badges yet.</p> : null}
+      {(dish.badges ?? []).map((badge) => (
         <div className="badge-row" key={badge.id}>
           <select value={badge.type} onChange={(event) => actions.updateBadge(dish.id, badge.id, { type: event.target.value })}>
             {BADGE_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}

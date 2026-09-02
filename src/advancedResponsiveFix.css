@@ -1,0 +1,85 @@
+/* Restore the Layout Advanced panel after the responsive layer. */
+
+.layout-print-section {
+  grid-template-columns: minmax(320px, 390px) minmax(0, 1fr) minmax(300px, 360px) !important;
+}
+
+.advanced-admin-panel {
+  display: block !important;
+  min-width: 0 !important;
+  height: calc(100vh - 64px) !important;
+  max-height: calc(100vh - 64px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  border-left: 1px solid var(--app-border, #e5e7eb) !important;
+  background: #ffffff;
+  padding: 22px;
+}
+
+.advanced-layout-section {
+  display: block !important;
+  visibility: visible !important;
+}
+
+@media (max-width: 1440px) {
+  .layout-print-section {
+    grid-template-columns: minmax(300px, 340px) minmax(0, 1fr) minmax(280px, 320px) !important;
+  }
+
+  .advanced-admin-panel {
+    padding: 18px !important;
+  }
+}
+
+@media (max-width: 1180px) {
+  .layout-print-section {
+    grid-template-columns: 1fr !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .layout-admin-panel,
+  .advanced-admin-panel,
+  .preview-stage {
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .advanced-admin-panel {
+    order: 3;
+    border-left: 0 !important;
+    border-top: 1px solid var(--app-border, #e5e7eb) !important;
+    padding: 18px !important;
+  }
+
+  .preview-stage {
+    order: 2;
+  }
+
+  .layout-admin-panel {
+    order: 1;
+  }
+}
+
+@media (max-width: 920px) {
+  .advanced-admin-panel {
+    padding: 16px !important;
+  }
+
+  .advanced-controls-stack,
+  .design-subpanel,
+  .typography-subpanel,
+  .font-pair-control {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .advanced-admin-panel {
+    padding: 12px !important;
+  }
+}

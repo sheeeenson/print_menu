@@ -1,0 +1,45 @@
+name: Build Renderer Windows Installer
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/sushiwoki-site-banners
+    paths:
+      - 'local-renderer/**'
+      - '.github/workflows/build-renderer-windows.yml'
+
+jobs:
+  build-windows-installer:
+    name: Build Windows Installer
+    runs-on: windows-latest
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    defaults:
+      run:
+        working-directory: local-renderer
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Windows installer
+        run: npm run dist:win
+
+      - name: List build output
+        run: dir dist
+
+      - name: Upload Windows installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: print-menu-renderer-windows-installer
+          path: local-renderer/dist/Print-Menu-Renderer-Setup-*.exe
+          if-no-files-found: error
+          retention-days: 14

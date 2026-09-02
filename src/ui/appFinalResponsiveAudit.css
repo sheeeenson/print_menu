@@ -1,0 +1,395 @@
+/* Final responsive audit layer.
+   Loaded after all page styles to prevent clipped labels, pills and section headers. */
+
+.main-navigation,
+.main-navigation.top-nav {
+  grid-template-columns: auto minmax(0, 1fr) auto auto !important;
+  align-items: center !important;
+}
+
+.project-menu {
+  position: relative !important;
+  justify-self: end !important;
+  min-width: 0 !important;
+  z-index: 80 !important;
+}
+
+.project-menu summary {
+  list-style: none !important;
+  min-height: 42px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 10px 15px !important;
+  border-radius: 14px !important;
+  background: rgba(255, 255, 255, 0.055) !important;
+  border: 1px solid var(--app-ui-border, rgba(255,255,255,0.11)) !important;
+  color: var(--app-ui-text, #f7f4ee) !important;
+  font-size: 0.86rem !important;
+  font-weight: 900 !important;
+  cursor: pointer !important;
+  user-select: none !important;
+}
+
+.project-menu summary::-webkit-details-marker {
+  display: none !important;
+}
+
+.project-menu summary::after {
+  content: '⌄';
+  font-size: 0.9em;
+  opacity: 0.72;
+  transform: translateY(-1px);
+}
+
+.project-menu[open] summary {
+  background: rgba(140, 61, 255, 0.20) !important;
+  border-color: rgba(185, 92, 255, 0.45) !important;
+  color: #ffffff !important;
+}
+
+.project-menu-panel {
+  position: absolute !important;
+  right: 0 !important;
+  top: calc(100% + 10px) !important;
+  width: min(260px, calc(100vw - 24px)) !important;
+  display: grid !important;
+  gap: 8px !important;
+  padding: 10px !important;
+  border-radius: 18px !important;
+  background: rgba(23, 25, 34, 0.98) !important;
+  border: 1px solid var(--app-ui-border, rgba(255,255,255,0.11)) !important;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.38) !important;
+  backdrop-filter: blur(18px) !important;
+}
+
+.project-menu-panel button {
+  width: 100% !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+  min-width: 0 !important;
+  white-space: normal !important;
+}
+
+.app-panel-header,
+.app-toolbar,
+.workspace-toolbar,
+.preview-toolbar,
+.promo-generator-toolbar,
+.image-menu-section-heading,
+.panel-title-row,
+.editor-card-title,
+.subsection-title,
+.advanced-panel-header,
+.advanced-card-title {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.app-panel-header *,
+.app-toolbar *,
+.workspace-toolbar *,
+.preview-toolbar *,
+.promo-generator-toolbar *,
+.image-menu-section-heading *,
+.panel-title-row *,
+.editor-card-title *,
+.subsection-title *,
+.advanced-panel-header *,
+.advanced-card-title * {
+  min-width: 0;
+}
+
+.app-panel-header h1,
+.app-panel-header h2,
+.app-toolbar h1,
+.app-toolbar h2,
+.workspace-toolbar h1,
+.workspace-toolbar h2,
+.preview-toolbar h1,
+.preview-toolbar h2,
+.promo-generator-toolbar h1,
+.promo-generator-toolbar h2,
+.image-menu-section-heading h1,
+.image-menu-section-heading h2,
+.panel-title-row h1,
+.panel-title-row h2,
+.editor-card-title h1,
+.editor-card-title h2,
+.editor-card-title h3,
+.subsection-title h1,
+.subsection-title h2,
+.subsection-title h3,
+.advanced-panel-header h1,
+.advanced-panel-header h2,
+.advanced-card-title h1,
+.advanced-card-title h2,
+.advanced-card-title h3 {
+  max-width: 100% !important;
+  overflow-wrap: anywhere !important;
+  text-wrap: balance;
+}
+
+.app-pill,
+.save-status,
+.image-menu-section-heading small,
+.app-preview-size,
+.promo-preview-size,
+.site-banner-preview-size,
+.promo-output-pill,
+.site-banner-output-pill {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow-wrap: anywhere !important;
+  white-space: normal !important;
+}
+
+.app-toolbar,
+.workspace-toolbar,
+.preview-toolbar,
+.promo-generator-toolbar {
+  flex-wrap: wrap !important;
+}
+
+.app-toolbar > *,
+.workspace-toolbar > *,
+.preview-toolbar > *,
+.promo-generator-toolbar > * {
+  min-width: 0 !important;
+}
+
+.image-menu-section-heading {
+  width: 100% !important;
+  align-items: start !important;
+}
+
+.image-menu-section-heading > div {
+  min-width: 0 !important;
+}
+
+.image-menu-section-heading small {
+  justify-self: start !important;
+  text-align: left !important;
+}
+
+.site-banner-select-section .image-menu-section-heading,
+.image-menu-select-section .image-menu-section-heading,
+.promo-generator-panel .image-menu-section-heading,
+.promo-panel-group .image-menu-section-heading {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.site-banner-select-section .image-menu-section-heading > small,
+.image-menu-select-section .image-menu-section-heading > small,
+.promo-generator-panel .image-menu-section-heading > small,
+.promo-panel-group .image-menu-section-heading > small {
+  justify-self: start !important;
+  width: fit-content !important;
+}
+
+.site-banner-export-row button,
+.app-segmented button,
+.project-actions button,
+.print-top-actions button,
+.image-menu-format-buttons button,
+.promo-format-buttons button,
+.promo-duration-buttons button,
+.site-banner-export-buttons button {
+  min-width: 0 !important;
+  overflow-wrap: anywhere !important;
+  white-space: normal !important;
+  text-align: center !important;
+}
+
+.image-menu-category-toggle,
+.image-menu-dish-picker label,
+.promo-dish-picker label,
+.site-banner-dish-picker label,
+.category-card,
+.category-checkbox,
+.page-list-item {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.image-menu-category-toggle strong,
+.image-menu-category-toggle small,
+.image-menu-dish-picker strong,
+.image-menu-dish-picker small,
+.promo-dish-picker strong,
+.promo-dish-picker small,
+.site-banner-dish-picker strong,
+.site-banner-dish-picker small,
+.category-card span,
+.category-card small,
+.category-checkbox strong,
+.category-checkbox small,
+.page-list-item span,
+.page-list-item small {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.site-banner-dish-picker strong,
+.site-banner-dish-picker small {
+  white-space: nowrap !important;
+}
+
+.app-control-group,
+.app-card,
+.panel-section,
+.editor-card,
+.promo-panel-group,
+.site-banner-panel-group,
+.settings-block,
+.advanced-control-card,
+.advanced-layout-section,
+.inline-advanced-controls {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+/* TV Promo product selector: prevent the latest deploy from clipping the dish picker. */
+.promo-generator-section {
+  min-height: calc(100dvh - 76px) !important;
+  height: calc(100dvh - 76px) !important;
+  overflow: hidden !important;
+}
+
+.promo-generator-panel {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: calc(100dvh - 76px) !important;
+  max-height: calc(100dvh - 76px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain !important;
+  scrollbar-gutter: stable !important;
+}
+
+.promo-select-section,
+.promo-generator-panel .promo-select-section,
+.promo-generator-panel .panel-section.promo-select-section {
+  display: grid !important;
+  gap: 12px !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: auto !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.promo-category-picker,
+.promo-select-section .image-menu-category-picker,
+.promo-generator-panel .image-menu-category-picker {
+  display: grid !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.promo-select-section .image-menu-category-group,
+.promo-select-section .image-menu-category-body,
+.promo-select-section .promo-dish-picker,
+.promo-select-section .image-menu-dish-picker {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.promo-select-section .image-menu-category-toggle {
+  width: 100% !important;
+  min-height: 46px !important;
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto !important;
+  align-items: center !important;
+}
+
+.promo-dish-picker label,
+.promo-select-section .image-menu-dish-picker label {
+  width: 100% !important;
+  min-height: 64px !important;
+  display: grid !important;
+  grid-template-columns: auto 52px minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 10px !important;
+  overflow: visible !important;
+  cursor: pointer !important;
+}
+
+.promo-dish-picker img,
+.promo-select-section .image-menu-dish-picker img,
+.promo-select-section .image-menu-mini-placeholder {
+  width: 52px !important;
+  height: 52px !important;
+  min-width: 52px !important;
+  object-fit: cover !important;
+  border-radius: 12px !important;
+}
+
+.promo-dish-picker label > span,
+.promo-select-section .image-menu-dish-picker label > span {
+  min-width: 0 !important;
+  display: grid !important;
+  gap: 2px !important;
+}
+
+.promo-dish-picker input[type='radio'] {
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+}
+
+@media (max-width: 1280px) {
+  .main-navigation,
+  .main-navigation.top-nav {
+    grid-template-columns: auto minmax(0, 1fr) auto auto !important;
+  }
+
+  .promo-generator-section {
+    grid-template-columns: minmax(300px, 360px) minmax(0, 1fr) !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .main-navigation,
+  .main-navigation.top-nav {
+    grid-template-columns: auto 1fr auto !important;
+    gap: 10px !important;
+  }
+
+  .main-navigation .main-tabs,
+  .main-navigation.top-nav .main-tabs {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+  }
+
+  .project-menu-panel {
+    right: 0 !important;
+  }
+
+  .promo-generator-section {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .promo-generator-panel {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+}

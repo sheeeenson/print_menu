@@ -1,0 +1,58 @@
+name: Build Renderer macOS DMG
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/sushiwoki-site-banners
+    paths:
+      - 'local-renderer/**'
+      - '.github/workflows/build-renderer-mac.yml'
+
+jobs:
+  build-mac-dmg:
+    name: Build macOS DMG (${{ matrix.arch }})
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            npm_script: dist:mac:arm64
+            artifact_name: print-menu-renderer-macos-arm64-dmg
+          - arch: x64
+            npm_script: dist:mac:x64
+            artifact_name: print-menu-renderer-macos-x64-dmg
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    defaults:
+      run:
+        working-directory: local-renderer
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install local Playwright Chromium
+        run: npm run setup:local-browsers
+
+      - name: Build DMG for ${{ matrix.arch }}
+        run: npm run ${{ matrix.npm_script }}
+
+      - name: List build output
+        run: ls -la dist
+
+      - name: Upload ${{ matrix.arch }} DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: local-renderer/dist/*-${{ matrix.arch }}.dmg
+          if-no-files-found: error
+          retention-days: 14

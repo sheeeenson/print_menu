@@ -8,6 +8,20 @@ import { PagePreview } from './PagePreview.jsx';
 import { PageSettingsPanel } from './PageSettingsPanel.jsx';
 import { calculateFitAllLayout, paperDimensions } from '../utils/fitAll.js';
 
+const DEFAULT_ITEM_NUMBER_BADGE = Object.freeze({
+  enabled: true,
+  size: 100,
+  shape: 'circle',
+  backgroundColor: '#231f20',
+  textColor: '#fffaf2',
+  borderColor: '#fffaf2',
+  borderWidth: 1,
+  opacity: 90,
+});
+
+const itemNumberBadgeSettings = (page) => ({ ...DEFAULT_ITEM_NUMBER_BADGE, ...(page.designSettings.itemNumberBadge ?? {}) });
+const safeCssColor = (value, fallback) => (/^#[0-9a-fA-F]{3,8}$/.test(value ?? '') ? value : fallback);
+
 export function LayoutPrintSection({ project, actions }) {
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [selectedPreviewDishId, setSelectedPreviewDishId] = useState('');
@@ -28,6 +42,7 @@ export function LayoutPrintSection({ project, actions }) {
 
   return (
     <section className="layout-print-section" aria-label="Layout workspace">
+      {selectedPage ? <ItemNumberBadgeStyle page={selectedPage} /> : null}
       <aside className="layout-admin-panel layout-sidebar">
         {fitWarning ? <div className="panel-fit-warning" role="alert">{fitWarning}</div> : null}
         <PageList project={project} actions={actions} onSelectPage={selectPageFromList} />
@@ -68,12 +83,14 @@ export function LayoutPrintSection({ project, actions }) {
 
 function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish }) {
   const settings = page.designSettings;
+  const numberBadge = itemNumberBadgeSettings(page);
   const selectedPlacement = selectedDish ? page.itemPlacements?.[selectedDish.id] : null;
   const update = (field) => (event) => {
     const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
     actions.updateSelectedPageDesign(field, value);
   };
   const updateNumber = (field) => (event) => actions.updateSelectedPageDesign(field, Number(event.target.value));
+  const updateItemNumberBadge = (changes) => actions.updateSelectedPageDesign('itemNumberBadge', { ...numberBadge, ...changes });
   const updateLayoutMode = (event) => {
     const layoutMode = event.target.value;
     actions.updateSelectedPage({
@@ -167,6 +184,29 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
         <p className="muted-text">Prices always stay pinned to the bottom of every card.</p>
       </section>
 
+      <section className="inline-advanced-controls settings-block item-number-settings-block">
+        <h3>Item numbers</h3>
+        <label className="toggle-label">
+          <input type="checkbox" checked={numberBadge.enabled} onChange={(event) => updateItemNumberBadge({ enabled: event.target.checked })} />
+          Show item numbers
+        </label>
+        <label className="slider-label"><span>Number size<strong>{numberBadge.size}%</strong></span><input type="range" min="55" max="170" value={numberBadge.size} onChange={(event) => updateItemNumberBadge({ size: Number(event.target.value) })} /></label>
+        <label className="field-label">Number shape
+          <select value={numberBadge.shape} onChange={(event) => updateItemNumberBadge({ shape: event.target.value })}>
+            <option value="circle">Circle</option>
+            <option value="rounded">Rounded</option>
+            <option value="square">Square</option>
+            <option value="outlineCircle">Outline circle</option>
+            <option value="outlineRounded">Outline rounded</option>
+          </select>
+        </label>
+        <label className="color-label">Fill<span><input type="color" value={numberBadge.backgroundColor} onChange={(event) => updateItemNumberBadge({ backgroundColor: event.target.value })} /><input value={numberBadge.backgroundColor} onChange={(event) => updateItemNumberBadge({ backgroundColor: event.target.value })} /></span></label>
+        <label className="color-label">Text<span><input type="color" value={numberBadge.textColor} onChange={(event) => updateItemNumberBadge({ textColor: event.target.value })} /><input value={numberBadge.textColor} onChange={(event) => updateItemNumberBadge({ textColor: event.target.value })} /></span></label>
+        <label className="color-label">Border<span><input type="color" value={numberBadge.borderColor} onChange={(event) => updateItemNumberBadge({ borderColor: event.target.value })} /><input value={numberBadge.borderColor} onChange={(event) => updateItemNumberBadge({ borderColor: event.target.value })} /></span></label>
+        <label className="slider-label"><span>Border width<strong>{numberBadge.borderWidth}px</strong></span><input type="range" min="0" max="8" value={numberBadge.borderWidth} onChange={(event) => updateItemNumberBadge({ borderWidth: Number(event.target.value) })} /></label>
+        <label className="slider-label"><span>Opacity<strong>{numberBadge.opacity}%</strong></span><input type="range" min="10" max="100" value={numberBadge.opacity} onChange={(event) => updateItemNumberBadge({ opacity: Number(event.target.value) })} /></label>
+      </section>
+
       {settings.layoutMode === 'manualDesigner' ? (
         <SelectedCardControls page={page} actions={actions} selectedDish={selectedDish} placement={selectedPlacement} />
       ) : null}
@@ -198,6 +238,16 @@ function LayoutPrintControls({ page, actions, onPrint, onSaveAsPdf, selectedDish
       </section>
     </div>
   );
+}
+
+function ItemNumberBadgeStyle({ page }) {
+  const badge = itemNumberBadgeSettings(page);
+  const isOutline = badge.shape === 'outlineCircle' || badge.shape === 'outlineRounded';
+  const radius = badge.shape === 'square' ? '0px' : badge.shape === 'rounded' || badge.shape === 'outlineRounded' ? '8px' : '999px';
+  const background = isOutline ? 'transparent' : safeCssColor(badge.backgroundColor, DEFAULT_ITEM_NUMBER_BADGE.backgroundColor);
+  const borderWidth = isOutline ? Math.max(1, Number(badge.borderWidth ?? 1)) : Number(badge.borderWidth ?? 0);
+  const css = `.print-page .preview-image-box::after{--item-number-scale:${Number(badge.size ?? 100) / 100};background:${background};color:${safeCssColor(badge.textColor, DEFAULT_ITEM_NUMBER_BADGE.textColor)};border-color:${safeCssColor(badge.borderColor, DEFAULT_ITEM_NUMBER_BADGE.borderColor)};border-width:${borderWidth}px;border-radius:${radius};opacity:${Number(badge.opacity ?? 100) / 100};display:${badge.enabled ? 'inline-grid' : 'none'};}`;
+  return <style>{css}</style>;
 }
 
 function columnPresetFor(columns) {

@@ -1,6 +1,8 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App.jsx';
+import './promoCtaDefaultsV2.js';
+import './promoCtaDefaultsV3.js';
 import './googleFonts.css';
 import './styles.css';
 import './dishSpacing.css';
@@ -14,7 +16,37 @@ import './pizzaSizeLayoutFix.js';
 import './pizzaBaselineFix.css';
 import './blurImageFix.css';
 import './finalPizzaPriceAlign.css';
+import './orderAndNumbers.css';
 import './ui/appTheme.css';
+import './mobileFixes.css';
+import './advancedResponsiveFix.css';
+import './unifiedAppTheme.css';
+import './mobileUxEnhancements.css';
+import './promoEnhancements.css';
+import './promoCtaPriceBaseline.css';
+import './promoCtaVisualDefaults.css';
+import './promoCtaDefaultUpgrade.js';
+import './removeGifCornerRadius.css';
+import './gifOverlayControls.css';
+import './dishSizeBoost.js';
+import './promoExtraEffects.js';
+import './promoWideMovement.js';
+import './promoCtaDefaultsV4.js';
+import './promoDishAnchorReset.js';
+import './promoSafeAreaOverlay.js';
+import './promoDurationExportFix.js';
+import './promoRenderProgressBar.js';
+import './promoRenderProgressBridge.js';
+import './promoRenderProgressInlineOverride.js';
+import './promoVideoOverlaySupport.js';
+import './posterFormatScale.js';
+import './posterUiLabels.js';
+import './ui/appUnifiedPrimitives.css';
+import './ui/appConsistentControls.css';
+import './ui/appFinalResponsiveAudit.css';
+import './tvPromoFinalDefaults.js';
+import './tvPromoFinalDefaults.css';
+import './tvPromoBaselineAlign.js';
 
 createRoot(document.querySelector('#root')).render(
   <React.StrictMode>

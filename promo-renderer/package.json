@@ -1,0 +1,13 @@
+{
+  "name": "promo-renderer",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "latest",
+    "playwright": "1.49.1"
+  }
+}

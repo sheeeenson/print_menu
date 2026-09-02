@@ -1,0 +1,146 @@
+/* Site Banner canvas styles only.
+   Page frame, panels, cards, fields and buttons are controlled by
+   src/ui/appUnifiedPrimitives.css and src/ui/appConsistentControls.css. */
+
+.site-banner-export-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.site-banner-export-row button {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.site-banner-select-section {
+  overflow: visible !important;
+  min-height: auto !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+.site-banner-select-section .image-menu-section-heading {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px !important;
+}
+
+.site-banner-select-section .image-menu-section-heading h2 {
+  margin: 0;
+}
+
+.site-banner-category-picker,
+.site-banner-select-section .image-menu-category-picker,
+.site-banner-select-section .image-menu-category-group,
+.site-banner-select-section .image-menu-category-body {
+  overflow: visible !important;
+  min-height: auto !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+.site-banner-category-picker .image-menu-category-toggle {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px !important;
+  width: 100%;
+  min-width: 0;
+}
+
+.site-banner-category-picker .image-menu-category-toggle strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.site-banner-dish-picker {
+  grid-template-columns: 1fr !important;
+  max-height: min(420px, 48vh) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding-right: 4px;
+  min-height: 80px !important;
+}
+
+.site-banner-dish-picker > div {
+  min-width: 0;
+  padding: 0 !important;
+}
+
+.site-banner-dish-picker label {
+  display: grid !important;
+  grid-template-columns: 20px 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 64px !important;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.site-banner-dish-picker input[type='radio'] {
+  width: 18px !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.site-banner-dish-picker img,
+.site-banner-dish-picker .image-menu-mini-placeholder {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.site-banner-dish-picker label > span:last-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.site-banner-dish-picker strong,
+.site-banner-dish-picker small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.site-banner-canvas-wrap { aspect-ratio: 2048 / 900; }
+.site-banner-scene { position: absolute; left: 0; top: 0; transform-origin: top left; overflow: hidden; background: var(--site-banner-bg); color: #fffaf2; isolation: isolate; font-family: inherit; }
+.site-banner-background { position: absolute; inset: 0; background: var(--site-banner-bg); z-index: 0; }
+.site-banner-scene-has-background-media .site-banner-background { background: #231f20; }
+.site-banner-background-media { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; pointer-events: none; }
+.site-banner-custom-background { filter: saturate(1.04) contrast(1.02); }
+.site-banner-background-dimmer { position: absolute; inset: 0; z-index: 2; pointer-events: none; background: rgba(0,0,0,var(--site-banner-background-dim, 0)); }
+.site-banner-vignette { position: absolute; inset: 0; z-index: 3; background: linear-gradient(90deg, rgba(35,31,32,0.18), rgba(35,31,32,0.04) 46%, rgba(35,31,32,0.04)); pointer-events: none; }
+.site-banner-guides { position: absolute; inset: 0; z-index: 20; pointer-events: none; }
+.site-banner-guide { position: absolute; border: 3px dashed rgba(255,250,242,0.82); box-shadow: inset 0 0 0 1px rgba(35,31,32,0.24); }
+.site-banner-guide span { position: absolute; left: 12px; top: 10px; border-radius: 999px; background: rgba(35,31,32,0.72); color: #fffaf2; padding: 7px 12px; font-size: 22px; font-weight: 900; letter-spacing: 0.02em; }
+.site-banner-guide-text { border-color: rgba(110, 206, 255, 0.82); background: rgba(110, 206, 255, 0.08); }
+.site-banner-guide-product { border-color: rgba(255, 207, 83, 0.84); background: rgba(255, 207, 83, 0.08); }
+.site-banner-copy { position: absolute; z-index: 8; width: 580px; display: grid; gap: 18px; }
+.site-banner-eyebrow { justify-self: start; margin: 0; border-radius: 999px; background: rgba(255,250,242,0.92); color: #231f20; padding: 14px 24px; font-size: 34px; line-height: 1; font-weight: 950; letter-spacing: 0.08em; }
+.site-banner-copy h2 { margin: 0; line-height: 0.9; letter-spacing: -0.08em; max-width: 650px; }
+.site-banner-subheadline { margin: 0; line-height: 1.12; font-weight: 780; max-width: 540px; opacity: 0.92; }
+.site-banner-product-stage { position: absolute; z-index: 5; display: grid; place-items: center; }
+.site-banner-product-stage::before { content: none; }
+.site-banner-product-image { position: relative; z-index: 2; max-width: 100%; max-height: 100%; object-fit: contain; filter: none; }
+.site-banner-product-placeholder { width: 620px; height: 360px; border-radius: 34px; display: grid; place-items: center; background: rgba(255,255,255,0.18); color: rgba(255,250,242,0.82); font-size: 48px; font-weight: 950; }
+.site-banner-icon { position: absolute; z-index: 7; height: auto; transform-origin: center center; cursor: grab; user-select: none; -webkit-user-drag: none; touch-action: none; }
+.site-banner-icon:active { cursor: grabbing; }
+.site-banner-cta { position: absolute; z-index: 9; border-radius: 999px; background: #fffaf2; padding: 22px 34px; font-weight: 950; letter-spacing: 0.1em; text-transform: uppercase; box-shadow: 0 18px 40px rgba(0,0,0,0.2); }
+.site-banner-price { position: absolute; z-index: 9; display: grid; gap: 8px; line-height: 1; }
+.site-banner-price span { justify-self: start; position: relative; border-radius: 18px; background: rgba(35,31,32,0.42); color: rgba(255,250,242,0.72); padding: 12px 18px; font-size: 0.56em; font-weight: 700; }
+.site-banner-price span::after { content: ''; position: absolute; left: 12px; right: 12px; top: 50%; height: 4px; background: currentColor; transform: rotate(-8deg); }
+.site-banner-price strong { font-size: 1em; letter-spacing: -0.08em; }
+.site-banner-icon-panel { display: grid; gap: 12px; }
+.site-banner-icon-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.site-banner-icon-actions button { flex: 1 1 110px; }

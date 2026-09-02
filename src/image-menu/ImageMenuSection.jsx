@@ -39,7 +39,7 @@ export function ImageMenuSection({ project }) {
   const contentDishes = useMemo(() => project.dishes ?? [], [project.dishes]);
   const visibleDishes = useMemo(() => contentDishes.filter((dish) => dish.visible !== false), [contentDishes]);
   const [imageProject, setImageProject] = useState(() => loadImageMenuProject(visibleDishes));
-  const [openCategoryIds, setOpenCategoryIds] = useState(() => new Set(contentCategories.map((category) => category.id)));
+  const [openCategoryIds, setOpenCategoryIds] = useState(() => new Set());
   const selectedPage = imageProject.pages.find((page) => page.id === imageProject.selectedPageId) ?? imageProject.pages[0];
 
   const categoryGroups = useMemo(() => contentCategories.map((category) => ({
@@ -54,14 +54,6 @@ export function ImageMenuSection({ project }) {
   useEffect(() => {
     saveImageMenuProject(imageProject);
   }, [imageProject]);
-
-  useEffect(() => {
-    setOpenCategoryIds((current) => {
-      const next = new Set(current);
-      contentCategories.forEach((category) => next.add(category.id));
-      return next;
-    });
-  }, [contentCategories]);
 
   const updateImageProject = (updater) => setImageProject((current) => updater(current));
   const updateSelectedPage = (updater) => updateImageProject((current) => ({

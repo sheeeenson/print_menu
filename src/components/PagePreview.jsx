@@ -4,7 +4,7 @@ import { PageHeaderPreview } from './PageHeaderPreview.jsx';
 import { calculateAutoFillGrid } from '../utils/autoFill.js';
 import { calculateFitAllLayout, paperDimensions } from '../utils/fitAll.js';
 
-const money = (value) => (typeof value === 'number' ? `${value.toFixed(value % 1 === 0 ? 0 : 2)} ₾` : '');
+const money = (value) => (typeof value === 'number' ? `${value.toFixed(2)} ₾` : '');
 
 export function PagePreview({ project, page, selectedPreviewDishId = '', onSelectPreviewDish = () => {}, onResizePreviewDish = () => {} }) {
   const selectedCategoryIds = new Set(page.selectedCategoryIds);
@@ -281,480 +281,91 @@ function imageHeightForStyle(settings) {
   return settings.imageHeight;
 }
 
-function safeCssColor(color, fallback) {
-  return /^#[0-9a-fA-F]{3,8}$/.test(color) ? color : fallback;
+function safeCssColor(value, fallback) {
+  if (value === 'accentColor') return fallback;
+  return /^#[0-9a-fA-F]{3,8}$/.test(value ?? '') ? value : fallback;
 }
-
-function hexToRgba(hex, alpha) {
-  const normalized = hex.replace('#', '');
-  const rgb = [3, 4].includes(normalized.length)
-    ? normalized.slice(0, 3).split('').map((char) => `${char}${char}`).join('')
-    : normalized.slice(0, 6);
-  const red = Number.parseInt(rgb.slice(0, 2), 16);
-  const green = Number.parseInt(rgb.slice(2, 4), 16);
-  const blue = Number.parseInt(rgb.slice(4, 6), 16);
-  return `rgba(${red}, ${green}, ${blue}, ${Math.min(1, Math.max(0, alpha))})`;
-}
-
 
 function selectedVisibleDishes(project, page) {
-  const selectedCategoryIds = new Set(page.selectedCategoryIds ?? []);
-  const selectedDishIds = Array.isArray(page.selectedDishIds) ? new Set(page.selectedDishIds) : null;
-
-  return project.dishes.filter((dish) =>
-    dish.visible && selectedCategoryIds.has(dish.categoryId) && (!selectedDishIds || selectedDishIds.has(dish.id)),
-  );
-}
-
-function spanToSize(value) {
-  const [colSpan, rowSpan] = String(value).split('x').map((part) => Number(part));
-  return { colSpan: Number.isFinite(colSpan) ? colSpan : 1, rowSpan: Number.isFinite(rowSpan) ? rowSpan : 1 };
-}
-
-function itemSpanForIndex(index, settings) {
-  if (index === 0 && settings.makeFirstItemHero) return spanToSize(settings.heroItemSpan);
-  return spanToSize(settings.defaultItemSpan);
-}
-
-function totalSpanCellsForCount(count, settings) {
-  return Array.from({ length: count }).reduce((total, _, index) => {
-    const span = itemSpanForIndex(index, settings);
-    return total + span.colSpan * span.rowSpan;
-  }, 0);
-}
-
-function canPackItems(dishes, page, rowLimit) {
-  const settings = page.designSettings;
-  const columns = settings.customGrid.columns;
-  const grid = Array.from({ length: rowLimit }, () => Array(columns).fill(false));
-
-  return dishes.every((dish, index) => {
-    const placement = page.itemPlacements?.[dish.id];
-    const colSpan = Math.min(columns, placement?.colSpan ?? 1);
-    const rowSpan = Math.max(1, placement?.rowSpan ?? 1);
-    for (let row = 0; row <= rowLimit - rowSpan; row += 1) {
-      for (let column = 0; column <= columns - colSpan; column += 1) {
-        let open = true;
-        for (let rr = row; rr < row + rowSpan; rr += 1) {
-          for (let cc = column; cc < column + colSpan; cc += 1) {
-            if (grid[rr][cc]) open = false;
-          }
-        }
-        if (open) {
-          for (let rr = row; rr < row + rowSpan; rr += 1) {
-            for (let cc = column; cc < column + colSpan; cc += 1) grid[rr][cc] = true;
-          }
-          return true;
-        }
-      }
-    }
-    return false;
-  });
-}
-
-function getCustomGridWarning(dishes, page, fitAllLayout) {
-  if (!dishes.length) return '';
-  if (fitAllLayout?.warning) return 'Some items do not fit into the current custom grid. Increase rows, reduce item size, enable Auto rows, or use Auto-fill.';
-  if (page.designSettings.customGrid.autoRows || page.designSettings.fitAllItems) return '';
-  return canPackItems(dishes, page, page.designSettings.customGrid.rows)
-    ? ''
-    : 'Some items do not fit into the current custom grid. Increase rows, reduce item size, enable Auto rows, or use Auto-fill.';
-}
-
-const SUPPORTED_GRID_SPANS = Object.freeze([
-  { colSpan: 1, rowSpan: 1 },
-  { colSpan: 2, rowSpan: 1 },
-  { colSpan: 1, rowSpan: 2 },
-  { colSpan: 2, rowSpan: 2 },
-  { colSpan: 3, rowSpan: 2 },
-  { colSpan: 3, rowSpan: 3 },
-]);
-
-
-const FLUID_GRID_WARNING = 'Fluid grid cannot fit all selected dishes with current sizes. Reduce card size, hide descriptions, reduce image area, or use Smart auto-fit.';
-
-function fluidPlacement(placement, index) {
-  return {
-    mode: 'fluid',
-    widthWeight: clamp(placement?.mode === 'fluid' ? placement.widthWeight ?? 1 : placement?.widthWeight ?? 1, 0.5, 4),
-    heightWeight: clamp(placement?.mode === 'fluid' ? placement.heightWeight ?? 1 : placement?.heightWeight ?? 1, 0.5, 4),
-    minWidthPercent: clamp(placement?.minWidthPercent ?? 12, 5, 100),
-    minHeightPercent: clamp(placement?.minHeightPercent ?? 8, 5, 100),
-    maxWidthPercent: clamp(placement?.maxWidthPercent ?? 100, 5, 100),
-    maxHeightPercent: clamp(placement?.maxHeightPercent ?? 100, 5, 100),
-    order: placement?.order ?? index,
-    colSpan: placement?.colSpan ?? 1,
-    rowSpan: placement?.rowSpan ?? 1,
-    priority: placement?.priority ?? 0,
-  };
-}
-
-function fluidItemStyle(placement, itemCount) {
-  const targetColumns = Math.min(4, Math.max(1, Math.ceil(Math.sqrt(itemCount || 1))));
-  const targetRows = Math.max(1, Math.ceil((itemCount || 1) / targetColumns));
-  const baseWidth = 100 / targetColumns;
-  const baseHeight = 100 / targetRows;
-  const widthPercent = clamp(baseWidth * placement.widthWeight, placement.minWidthPercent, placement.maxWidthPercent);
-  const heightPercent = clamp(baseHeight * placement.heightWeight, placement.minHeightPercent, placement.maxHeightPercent);
-  return {
-    '--fluid-basis': `${widthPercent}%`,
-    '--fluid-height': `${heightPercent}%`,
-    '--fluid-grow': placement.widthWeight,
-    order: placement.order,
-  };
-}
-
-function FluidGridPreview({ dishes, page, selectedDishId, onSelectDish, onResizeDish, onFitWarning }) {
-  const gridRef = useRef(null);
-  useEffect(() => {
-    const grid = gridRef.current;
-    if (!grid) return;
-    const checkFit = () => {
-      const hasOverflow = grid.scrollHeight > grid.clientHeight + 2 || grid.scrollWidth > grid.clientWidth + 2;
-      onFitWarning(hasOverflow ? FLUID_GRID_WARNING : '');
-    };
-    checkFit();
-    const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(checkFit) : null;
-    resizeObserver?.observe(grid);
-    return () => resizeObserver?.disconnect();
-  }, [dishes.length, page.itemPlacements, page.designSettings.cardGap, page.designSettings.cardPadding, page.designSettings.imageHeight, onFitWarning]);
-
-  if (!dishes.length) return <EmptyPage />;
-  return (
-    <div ref={gridRef} className="fluid-grid" aria-label="Fluid grid dish layout" onPointerDown={(event) => { if (event.target === event.currentTarget) onSelectDish(''); }}>
-      {dishes.map((dish, index) => {
-        const placement = fluidPlacement(page.itemPlacements?.[dish.id], index);
-        const isSelected = selectedDishId === dish.id;
-        return (
-          <div
-            className={`fluid-grid-item preview-selectable-item ${isSelected ? 'selected-preview-item' : ''}`}
-            key={dish.id}
-            style={fluidItemStyle(placement, dishes.length)}
-            onPointerDown={(event) => { event.stopPropagation(); onSelectDish(dish.id); }}
-          >
-            <DishCard dish={dish} page={page} isHero={index === 0 && page.designSettings.makeFirstItemHero} />
-            {isSelected ? <FluidResizeHandles gridRef={gridRef} dishId={dish.id} placement={placement} itemCount={dishes.length} onResize={onResizeDish} /> : null}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function FluidResizeHandles({ gridRef, dishId, placement, itemCount, onResize }) {
-  const dragState = useRef(null);
-  const startDrag = (handle) => (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const grid = gridRef.current;
-    if (!grid) return;
-    const rect = grid.getBoundingClientRect();
-    const targetColumns = Math.min(4, Math.max(1, Math.ceil(Math.sqrt(itemCount || 1))));
-    const targetRows = Math.max(1, Math.ceil((itemCount || 1) / targetColumns));
-    dragState.current = {
-      handle,
-      rect,
-      startX: event.clientX,
-      startY: event.clientY,
-      startPlacement: placement,
-      baseWidth: 100 / targetColumns,
-      baseHeight: 100 / targetRows,
-    };
-    event.currentTarget.setPointerCapture(event.pointerId);
-  };
-  const continueDrag = (event) => {
-    const state = dragState.current;
-    if (!state) return;
-    event.preventDefault();
-    event.stopPropagation();
-    const dxPercent = ((event.clientX - state.startX) / Math.max(1, state.rect.width)) * 100;
-    const dyPercent = ((event.clientY - state.startY) / Math.max(1, state.rect.height)) * 100;
-    const next = { ...state.startPlacement, mode: 'fluid' };
-    if (state.handle !== 'bottom') next.widthWeight = clamp(Number((state.startPlacement.widthWeight + dxPercent / state.baseWidth).toFixed(2)), 0.5, 4);
-    if (state.handle !== 'right') next.heightWeight = clamp(Number((state.startPlacement.heightWeight + dyPercent / state.baseHeight).toFixed(2)), 0.5, 4);
-    onResize(dishId, next);
-  };
-  const stopDrag = (event) => {
-    if (!dragState.current) return;
-    event.preventDefault();
-    event.stopPropagation();
-    dragState.current = null;
-  };
-  return (
-    <div className="preview-resize-handles fluid-resize-handles" aria-hidden="true">
-      <span className="resize-handle resize-handle-visual resize-handle-top-left" />
-      {['right', 'bottom', 'bottom-right'].map((handle) => (
-        <span key={handle} className={`resize-handle resize-handle-${handle}`} onPointerDown={startDrag(handle)} onPointerMove={continueDrag} onPointerUp={stopDrag} onPointerCancel={stopDrag} />
-      ))}
-    </div>
-  );
-}
-
-function CustomGridPreview({ dishes, page, fitAllLayout, selectedDishId, onSelectDish, onResizeDish, className = 'custom-grid', ariaLabel = 'Custom dish grid' }) {
-  const gridRef = useRef(null);
-  if (!dishes.length) return <EmptyPage />;
-  return (
-    <div ref={gridRef} className={className} aria-label={ariaLabel} onPointerDown={(event) => { if (event.target === event.currentTarget) onSelectDish(''); }}>
-      {dishes.map((dish, index) => {
-        const placement = page.itemPlacements?.[dish.id];
-        const defaultSpan = itemSpanForIndex(index, page.designSettings);
-        const colSpan = Math.min(page.designSettings.customGrid.columns, placement?.colSpan ?? defaultSpan.colSpan);
-        const rowSpan = Math.min(page.designSettings.customGrid.rows, placement?.rowSpan ?? defaultSpan.rowSpan);
-        const isSelected = selectedDishId === dish.id;
-        return (
-          <div
-            className={`custom-grid-item preview-selectable-item ${isSelected ? 'selected-preview-item' : ''}`}
-            key={dish.id}
-            style={{ '--col-span': colSpan, '--row-span': rowSpan }}
-            onPointerDown={(event) => {
-              event.stopPropagation();
-              onSelectDish(dish.id);
-            }}
-          >
-            <DishCard dish={dish} page={page} hideDescription={fitAllLayout?.hideDescriptions} isHero={index === 0 && page.designSettings.makeFirstItemHero} />
-            {isSelected ? (
-              <ResizeHandles
-                gridRef={gridRef}
-                dishId={dish.id}
-                page={page}
-                currentPlacement={{ colSpan, rowSpan, priority: placement?.priority ?? 0 }}
-                onResize={onResizeDish}
-              />
-            ) : null}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-
-function FreeResizePreview({ dishes, page, selectedDishId, onSelectDish, onResizeDish }) {
-  const areaRef = useRef(null);
-  if (!dishes.length) return <EmptyPage />;
-  return (
-    <div ref={areaRef} className="free-resize-canvas" aria-label="Free resize dish layout" onPointerDown={(event) => { if (event.target === event.currentTarget) onSelectDish(''); }}>
-      {dishes.map((dish, index) => {
-        const placement = freePlacement(page.itemPlacements?.[dish.id], index, dishes.length);
-        const isSelected = selectedDishId === dish.id;
-        return (
-          <div
-            key={dish.id}
-            className={`free-resize-item preview-selectable-item ${isSelected ? 'selected-preview-item' : ''}`}
-            style={{ left: `${placement.xPercent}%`, top: `${placement.yPercent}%`, width: `${placement.widthPercent}%`, height: `${placement.heightPercent}%`, zIndex: placement.zIndex }}
-            onPointerDown={(event) => { event.stopPropagation(); onSelectDish(dish.id); }}
-          >
-            <DishCard dish={dish} page={page} isHero={index === 0 && page.designSettings.makeFirstItemHero} />
-            {isSelected ? <FreeResizeHandles areaRef={areaRef} dishId={dish.id} placement={placement} onResize={onResizeDish} /> : null}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function freePlacement(placement, index, count) {
-  const columns = Math.min(3, Math.max(1, Math.ceil(Math.sqrt(count || 1))));
-  const rows = Math.max(1, Math.ceil((count || 1) / columns));
-  const width = 100 / columns;
-  const height = 100 / rows;
-  const col = index % columns;
-  const row = Math.floor(index / columns);
-  const base = placement?.mode === 'free'
-    ? placement
-    : {
-        mode: 'free',
-        xPercent: col * width,
-        yPercent: row * height,
-        widthPercent: width,
-        heightPercent: height,
-        zIndex: index + 1,
-      };
-  return clampFreePlacement(base);
-}
-
-function clampFreePlacement(placement) {
-  const width = clamp(placement.widthPercent ?? 30, 4, 100);
-  const height = clamp(placement.heightPercent ?? 22, 4, 100);
-  return {
-    mode: 'free',
-    widthPercent: width,
-    heightPercent: height,
-    xPercent: clamp(placement.xPercent ?? 0, 0, 100 - width),
-    yPercent: clamp(placement.yPercent ?? 0, 0, 100 - height),
-    zIndex: Math.max(1, placement.zIndex ?? 1),
-  };
-}
-
-function FreeResizeHandles({ areaRef, dishId, placement, onResize }) {
-  const dragState = useRef(null);
-  const startDrag = (handle) => (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const area = areaRef.current;
-    if (!area) return;
-    const rect = area.getBoundingClientRect();
-    dragState.current = {
-      handle,
-      rect,
-      startX: event.clientX,
-      startY: event.clientY,
-      start: placement,
-    };
-    event.currentTarget.setPointerCapture(event.pointerId);
-  };
-  const continueDrag = (event) => {
-    const state = dragState.current;
-    if (!state) return;
-    event.preventDefault();
-    event.stopPropagation();
-    const dx = ((event.clientX - state.startX) / Math.max(1, state.rect.width)) * 100;
-    const dy = ((event.clientY - state.startY) / Math.max(1, state.rect.height)) * 100;
-    const next = { ...state.start };
-    if (state.handle === 'move') {
-      next.xPercent = state.start.xPercent + dx;
-      next.yPercent = state.start.yPercent + dy;
-    } else {
-      if (state.handle !== 'bottom') next.widthPercent = state.start.widthPercent + dx;
-      if (state.handle !== 'right') next.heightPercent = state.start.heightPercent + dy;
-    }
-    onResize(dishId, clampFreePlacement(next));
-  };
-  const stopDrag = (event) => {
-    if (!dragState.current) return;
-    event.preventDefault();
-    event.stopPropagation();
-    dragState.current = null;
-  };
-  return (
-    <div className="preview-resize-handles free-resize-handles" aria-hidden="true">
-      <span className="free-move-layer" onPointerDown={startDrag('move')} onPointerMove={continueDrag} onPointerUp={stopDrag} onPointerCancel={stopDrag} />
-      {['right', 'bottom', 'bottom-right'].map((handle) => (
-        <span key={handle} className={`resize-handle resize-handle-${handle}`} onPointerDown={startDrag(handle)} onPointerMove={continueDrag} onPointerUp={stopDrag} onPointerCancel={stopDrag} />
-      ))}
-    </div>
-  );
+  const selectedCategoryIds = new Set(page.selectedCategoryIds);
+  const selectedDishIds = new Set(page.selectedDishIds);
+  return project.dishes.filter((dish) => dish.visible && selectedCategoryIds.has(dish.categoryId) && selectedDishIds.has(dish.id));
 }
 
 function ClassicColumnsPreview({ dishes, page }) {
-  if (!dishes.length) return <EmptyPage />;
-  const columns = page.designSettings.classicColumns ?? 2;
-  const rows = Math.max(1, Math.ceil(dishes.length / columns));
+  const categories = groupDishesByCategoryOrder(dishes);
   return (
-    <div className="classic-columns-grid" style={{ '--classic-rows': rows }} aria-label="Classic column dish layout">
-      {dishes.map((dish) => <DishCard key={dish.id} dish={dish} page={page} />)}
+    <div className="classic-columns-grid">
+      {categories.map(([categoryId, items]) => <div className="classic-column" key={categoryId}>{items.map((dish) => <DishCard key={dish.id} dish={dish} page={page} />)}</div>)}
     </div>
   );
 }
 
-function ResizeHandles({ gridRef, dishId, page, currentPlacement, onResize }) {
-  const dragState = useRef(null);
+function AutoFillPreview({ dishes, page }) {
+  return <div className="auto-fill-dish-grid">{dishes.map((dish) => <DishCard key={dish.id} dish={dish} page={page} />)}</div>;
+}
 
-  const startDrag = (handle) => (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const grid = gridRef.current;
-    if (!grid) return;
-    const styles = window.getComputedStyle(grid);
-    const gap = Number.parseFloat(styles.columnGap || styles.gap || '0') || 0;
-    const rect = grid.getBoundingClientRect();
-    const columns = page.designSettings.customGrid.columns;
-    const rows = page.designSettings.customGrid.rows;
-    const cellWidth = (rect.width - gap * Math.max(0, columns - 1)) / columns;
-    const cellHeight = (rect.height - gap * Math.max(0, rows - 1)) / rows;
-    dragState.current = {
-      handle,
-      startX: event.clientX,
-      startY: event.clientY,
-      startColSpan: currentPlacement.colSpan,
-      startRowSpan: currentPlacement.rowSpan,
-      cellWidth: Math.max(1, cellWidth + gap),
-      cellHeight: Math.max(1, cellHeight + gap),
-      lastColSpan: currentPlacement.colSpan,
-      lastRowSpan: currentPlacement.rowSpan,
-    };
-    event.currentTarget.setPointerCapture(event.pointerId);
-  };
-  const continueDrag = (event) => {
-    const state = dragState.current;
-    if (!state) return;
-    event.preventDefault();
-    event.stopPropagation();
-    const deltaColumns = state.handle === 'bottom' ? 0 : Math.round((event.clientX - state.startX) / state.cellWidth);
-    const deltaRows = state.handle === 'right' ? 0 : Math.round((event.clientY - state.startY) / state.cellHeight);
-    const requested = {
-      colSpan: clamp(state.startColSpan + deltaColumns, 1, page.designSettings.customGrid.columns),
-      rowSpan: clamp(state.startRowSpan + deltaRows, 1, page.designSettings.customGrid.rows),
-    };
-    const nextSpan = nearestSupportedSpan(requested, page.designSettings.customGrid.columns, page.designSettings.customGrid.rows, state.handle);
-    if (nextSpan.colSpan === state.lastColSpan && nextSpan.rowSpan === state.lastRowSpan) return;
-    const accepted = onResize(dishId, { ...currentPlacement, ...nextSpan }, { ...currentPlacement, colSpan: state.lastColSpan, rowSpan: state.lastRowSpan });
-    if (accepted) {
-      state.lastColSpan = nextSpan.colSpan;
-      state.lastRowSpan = nextSpan.rowSpan;
-    }
-  };
-  const stopDrag = (event) => {
-    if (!dragState.current) return;
-    event.preventDefault();
-    event.stopPropagation();
-    dragState.current = null;
-  };
+function FitAllPreview({ dishes, page, fitAllLayout }) {
+  return <div className="fit-all-dish-grid">{dishes.map((dish) => <DishCard key={dish.id} dish={dish} page={page} hideDescription={fitAllLayout.hideDescriptions} />)}</div>;
+}
+
+function CustomGridPreview({ dishes, page, fitAllLayout, selectedDishId, onSelectDish, onResizeDish }) {
+  const rows = effectiveCustomGridRows(page.designSettings, fitAllLayout, dishes.length);
+  const placedItems = packGridItems(dishes, page, rows);
   return (
-    <div className="preview-resize-handles" aria-hidden="true">
-      <span className="resize-handle resize-handle-visual resize-handle-top-left" />
-      {['right', 'bottom', 'bottom-right'].map((handle) => (
-        <span
-          key={handle}
-          className={`resize-handle resize-handle-${handle}`}
-          onPointerDown={startDrag(handle)}
-          onPointerMove={continueDrag}
-          onPointerUp={stopDrag}
-          onPointerCancel={stopDrag}
-        />
+    <div className="custom-grid custom-grid-canvas" style={{ '--grid-rows': rows }}>
+      {placedItems.map(({ dish, placement, gridArea }) => (
+        <ResizableGridItem key={dish.id} dish={dish} page={page} placement={placement} gridArea={gridArea} isSelected={selectedDishId === dish.id} onSelectDish={onSelectDish} onResizeDish={onResizeDish}>
+          <DishCard dish={dish} page={page} isHero={placement.colSpan > 1 || placement.rowSpan > 1} />
+        </ResizableGridItem>
       ))}
     </div>
   );
 }
 
-function nearestSupportedSpan(requested, maxColumns, maxRows, handle) {
-  const allowed = SUPPORTED_GRID_SPANS.filter((span) => span.colSpan <= maxColumns && span.rowSpan <= maxRows);
-  const compatible = allowed.filter((span) => {
-    if (handle === 'right') return span.rowSpan === requested.rowSpan;
-    if (handle === 'bottom') return span.colSpan === requested.colSpan;
-    return true;
-  });
+function FluidGridPreview({ dishes, page, selectedDishId, onSelectDish, onResizeDish, onFitWarning }) {
+  const [dragState, setDragState] = useState(null);
+  const containerRef = useRef(null);
+  const placements = dishes.map((dish) => ({ dish, placement: page.itemPlacements?.[dish.id] ?? {} }));
+  const totalWeight = placements.reduce((sum, item) => sum + (item.placement.widthWeight ?? 1), 0);
 
-  const candidates = compatible.length ? compatible : allowed;
-  return candidates.reduce((best, span) => {
-    const score = Math.abs(span.colSpan - requested.colSpan) + Math.abs(span.rowSpan - requested.rowSpan);
-    const bestScore = Math.abs(best.colSpan - requested.colSpan) + Math.abs(best.rowSpan - requested.rowSpan);
-    return score < bestScore ? span : best;
-  }, candidates[0] ?? { colSpan: 1, rowSpan: 1 });
-}
-
-function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value));
-}
-
-function AutoFillPreview({ dishes, page }) {
-  if (!dishes.length) return <EmptyPage />;
+  const updateWeight = (dishId, deltaX, deltaY) => {
+    const container = containerRef.current;
+    if (!container) return;
+    const widthStep = container.clientWidth / Math.max(1, placements.length);
+    const heightStep = 48;
+    const current = page.itemPlacements?.[dishId] ?? {};
+    const widthWeight = Math.min(4, Math.max(0.5, (current.widthWeight ?? 1) + deltaX / widthStep));
+    const heightWeight = Math.min(4, Math.max(0.5, (current.heightWeight ?? 1) + deltaY / heightStep));
+    onResizeDish(dishId, { ...current, mode: 'fluid', widthWeight, heightWeight });
+  };
 
   return (
-    <div className="auto-fill-dish-grid" aria-label="Auto-filled dish layout">
-      {dishes.map((dish) => <DishCard key={dish.id} dish={dish} page={page} />)}
+    <div className="fluid-grid" ref={containerRef}>
+      {placements.map(({ dish, placement }) => (
+        <ResizableFluidItem key={dish.id} dish={dish} placement={placement} page={page} totalWeight={totalWeight} isSelected={selectedDishId === dish.id} onSelectDish={onSelectDish} onResizeStart={setDragState}>
+          <DishCard dish={dish} page={page} isHero={(placement.widthWeight ?? 1) > 1.3 || (placement.heightWeight ?? 1) > 1.3} />
+        </ResizableFluidItem>
+      ))}
     </div>
   );
 }
 
-function FitAllPreview({ dishes, page, fitAllLayout }) {
-  if (!dishes.length) return <EmptyPage />;
-  const capacity = Math.max(0, fitAllLayout.columns * fitAllLayout.rows);
-  const renderDishes = fitAllLayout.success ? dishes : dishes.slice(0, capacity);
-
+function FreeResizePreview({ dishes, page, selectedDishId, onSelectDish, onResizeDish }) {
   return (
-    <div className="fit-all-dish-grid" aria-label="Guaranteed fit dish layout">
-      {renderDishes.map((dish, index) => <DishCard key={dish.id} dish={dish} page={page} hideDescription={fitAllLayout.hideDescriptions} isHero={index === 0} />)}
+    <div className="free-resize-canvas">
+      {dishes.map((dish, index) => {
+        const placement = page.itemPlacements?.[dish.id] ?? {};
+        const xPercent = placement.xPercent ?? (index % 3) * 32;
+        const yPercent = placement.yPercent ?? Math.floor(index / 3) * 24;
+        const widthPercent = placement.widthPercent ?? 30;
+        const heightPercent = placement.heightPercent ?? 22;
+        return (
+          <FreeResizeItem key={dish.id} dish={dish} page={page} placement={{ ...placement, xPercent, yPercent, widthPercent, heightPercent }} isSelected={selectedDishId === dish.id} onSelectDish={onSelectDish} onResizeDish={onResizeDish}>
+            <DishCard dish={dish} page={page} isHero={(widthPercent > 38 || heightPercent > 28)} />
+          </FreeResizeItem>
+        );
+      })}
     </div>
   );
 }
@@ -858,21 +469,180 @@ function renderPlainLocalizedText(item, field, languageMode, fallback) {
   return english || georgian || fallback;
 }
 
-export function renderLocalizedText(item, field, languageMode, fallback) {
+function renderLocalizedText(item, field, languageMode, fallback) {
   const english = item[`${field}En`] || '';
   const georgian = item[`${field}Ge`] || '';
+  if (languageMode === 'ge') return georgian || english || fallback;
+  if (languageMode === 'en') return english || georgian || fallback;
+  return <><span className="localized-line">{english || fallback}</span>{georgian ? <span className="localized-line localized-ge">{georgian}</span> : null}</>;
+}
 
-  if (languageMode === 'en') return <span>{english || fallback}</span>;
-  if (languageMode === 'ge') return <span>{georgian || fallback}</span>;
+function groupDishesByCategoryOrder(dishes) {
+  const groups = new Map();
+  dishes.forEach((dish) => {
+    const key = dish.categoryId || 'uncategorized';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(dish);
+  });
+  return Array.from(groups.entries());
+}
 
-  return (
-    <>
-      <span className="localized-line localized-en">{english || fallback}</span>
-      {georgian ? <span className="localized-line localized-ge">{georgian}</span> : null}
-    </>
-  );
+function itemSpan(placement = {}, fallbackSpan = '1x1') {
+  const defaultSpan = fallbackSpan === '2x1' ? { colSpan: 2, rowSpan: 1 } : { colSpan: 1, rowSpan: 1 };
+  return {
+    colSpan: Math.max(1, Math.min(4, placement.colSpan ?? defaultSpan.colSpan)),
+    rowSpan: Math.max(1, Math.min(4, placement.rowSpan ?? defaultSpan.rowSpan)),
+  };
+}
+
+function heroSpan(settings) {
+  if (settings.heroItemSpan === '3x2') return { colSpan: 3, rowSpan: 2 };
+  if (settings.heroItemSpan === '2x1') return { colSpan: 2, rowSpan: 1 };
+  return { colSpan: 2, rowSpan: 2 };
+}
+
+function placementForDish(dish, index, page) {
+  const placement = page.itemPlacements?.[dish.id] ?? {};
+  if (index === 0 && page.designSettings.makeFirstItemHero) return { ...placement, ...heroSpan(page.designSettings) };
+  const span = itemSpan(placement, page.designSettings.defaultItemSpan);
+  return { ...placement, ...span };
+}
+
+function packGridItems(dishes, page, effectiveRows) {
+  const columns = Math.max(1, page.designSettings.customGrid.columns);
+  const rows = Math.max(1, effectiveRows ?? page.designSettings.customGrid.rows);
+  const occupied = Array.from({ length: rows }, () => Array(columns).fill(false));
+  const sorted = [...dishes].sort((a, b) => (placementForDish(a, 0, page).priority ?? 0) - (placementForDish(b, 0, page).priority ?? 0));
+
+  const canPlace = (row, col, colSpan, rowSpan) => row + rowSpan <= rows && col + colSpan <= columns && occupied.slice(row, row + rowSpan).every((line) => line.slice(col, col + colSpan).every((cell) => !cell));
+  const mark = (row, col, colSpan, rowSpan) => {
+    for (let r = row; r < row + rowSpan; r += 1) for (let c = col; c < col + colSpan; c += 1) occupied[r][c] = true;
+  };
+
+  return sorted.map((dish, index) => {
+    const placement = placementForDish(dish, index, page);
+    const colSpan = Math.min(placement.colSpan ?? 1, columns);
+    const rowSpan = Math.min(placement.rowSpan ?? 1, rows);
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < columns; col += 1) {
+        if (canPlace(row, col, colSpan, rowSpan)) {
+          mark(row, col, colSpan, rowSpan);
+          return { dish, placement: { ...placement, colSpan, rowSpan }, gridArea: `${row + 1} / ${col + 1} / span ${rowSpan} / span ${colSpan}` };
+        }
+      }
+    }
+    return { dish, placement: { ...placement, colSpan: 1, rowSpan: 1 }, gridArea: 'auto' };
+  });
+}
+
+function canPackItems(dishes, page, rows) {
+  const columns = Math.max(1, page.designSettings.customGrid.columns);
+  const occupied = Array.from({ length: rows }, () => Array(columns).fill(false));
+  return dishes.every((dish, index) => {
+    const placement = placementForDish(dish, index, page);
+    const colSpan = Math.min(placement.colSpan ?? 1, columns);
+    const rowSpan = Math.min(placement.rowSpan ?? 1, rows);
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < columns; col += 1) {
+        if (row + rowSpan <= rows && col + colSpan <= columns && occupied.slice(row, row + rowSpan).every((line) => line.slice(col, col + colSpan).every((cell) => !cell))) {
+          for (let r = row; r < row + rowSpan; r += 1) for (let c = col; c < col + colSpan; c += 1) occupied[r][c] = true;
+          return true;
+        }
+      }
+    }
+    return false;
+  });
+}
+
+function ResizableGridItem({ dish, page, placement, gridArea, isSelected, onSelectDish, onResizeDish, children }) {
+  const [drag, setDrag] = useState(null);
+  const ref = useRef(null);
+  const columns = Math.max(1, page.designSettings.customGrid.columns);
+  const rows = Math.max(1, effectiveCustomGridRows(page.designSettings, null, page.selectedDishIds?.length ?? 1));
+
+  const startResize = (event, axis) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect) return;
+    setDrag({ axis, startX: event.clientX, startY: event.clientY, startColSpan: placement.colSpan ?? 1, startRowSpan: placement.rowSpan ?? 1, previousPlacement: placement });
+    onSelectDish(dish.id);
+  };
+
+  useEffect(() => {
+    if (!drag) return undefined;
+    const onMove = (event) => {
+      const deltaX = event.clientX - drag.startX;
+      const deltaY = event.clientY - drag.startY;
+      const nextColSpan = drag.axis.includes('x') ? Math.max(1, Math.min(columns, drag.startColSpan + Math.round(deltaX / Math.max(32, ref.current?.clientWidth || 120)))) : drag.startColSpan;
+      const nextRowSpan = drag.axis.includes('y') ? Math.max(1, Math.min(rows, drag.startRowSpan + Math.round(deltaY / Math.max(32, ref.current?.clientHeight || 120)))) : drag.startRowSpan;
+      onResizeDish(dish.id, { ...placement, colSpan: nextColSpan, rowSpan: nextRowSpan }, drag.previousPlacement);
+    };
+    const onUp = () => setDrag(null);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp, { once: true });
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }, [drag, columns, rows, dish.id, onResizeDish, placement]);
+
+  return <div ref={ref} onPointerDown={(event) => { event.stopPropagation(); onSelectDish(dish.id); }} className={`custom-grid-item resizable-grid-item ${isSelected ? 'selected-preview-card' : ''}`} style={{ gridArea }}>{children}<button type="button" className="resize-handle resize-x" onPointerDown={(event) => startResize(event, 'x')} aria-label="Resize card width" /><button type="button" className="resize-handle resize-y" onPointerDown={(event) => startResize(event, 'y')} aria-label="Resize card height" /><button type="button" className="resize-handle resize-xy" onPointerDown={(event) => startResize(event, 'xy')} aria-label="Resize card" /></div>;
+}
+
+function ResizableFluidItem({ dish, placement, page, totalWeight, isSelected, onSelectDish, onResizeStart, children }) {
+  const ref = useRef(null);
+  const startResize = (event, axis) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onResizeStart({ dishId: dish.id, axis, startX: event.clientX, startY: event.clientY });
+  };
+
+  return <div ref={ref} onPointerDown={(event) => { event.stopPropagation(); onSelectDish(dish.id); }} className={`fluid-grid-item resizable-grid-item ${isSelected ? 'selected-preview-card' : ''}`} style={{ flexGrow: placement.widthWeight ?? 1, flexBasis: `${Math.max(14, ((placement.widthWeight ?? 1) / Math.max(1, totalWeight)) * 100)}%`, minHeight: `${Math.max(80, 110 * (placement.heightWeight ?? 1))}px` }}>{children}<button type="button" className="resize-handle resize-x" onPointerDown={(event) => startResize(event, 'x')} aria-label="Resize card width" /><button type="button" className="resize-handle resize-y" onPointerDown={(event) => startResize(event, 'y')} aria-label="Resize card height" /><button type="button" className="resize-handle resize-xy" onPointerDown={(event) => startResize(event, 'xy')} aria-label="Resize card" /></div>;
+}
+
+function FreeResizeItem({ dish, page, placement, isSelected, onSelectDish, onResizeDish, children }) {
+  const [drag, setDrag] = useState(null);
+  const ref = useRef(null);
+  const style = {
+    left: `${placement.xPercent}%`,
+    top: `${placement.yPercent}%`,
+    width: `${placement.widthPercent}%`,
+    height: `${placement.heightPercent}%`,
+    zIndex: placement.zIndex ?? 1,
+  };
+
+  const startResize = (event, axis) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const parent = ref.current?.parentElement?.getBoundingClientRect();
+    if (!parent) return;
+    setDrag({ axis, startX: event.clientX, startY: event.clientY, start: placement, parent });
+    onSelectDish(dish.id);
+  };
+
+  useEffect(() => {
+    if (!drag) return undefined;
+    const onMove = (event) => {
+      const dx = ((event.clientX - drag.startX) / drag.parent.width) * 100;
+      const dy = ((event.clientY - drag.startY) / drag.parent.height) * 100;
+      const next = { ...drag.start };
+      if (drag.axis.includes('x')) next.widthPercent = Math.min(100 - next.xPercent, Math.max(10, drag.start.widthPercent + dx));
+      if (drag.axis.includes('y')) next.heightPercent = Math.min(100 - next.yPercent, Math.max(8, drag.start.heightPercent + dy));
+      onResizeDish(dish.id, { ...next, mode: 'free' }, drag.start);
+    };
+    const onUp = () => setDrag(null);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp, { once: true });
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }, [drag, dish.id, onResizeDish, placement]);
+
+  return <div ref={ref} className={`free-resize-item resizable-grid-item ${isSelected ? 'selected-preview-card' : ''}`} onPointerDown={(event) => { event.stopPropagation(); onSelectDish(dish.id); }} style={style}>{children}<button type="button" className="resize-handle resize-x" onPointerDown={(event) => startResize(event, 'x')} aria-label="Resize card width" /><button type="button" className="resize-handle resize-y" onPointerDown={(event) => startResize(event, 'y')} aria-label="Resize card height" /><button type="button" className="resize-handle resize-xy" onPointerDown={(event) => startResize(event, 'xy')} aria-label="Resize card" /></div>;
 }
 
 function EmptyPage() {
-  return <div className="preview-empty">Select categories to add content to this page.</div>;
+  return <div className="preview-empty">Select categories and dishes to build this page.</div>;
 }

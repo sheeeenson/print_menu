@@ -1,0 +1,4 @@
+/* Deprecated: corner radius was replaced by GIF shape presets. */
+.promo-generator-panel .promo-panel-group:last-of-type > .image-menu-control:last-of-type {
+  display: none !important;
+}

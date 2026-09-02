@@ -1,0 +1,15 @@
+/* Keep the default CTA/offer visually anchored to the same lower edge as the sale price. */
+.promo-price-card {
+  transform-origin: right bottom !important;
+}
+
+.promo-cta {
+  box-sizing: border-box !important;
+  line-height: 1 !important;
+  transform-origin: left bottom !important;
+}
+
+.promo-cta-with-badge,
+.promo-cta-no-badge {
+  vertical-align: bottom !important;
+}
